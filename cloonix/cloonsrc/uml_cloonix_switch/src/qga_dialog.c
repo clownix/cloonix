@@ -27,6 +27,9 @@ int get_running_in_crun(void);
 
 /* EVERY REQUEST BELOW ENDS IN \n, AND THAT IS NOT COSMETIC. */
 #define QGA_PING_BEATS   2400
+/* Ping prodded every 20 beats while the agent is silent; unanswered prods
+   bounded. */
+#define QGA_PING_MAX_OUT 10
 #define QGA_MAX_REBOOTS  2
 
 #define QGA_PING "{\"execute\":\"guest-ping\"}\n"
@@ -198,6 +201,8 @@ typedef struct t_qrec
   int count_no_response;
   int request_reboot_done;
   int ping_launch;
+  int ping_outstanding;
+  int ping_prod_stopped;
   int sync_launch;
   int sync_rand;
   int file_open;
@@ -253,11 +258,20 @@ static char *qga_where(t_qrec *q)
   return txt;
 }
 
-/* An answer that is not the one of the current step: the step says where. */
+/* Not the answer of the current step: late answers to prods are counted
+   off, not reported. */
 static void qga_unexpected(t_qrec *q, char *msg)
 {
-  KERR("ERROR %s: qga answer does not fit the step (%s): %s",
-       q->name, qga_where(q), msg);
+  if ((q->ping_outstanding > 0) && (strstr(msg, "\"return\": {}")))
+    {
+    q->ping_outstanding -= 1;
+    q->ping_prod_stopped = 0;
+    KTRC("%s: a late answer to a ping sent again, %d still out",
+         q->name, q->ping_outstanding);
+    }
+  else
+    KERR("ERROR %s: qga answer does not fit the step (%s): %s",
+         q->name, qga_where(q), msg);
 }
 
 static void reset_diag(t_qrec *q)
@@ -407,7 +421,8 @@ static void qemu_ga_fail(char *name)
   int time_end, llid, reboots;
   if (!cur)
     KOUT("ERROR %s", name);
-  KERR("FAILED qemu_ga_fail %s", name);
+  KERR("ERROR %s: the agent dialog is given up and the record dropped at "
+       "step (%s)", name, qga_where(cur));
   memset(tmp_name, 0, MAX_NAME_LEN);
   strncpy(tmp_name, name, MAX_NAME_LEN-1);
   prev = cur->prev;
@@ -462,19 +477,47 @@ static int qga_rx_cb(int llid, int fd)
     else
       {
       if (len == max)
-        KERR("ERROR %s %s %d", cur->name, cur->resp, len);
+        {
+        KERR("ERROR %s: a qga answer of %d bytes fills the buffer with no "
+             "complete message, dropping it and resyncing", cur->name, len);
+        reset_diag(cur);
+        }
       else
         {
-        ptr = cur->resp;
+        /* Every complete message of this read (a waking agent answers many at
+                   once); the rest waits for the next read. */
+        char work[MAX_QGA_MSG_LEN+1];
+        char kname[MAX_NAME_LEN];
+        int used = cur->resp_offset + len;
+        int kept;
+        memcpy(work, cur->resp, used);
+        work[used] = 0;
+        memset(kname, 0, MAX_NAME_LEN);
+        strncpy(kname, cur->name, MAX_NAME_LEN-1);
+        ptr = used ? work : NULL;
+        while ((ptr) && (qmp_braces_complete(ptr, &next_ptr)))
+          {
+          if (automate_rx_qga_msg(cur, ptr) == 0)
+            reset_diag(cur);
+          /* a step that gives up frees the record: nothing left to keep */
+          cur = get_qrec_with_name(kname);
+          if (!cur)
+            return len;
+          ptr = next_ptr;
+          }
+        memset(cur->resp, 0, MAX_QGA_MSG_LEN);
+        cur->resp_offset = 0;
         if (ptr)
           {
-          if (qmp_braces_complete(ptr, &next_ptr))
+          kept = used - (int) (ptr - work);
+          if ((kept > 0) && (kept < MAX_QGA_MSG_LEN))
             {
-            if (automate_rx_qga_msg(cur, ptr) == 0)
-              reset_diag(cur);
+            memcpy(cur->resp, ptr, kept);
+            cur->resp_offset = kept;
             }
           else
-            cur->resp_offset += len;
+            KERR("ERROR %s: %d bytes of an unfinished qga answer cannot be "
+                 "kept, resyncing", cur->name, kept);
           }
         }
       }
@@ -647,6 +690,7 @@ static int automate_tx_qga_msg(t_qrec *cur)
     cur->count_no_response = 0;
     strncpy(req, QGA_PING, sizeof(req)-1);
     watch_tx(cur->llid, strlen(req), req);
+    cur->ping_outstanding += 1;
     cur->ping_launch += 1;
     }
   else if ((cur->ping_launch == 1) || (cur->ping_launch == 3))
@@ -654,8 +698,18 @@ static int automate_tx_qga_msg(t_qrec *cur)
     cur->count_no_response += 1;
     if ((cur->count_no_response%20) == 0 )
       {
-      strncpy(req, QGA_PING, sizeof(req)-1);
-      watch_tx(cur->llid, strlen(req), req);
+      if (cur->ping_outstanding < QGA_PING_MAX_OUT)
+        {
+        strncpy(req, QGA_PING, sizeof(req)-1);
+        watch_tx(cur->llid, strlen(req), req);
+        cur->ping_outstanding += 1;
+        }
+      else if (cur->ping_prod_stopped == 0)
+        {
+        cur->ping_prod_stopped = 1;
+        KERR("WARNING %s: %d guest-ping prods unanswered, no more sent "
+             "until one comes back", cur->name, cur->ping_outstanding);
+        }
       }
     if (cur->count_no_response > QGA_PING_BEATS)
       {
@@ -937,7 +991,12 @@ static int automate_rx_qga_msg(t_qrec *cur, char *msg)
     if (!ptr)
       qga_unexpected(cur, msg);
     else
+      {
+      if (cur->ping_outstanding > 0)
+        cur->ping_outstanding -= 1;
+      cur->ping_prod_stopped = 0;
       cur->ping_launch += 1;
+      }
     }
 
   else if ((cur->ping_launch == 4) && (cur->sync_launch == 1))

@@ -127,7 +127,7 @@ chmod 700 ${TRIXIE}/root
 . "$(dirname "$0")/../cnt_kvm/cnt_common.sh"
 cnt_common_config "${TRIXIE}" || exit 1
 
-# Guest userns: uid 0 = the cloonix user, 1..n = subuids. A file owned outside the map is unreachable even by root: claim it for uid 0.
+# Guest userns: files of an unmapped owner are claimed for uid 0.
 # postfix refuses to run its queue as root: it drops to its own account (inside
 # the subuid window). Trees claimed so the demo writes main.cf; "postfix set-permissions" does the queue.
 for i in "/etc/postfix" "/var/spool/postfix" "/var/lib/postfix" \

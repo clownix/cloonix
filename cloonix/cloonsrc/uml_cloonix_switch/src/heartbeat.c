@@ -54,8 +54,8 @@ static void loss_of_fd_trap(void)
          open_fds, declared_fds, open_fds - declared_fds);
 }
 
-/* Malloc counters: reported on a new high, at most every ten minutes.     */
-/* Type 23 is a pool that oscillates and does not grow.                     */
+/* Malloc counters: reported on a new high, at most every ten minutes. */
+/* Type 23 is a pool that oscillates and does not grow. */
 static void malloc_watchdog(void)
 {
   static unsigned long hi_total;

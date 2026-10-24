@@ -38,7 +38,8 @@ static void peer_doorways_client_tx(int llid, int len, char *buf)
   static const int MAGIC_PREFIX_LEN = 8;
   if (len <= MAGIC_PREFIX_LEN)
     {
-    KERR("ERROR %d too short", len);
+    KERR("ERROR a c2c message of %d bytes on llid %d, not even its prefix, "
+         "dropped", len, llid);
     return;
     }
   buf += MAGIC_PREFIX_LEN;
@@ -68,7 +69,11 @@ void wrap_proxy_callback_connect(char *name, int pair_llid)
 {
   t_ovs_c2c *cur = find_c2c(name);
   if (!cur)
-    KERR("ERROR %s %d", name, pair_llid);
+    {
+    KERR("WARNING c2c %s: proxymous connected it to its peer (llid %d) after "
+         "it was deleted here, ignored", name, pair_llid);
+    return;
+    }
   cur->pair_llid = pair_llid;
   if (!cur->topo.local_is_master)
     {
@@ -82,9 +87,11 @@ void wrap_proxy_callback_connect(char *name, int pair_llid)
 void wrap_try_connect_to_peer(t_ovs_c2c *cur)
 {
   if (!cur->topo.local_is_master)
-    KERR("ERROR %s", cur->name);
+    KERR("ERROR c2c %s: a connect to the peer asked of the slave side, "
+         "ignored", cur->name);
   else if (cur->peer_llid)
-    KERR("ERROR %s", cur->name);
+    KERR("ERROR c2c %s: a connect to the peer asked while connected on llid "
+         "%d, ignored", cur->name, cur->peer_llid);
   else
     {
     if (cur->peer_listen_llid)
@@ -92,14 +99,10 @@ void wrap_try_connect_to_peer(t_ovs_c2c *cur)
       doorways_sock_client_inet_delete(cur->peer_listen_llid);
       cur->peer_listen_llid = 0;
       }
-    if (cur->peer_llid)
-      KERR("ERROR PROBLEM %s", cur->name);
-    if (msg_exist_channel(cur->peer_llid))
-      KERR("ERROR PROBLEM %s", cur->name);
-    if (cur->topo.tcp_connection_peered)
-      KERR("ERROR PROBLEM %s", cur->name);
-    if (cur->topo.udp_connection_peered)
-      KERR("ERROR PROBLEM %s", cur->name);
+    if (cur->topo.tcp_connection_peered || cur->topo.udp_connection_peered)
+      KERR("ERROR c2c %s: connecting to the peer again while still marked "
+           "peered (tcp %d udp %d)", cur->name,
+           cur->topo.tcp_connection_peered, cur->topo.udp_connection_peered);
     cur->ref_tid = get_new_tid();
     c2c_state_progress_up(cur, state_master_try_connect_to_peer);
     proxycrun_transmit_dist_tcp_ip_port(cur->name, cur->topo.dist_tcp_ip,

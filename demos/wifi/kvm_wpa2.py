@@ -10,60 +10,40 @@ Three machines and no lan at all::
        |              |             |
        +------- the air ------------+
 
-This one is deliberately unlike the others in the set, in two ways.
+The demo wifi/cnt_wpa2.py played by kvm. cloonix gives a kvm a radio with
+wlan=N: the cloonix agent loads mac80211_hwsim in the guest kernel and makes
+the radio, wlan0, and carries its frames to doorways, relayed to
+suid-power. The frames never cross an ovs lan: they cross an air, of which cloonix
+is the medium, captured by its name. The demo is a test of the wifi of this
+build on this kernel, and says at each step whether it passed: a failure is
+a finding about cloonix or the kernel, not a protocol lesson.
 
-The demo wifi/cnt_wpa2.py played by kvm.
-
-There is NO WIRE. cloonix gives a kvm a wifi interface with wlan=N: the
-cloonix agent inside the guest loads mac80211_hwsim in the guest kernel and
-makes a radio, which appears as wlan0. Frames between these machines never
-cross an ovs lan: they cross an air, of which cloonix is the medium -- the
-agent carries each frame to doorways, relayed to suid-power, which gives it
-to the radios on the same air -- and the air is captured by its name.
-
-And its purpose is different. The other demos explain a protocol that is
-known to work. This one is a TEST: it asks whether the wifi support in this
-build of cloonix does what it claims, on this kernel, and says clearly at
-each step whether it did.
-
-  ACT 1  do the radios exist at all? Three kvm asked for one wifi
-         interface each, and iw is asked whether it got one.
+  ACT 1  do the radios exist: three kvm asked for one radio each, and iw
+         asked whether each got it.
   ACT 2  hostapd turns one of them into an access point.
-  ACT 3  the other two scan, and the question is whether they can hear it.
-         This is the act that proves the simulated air is shared, which is
-         the part most likely not to work.
-  ACT 4  they associate with WPA2 and get addresses, and then ping the
-         access point and each other.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+  ACT 3  the other two scan: can they hear it, the proof that the air is
+         shared.
+  ACT 4  they associate with WPA2, get addresses, ping the access point and
+         each other.
+  ACT 5  the beacons of the access point counted in the capture of the air.
+  ACT 6  sta2 put on a second air, where the access point cannot be heard,
+         then back on kvmwifi, where it joins again: an air is a lan of wlans,
+         plugged and unplugged like any lan.
 
 Image: trixie.qcow2
 Size:  3 kvm, no lan at all
 
 THE PACKET TO CATCH
 -------------------
-  The air itself. cloonix is the medium of the radios of the net: every
-  frame goes through it, to the radios on the same air only, and each air
-  is captured by its name. A kvm radio starts on the air "kvmwifi", the
-  amber lan of the canvas, captured as "kvmwifi 0".
+  The air itself: every frame goes through cloonix, to the radios of the
+  same air only. A radio starts on the air "kvmwifi", the amber lan of the
+  canvas, captured as "kvmwifi 0":
 
       cloonix cli <net> cnf kvmwifi sniff=on
       cloonix cli <net> sniff kvmwifi
 
-  ACT 5 counts the beacons of the access point in that capture. In
-  webshark (double-click the air kvmwifi) the 4-way handshake shows as four
-  EAPOL frames, Message 1 of 4 to Message 4 of 4.
-
-  ACT 6 puts sta2 on a second air, where the access point cannot be
-  heard, then back on kvmwifi, where it joins again: an air is a lan of wlans,
-  plugged with plug and unplug like any lan.
-
-
-Important
-  This is a TEST of this build of cloonix on this kernel, and it says clearly
-  at each step whether it passed. A failure here is a cloonix or kernel
-  finding, not a protocol lesson.
+  In webshark, a double-click on the air kvmwifi, the 4-way handshake shows as
+  four EAPOL frames, Message 1 of 4 to Message 4 of 4.
 """
 import os
 import subprocess
@@ -118,8 +98,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -182,7 +162,7 @@ def wait_radio(node, secs=60):
         time.sleep(2)
 
 def radios_present(node):
-    """Did this kvm actually get a wifi interface?
+    """Did this kvm get a wifi interface?
 
     The whole demo turns on this, so it is asked first and answered plainly.
     A missing wlan0 means wlan= did not work, which is a completely
@@ -257,7 +237,7 @@ def hostapd_start():
 def scan_for_ssid(node, tries=6):
     """Can this station HEAR the access point?
 
-    The act most likely to fail, and the one worth the demo existing. Every
+    The act most likely to fail, and the reason for the demo. Every
     radio of a kvm is heard by the radios on the same air, the agent,
     doorways and suid-power carrying its frames between the guests: exactly
     what this asks.
@@ -568,7 +548,7 @@ def main():
     story()
     if len(stations) < len(STATIONS):
         story("    fewer stations than expected. An access point holds one")
-        story("    entry per client, so this is worth looking at.")
+        story("    entry per client: look at it.")
         story()
 
     results = []
@@ -603,7 +583,7 @@ def main():
 IT WORKS. Three kvm, three simulated radios, WPA2 between them, and
 traffic passing over the air with no lan involved.
 
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   watch the access point's view of its clients change as you take one away:
     cloonix cli %s ssh %s "iw dev wlan0 station dump"

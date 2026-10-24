@@ -227,6 +227,42 @@ static char *topo_to_json(t_topo_info *topo, int *out_len)
     }
   TW_APPEND("]");
 
+  /* each air once, its capture as an eth's: the radios on it carry it */
+  TW_APPEND(",\"air\":[");
+  {
+  char seen[64][MAX_NAME_LEN];
+  int nb_seen = 0, k;
+  for (i = 0; i < topo->nb_kvm + topo->nb_cnt; i++)
+    {
+    int nb   = (i < topo->nb_kvm) ? topo->kvm[i].nb_tot_nb_vwif
+                                  : topo->cnt[i - topo->nb_kvm].nb_tot_nb_vwif;
+    char (*air)[MAX_NAME_LEN] = (i < topo->nb_kvm) ? topo->kvm[i].vwif_air
+                              : topo->cnt[i - topo->nb_kvm].vwif_air;
+    int *endp = (i < topo->nb_kvm) ? topo->kvm[i].vwif_endp_type
+                                   : topo->cnt[i - topo->nb_kvm].vwif_endp_type;
+    for (j = 0; (j < nb) && (j < MAX_VWIF); j++)
+      {
+      if (!air[j][0])
+        continue;
+      for (k = 0; (k < nb_seen) && strcmp(seen[k], air[j]); k++);
+      if (k < nb_seen)
+        continue;
+      if (nb_seen >= (int) (sizeof(seen)/sizeof(seen[0])))
+        {
+        KERR("WARNING topo: more than %d airs, %s not given to the canvas",
+             nb_seen, air[j]);
+        continue;
+        }
+      strncpy(seen[nb_seen], air[j], MAX_NAME_LEN-1);
+      seen[nb_seen][MAX_NAME_LEN-1] = 0;
+      TW_APPEND("%s{\"name\":\"%s\",\"etype\":\"%s\"}", nb_seen ? "," : "",
+                air[j], endp[j] == endp_type_eths ? "eths" : "ethv");
+      nb_seen += 1;
+      }
+    }
+  }
+  TW_APPEND("]");
+
   TW_APPEND("}");
   *out_len = used;
   return buf;
@@ -292,7 +328,7 @@ static void timer_apply_topo(void *data)
       clownix_free(json, __FUNCTION__);
       }
     else
-      KERR("topo_web: topo_to_json returned NULL");
+      KERR("ERROR topo_to_json returned NULL");
     }
   topo_free_topo(topo);
 }
@@ -308,13 +344,13 @@ static void topo_web_recv_topo(int tid, t_topo_info *topo)
   if (g_topo_cb_registered)
     topo_cb(tid, topo);
   else
-    KERR("topo_web: WARNING callback not yet registered — topo dropped");
+    KERR("WARNING a topo came before its callback was registered, dropped");
 }
 
 void topo_doorways_tx(int llid, int len, char *buf)
 {
   if (doorways_tx_bufraw(llid, 0, doors_type_switch, doors_val_none, len, buf))
-    KERR("topo_doorways_tx: send failed llid=%d", llid);
+    KERR("ERROR topo send failed on llid %d", llid);
 }
 
 static void topo_doors_rx(int llid, int tid,
@@ -328,7 +364,7 @@ static void topo_doors_rx(int llid, int tid,
       }
     else if (val == doors_val_link_ko)
       {
-      KERR("topo client: link_ko on llid=%d", llid);
+      KERR("WARNING topo client: link lost on llid %d", llid);
       }
     else
       {
@@ -337,12 +373,12 @@ static void topo_doors_rx(int llid, int tid,
         {
         int r3 = rpct_decoder(llid, len, buf);
         if (r3)
-          KERR("topo client: unknown message llid=%d len=%d", llid, len);
+          KERR("ERROR topo client: unknown message on llid %d, %d bytes", llid, len);
         }
       }
     }
   else
-    KERR("topo client: unexpected doors type=%d", type);
+    KERR("ERROR topo client: unexpected doors type %d", type);
 }
 
 /* A beat on the topology socket, twice a second. */
@@ -381,7 +417,7 @@ static void topo_err_cb(int llid)
 int topo_callback_connect(int llid, int fd)
 {
   if (llid != g_topo_connect_llid)
-    KERR("topo_callback_connect: unexpected llid %d vs %d", llid, g_topo_connect_llid);
+    KERR("ERROR topo connect: llid %d where %d was expected", llid, g_topo_connect_llid);
   g_topo_connect_llid = 0;
 
   g_topo_llid = doorways_sock_client_inet_end(doors_type_switch, llid, fd,
@@ -390,12 +426,12 @@ int topo_callback_connect(int llid, int fd)
                                                topo_doors_rx);
   if (!g_topo_llid)
     {
-    KERR("topo client: doorways_sock_client_inet_end failed");
+    KERR("ERROR topo client: doorways_sock_client_inet_end failed");
     return 0;
     }
   if (doorways_sig_bufraw(g_topo_llid, llid, doors_type_switch,
                            doors_val_init_link, "OK"))
-    KERR("topo client: doorways_sig_bufraw failed");
+    KERR("ERROR topo client: doorways_sig_bufraw failed");
 
   g_topo_cb_registered = 1;
   send_event_topo_sub(g_topo_llid, 0);
@@ -423,6 +459,8 @@ static void build_images_json(int nb_kvm, t_slowperiodic *kvm,
        if (_n > 0 && used+_n < cap) used += _n; } while(0)
 
   IJ_APPEND("{\"type\":\"images\"");
+  if (!pthexec_qemu_bin())
+    IJ_APPEND(",\"kvm_absent\":1");
   IJ_APPEND(",\"kvm\":[");
   for (i = 0; i < nb_kvm; i++)
     IJ_APPEND("%s\"%s\"", i ? "," : "", kvm[i].name);
@@ -486,9 +524,8 @@ static int   g_cmds_tid;
 static int   g_cmds_done;
 static char *g_cmds_text;
 
-/* The http threads never touch doorways: its hmac key and digest, the rpc
-   buffers and the tx queues belong to the main loop. A request is queued
-   here and sent from there. */
+/* http threads never touch doorways (owned by the main loop): queued here,
+   sent from the loop. */
 typedef struct t_job
 {
   void (*fn)(struct t_job *);
@@ -624,6 +661,11 @@ static void do_position(t_job *j)
 static void do_poseth(t_job *j)
 {
   send_item_poseth(g_topo_llid, 0, j->s1, j->i1, j->i2);
+}
+
+static void do_note(t_job *j)
+{
+  send_item_note(g_topo_llid, 0, j->s1, j->s2);
 }
 
 static void do_cnf_a2b(t_job *j)
@@ -838,6 +880,11 @@ void topo_web_poseth(char *name, int num, int deg)
   job_named(do_poseth, "poseth", name, num, deg, NULL);
 }
 
+void topo_web_note(char *name, char *txt)
+{
+  job_named(do_note, "note", name, 0, 0, txt);
+}
+
 void topo_web_cnf_a2b(char *name, int dir, char *cmd, int val)
 {
   char dir_cmd_val[MAX_PATH_LEN];
@@ -1036,7 +1083,7 @@ static void prune_vm_state(t_topo_info *topo)
   g_nb_vm_state = keep;
 }
 
-/* Guest state, from vm_evt_* messages and from the topology.              */
+/* Guest state, from vm_evt_* messages and from the topology. */
 static void broadcast_vmstate(const char *name, const char *state);
 
 static void topo_seed_vmstate(const char *name, int ping_ok)
@@ -1068,6 +1115,7 @@ typedef struct t_layout_keep
   int has_xy;
   int deg[MAX_ETH_VM];
   int has_deg[MAX_ETH_VM];
+  char note[MAX_NOTE_LEN];
 } t_layout_keep;
 static t_layout_keep g_layout_keep[MAX_LAYOUT_KEEP];
 static int g_nb_layout_keep;
@@ -1090,6 +1138,8 @@ void topo_web_layout_forget_all(void)
   g_nb_layout_keep = 0;
 }
 
+
+
 static int fmt_item_pos(char *buf, int size, char *name, int x, int y)
 {
   return snprintf(buf, size,
@@ -1101,6 +1151,35 @@ static int fmt_item_poseth(char *buf, int size, char *name, int num, int deg)
   return snprintf(buf, size,
     "{\"type\":\"itemposeth\",\"name\":\"%s\",\"num\":%d,\"deg\":%d}",
     name, num, deg);
+}
+
+static int fmt_item_note(char *buf, int size, char *name, char *txt)
+{
+  int len = snprintf(buf, size, "{\"type\":\"itemnote\",\"name\":\"%s\","
+                     "\"txt\":\"", name);
+  if ((len < 0) || (len >= size - 8))
+    return -1;
+  len += json_escape(buf + len, txt, size - len - 3);
+  len += snprintf(buf + len, size - len, "\"}");
+  return len;
+}
+
+/* "" removes the note, the switch sends it for an item gone too */
+void recv_item_note(int llid, int tid, char *name, char *txt)
+{
+  char buf[1024];
+  int len;
+  t_layout_keep *k = layout_keep_find(name);
+  (void)llid; (void)tid;
+  if (k)
+    {
+    memset(k->note, 0, MAX_NOTE_LEN);
+    strncpy(k->note, txt, MAX_NOTE_LEN-1);
+    }
+  else
+    KERR("WARNING note on %s not kept: the layout table is full", name);
+  len = fmt_item_note(buf, sizeof(buf), name, txt);
+  if (len > 0) ws_broadcast_topo_json(buf, len);
 }
 
 void recv_item_pos(int llid, int tid, char *name, int x, int y)
@@ -1152,6 +1231,12 @@ static void send_layout_kept(int cfd)
         len = fmt_item_poseth(buf, sizeof(buf), k->name, j, k->deg[j]);
         if (len > 0) ws_send_text(cfd, buf, len);
         }
+    if (k->note[0])
+      {
+      char nbuf[1024];
+      len = fmt_item_note(nbuf, sizeof(nbuf), k->name, k->note);
+      if (len > 0) ws_send_text(cfd, nbuf, len);
+      }
     }
 }
 
@@ -1254,7 +1339,7 @@ char *topo_web_get_snapshot_json(int *out_len)
   return topo_to_json(g_topo_current, out_len);
 }
 
-/* Send the whole topology to one browser.                                  */
+/* Send the whole topology to one browser. */
 void topo_web_send_snapshot(int cfd)
 {
   int i, len = 0;

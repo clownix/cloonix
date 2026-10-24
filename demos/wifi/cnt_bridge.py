@@ -9,7 +9,7 @@ A station on the air reaches a server on a cable through the AP::
   10.40.0.10                                 10.40.0.1
 
 A home box does exactly this: its radio and its ethernet ports are one
-bridge, one subnet. The Linux bridge dates from 1999 (Lennert Buytenhek);
+bridge, one subnet. The Linux bridge is Lennert Buytenhek's, kernel 2.4;
 hostapd puts wlan0 in it itself with its option bridge=. The frames of
 the station cross the air as 802.11, then the cable as ethernet.
 
@@ -77,7 +77,7 @@ def main():
     check_net()
     rootfs = choose_rootfs()
     story("A home box: its radio and its ethernet are one Linux bridge")
-    story("(Lennert Buytenhek, 1999), hostapd putting wlan0 in it.")
+    story("(Lennert Buytenhek, kernel 2.4), hostapd putting wlan0 in it.")
     story()
     step("erasing the net, then placing the items")
     erase_net()

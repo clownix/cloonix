@@ -194,7 +194,10 @@ void cnt_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
     if (is_ko)
       {
       mactopo_add_resp(0, item_cnt, name, num, lan);
-      KTRC("%s %d: the add of lan %s was refused", name, num, lan);
+      if (cur->poweroff_done)
+        KTRC("%s %d: the add of lan %s ends with its delete", name, num, lan);
+      else
+        KERR("ERROR %s %d: the add of lan %s was refused", name, num, lan);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), "KO");
       if (strlen(cur->att_lan[num].lan_added))
         {
@@ -281,6 +284,24 @@ void cnt_topo_endp_push(void)
       }
     cur = cur->next;
     }
+}
+
+/* no cnt of that name, or one being deleted */
+int cnt_is_going(char *name)
+{
+  t_cnt *cur = find_cnt(name);
+  return ((!cur) || (cur->poweroff_done));
+}
+
+static char *cnt_pending_what(t_cnt *cur)
+{
+  if (cur->lan_add_waiting_ack)
+    return "its plug";
+  if (cur->lan_del_waiting_ack)
+    return "its unplug";
+  if (!cur->cnt_pid)
+    return "its create";
+  return "a request on it";
 }
 
 int cnt_name_exists(char *name, int *nb_eth)
@@ -553,8 +574,8 @@ int cnt_delete(int llid, int cli_llid, int cli_tid, char *name)
     cur->poweroff_done = 1;
     if ((cur->cli_llid != 0) || (cur->cli_tid != 0))
       {
-      KTRC("%s: deleted before its create answered, telling the client",
-           name);
+      KERR("WARNING %s: deleted while %s was waiting for its answer, that "
+           "request is refused", name, cnt_pending_what(cur));
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), "STOPPED CNT");
       }
     cd = (t_cnt_delete *) clownix_malloc(sizeof(t_cnt_delete), 3);
@@ -821,10 +842,12 @@ int cnt_add_lan(int llid, int tid, char *name, int num, char *lan, char *err)
     if (cur->att_lan[num].lan_attached_ok)
       snprintf(err, MAX_PATH_LEN-1, "ERROR %s eth%d is already cabled to "
                "lan %s", name, num, cur->att_lan[num].lan);
+    else if (cur->lan_del_waiting_ack)
+      snprintf(err, MAX_PATH_LEN-1, "WARNING %s is being uncabled from a "
+               "lan, ask again when that is done", name);
     else
-      snprintf(err, MAX_PATH_LEN-1, "ERROR %s is busy with a request "
-               "(cli:%d add:%d del:%d)", name, cur->cli_llid,
-               cur->lan_add_waiting_ack, cur->lan_del_waiting_ack);
+      snprintf(err, MAX_PATH_LEN-1, "WARNING %s is being cabled to a lan, "
+               "ask again when that is done", name);
     KERR("%s", err);
     }
   else
@@ -885,10 +908,9 @@ int cnt_del_lan(int llid, int tid, char *name, int num, char *lan, char *err)
     }
   else if (strcmp(cur->att_lan[num].lan, lan))
     {
-    snprintf(err, MAX_PATH_LEN-1,
-    "ERROR CNT cannot attach %s, %s %d attached to %s",
-    lan, name, num, cur->att_lan[num].lan);
-    KERR("%s", err);
+    snprintf(err, MAX_PATH_LEN-1, "unplug %s eth%d %s refused: eth%d is on %s",
+             name, num, lan, num, cur->att_lan[num].lan);
+    KERR("ERROR %s", err);
     }
   else
     {

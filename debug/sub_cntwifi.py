@@ -5,7 +5,9 @@ default air "cntwifi". A wlan is plugged into another air with plug and
 unplugged with unplug, as an eth with a lan; an eth never goes on an air,
 a wlan never on a lan of eths, and no item may be named cntwifi. dump json
 carries the air of each radio, dump commands replays it; an air is born not
-sniffed, cnf <air> sniff=on and off, dump commands replays it; each air has its
+sniffed, cnf <air> sniff=on and off, dump commands replays it, dump json
+gives the radios on a captured air vwif_endp eths (14) as an eth, ethv (15)
+otherwise; each air has its
 capture fifo snf/<air>_0 while a radio is on it; the canvas, the /topo
 websocket, draws each wlan with etype wlan and a link to its air. The radios
 are given back
@@ -53,6 +55,19 @@ def refused(r, words, what):
     if r.returncode == 0 or words not in said:
         raise Fail("%s: refused with \"%s\" wanted, got rc %d: %s"
                    % (what, words, r.returncode, said[-200:]))
+
+
+def air_endp(air):
+    """The vwif_endp dump json gives the radios on the air, as a set."""
+    t, out = ftopo(), set()
+    for kind in ("cnt", "kvm"):
+        for g in t.get(kind, []) or []:
+            airs = (g.get("vwif_air") or "").split(",")
+            endp = (g.get("vwif_endp") or "").split(",")
+            for a, e in zip(airs, endp):
+                if a == air:
+                    out.add(e)
+    return out
 
 
 def module_loaded():
@@ -147,9 +162,15 @@ def sub_cntwifi():
         must(cli("cnf", AIR2, "sniff=on"), line)
         if line not in dump_list():
             raise Fail("dump commands lacks \"%s\"" % line)
+        if air_endp(AIR2) != {"14"}:
+            raise Fail("dump json: the radios on %s say %s after sniff=on, "
+                       "not eths 14" % (AIR2, air_endp(AIR2)))
         must(cli("cnf", AIR2, "sniff=off"), "cnf %s sniff=off" % AIR2)
         if line in dump_list():
             raise Fail("dump commands still has \"%s\" after off" % line)
+        if air_endp(AIR2) != {"15"}:
+            raise Fail("dump json: the radios on %s say %s after sniff=off, "
+                       "not ethv 15" % (AIR2, air_endp(AIR2)))
         # the number past the eths, of 76 clients, still names a wlan
         raw_rpc('{"fctident": "del_lan_endp", "tid": 0, "name": "%s", '
                 '"num": 2, "lan": "%s"}' % (D, AIR2))

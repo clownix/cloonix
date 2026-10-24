@@ -11,60 +11,41 @@ Four containers, one impaired cable::
               probe1              probe2
             (mtr, hop by hop)   (a second flow)
 
-The a2b is the instrument: it can be told to delay, to lose and to limit
-a rate, each direction on its own. Every number below is measured over it
-rather than argued about.
+The a2b is the instrument, told to delay, to lose and to limit a rate,
+each direction on its own; every number below is measured over it.
 
-  ACT 1  the path as it is: iperf3 flat out, and mtr saying what is
-         between the two ends. A baseline nobody has done anything to.
-  ACT 2  100 ms of delay, and nothing lost. The throughput collapses
-         anyway, which is the bandwidth-delay product and the first
-         surprise of the demo.
-  ACT 3  1 % loss, no delay. Then 1 % loss AND delay together, which is
-         far worse than the sum of the two -- and is what a real bad link
-         is.
-  ACT 4  a rate limit, two flows at once, and what "fair" turns out to
-         mean. The sniffer counts what really crossed, against what
-         iperf3 says it sent.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself.
+  ACT 1  the path as it is: iperf3 flat out, and mtr saying what is between
+         the two ends, the baseline.
+  ACT 2  100 ms of delay, nothing lost: the throughput collapses all the
+         same, the bandwidth-delay product.
+  ACT 3  1 % loss, no delay; then loss and delay together, which lower the
+         throughput far more than each alone, as on a bad real link.
+  ACT 4  a rate limit and two flows at once, and what fair turns out to
+         mean: the sniffer counts what crossed, against what iperf3 says
+         it sent.
 
 Image: perf_trixie
 Size:  4 containers, 2 lans, 1 a2b
 
 THE PACKET TO CATCH
 -------------------
-  This is the demo where the filter matters most, and for a reason that
-  is easy to miss: a filter is applied on the server, and what does not
-  match never crosses the wire to the client at all. Subscribing to a
-  10 Gbit/s iperf3 run unfiltered would drown the subscription and change
-  the number being measured. A narrow filter does not.
+  The filter is applied on the server, and what does not match never
+  crosses to the client: an unfiltered subscription to a 10 Gbit/s run
+  would drown and change the number measured. A narrow one:
 
-    cloonix cli nemo cnf h2 eth0 sniff=on
-    cloonix cli nemo sniff h2 eth0 --dump tcp port 5201 and less 100
+    cloonix cli nemo cnf receiver eth0 sniff=on
+    cloonix cli nemo sniff receiver eth0 --dump tcp port 5201 and less 100
 
-  "less 100" keeps the small packets and drops the full-size ones, so
-  what arrives is the control conversation and the pure acks -- a few
-  per second instead of hundreds of thousands. The packet to catch is
-  the iperf3 control exchange on 5201 at the start and the end of a run,
-  which is where the JSON summary is handed back.
-
-  ACT 3 is where a capture explains a number. With 100 ms of delay on
-  the a2b and a default window, throughput collapses:
-
-    cloonix cli nemo sniff h2 eth0 --dump tcp port 5201 and less 100
-
-  and the acks come back in a rhythm that shows the sender waiting. The
-  bandwidth-delay product stops being a formula at that point.
-
-  Say so in the report: any number taken while a snf is running is a
-  number taken with a sniffer running, and should be labelled that way.
+  less 100 keeps the small packets, the control conversation and the pure
+  acks, a few a second instead of hundreds of thousands. The packet to
+  catch is the iperf3 control exchange on 5201 at the start and the end of
+  a run, where the JSON summary is handed back. In ACT 2 the acks come
+  back in a rhythm that shows the sender waiting: the bandwidth-delay
+  product, on the wire.
 
 Important
-  Pairs with demos/cloonix/a2b.py throughout.
-  Report the container count, the host and the kernel with any number, or
-  the number means nothing later.
+  A number taken while a snf runs is a number taken with a sniffer
+  running. Report the container count, the host and the kernel with it.
 """
 import os
 import shlex
@@ -81,25 +62,24 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    NET, CLOONIX, answers, capturable, check_net, erase_net, in_lst,
-    in_parallel, place, run, show, step, story, wait_exists)
+    NET, CLOONIX, answers, capturable, check_net, erase_net, in_parallel,
+    place, run, show, step, story, wait_exists, unavailable, guarded)
 
 ROOTFS_CHOICES = ("perf_trixie",)
 
 HISTORY = """\
 The bandwidth-delay product measured here is the 1988 finding of Van
-Jacobson at Lawrence Berkeley Laboratory, whose congestion control
-saved the internet from collapse and put a window between throughput
-and round trip. iperf began at NLANR around 2003 as a portable heir
-of ttcp of 1984; iperf3 is the 2014 rewrite of the ESnet group at the
-same Berkeley laboratory, by Jon Dugan and Brian Tierney's team. mtr,
-Matt's traceroute, was written by Matt Kimball in 1997 and merged
-traceroute, of Van Jacobson again, with ping into one screen; Roger
-Wolff maintains it.
+Jacobson at Lawrence Berkeley Laboratory, whose congestion control, written
+after the congestion collapses of 1986, ties the throughput of a flow to its
+window and its round trip. iperf began at NLANR around 2003 as a portable
+heir of ttcp of 1984; iperf3 is the 2014 rewrite of the ESnet group at the
+same Berkeley laboratory, by Jon Dugan and Brian Tierney's team. mtr, Matt's
+traceroute, was written by Matt Kimball in 1997 and merged traceroute, of
+Van Jacobson again, with ping into one screen; Roger Wolff maintains it.
 
 Today: iperf3 and mtr are the first two tools of a network engineer facing a
-slow path, and the bandwidth-delay product is why a single TCP flow across an
-ocean needs large windows.
+slow path, and the bandwidth-delay product is why a single TCP flow across
+an ocean needs large windows.
 """
 
 SND, RCV, P1, P2 = "sender", "receiver", "probe1", "probe2"
@@ -154,7 +134,7 @@ def choose_rootfs():
         if ok:
             return cand
         said = (r.stdout + r.stderr).strip() or "nothing"
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -189,7 +169,7 @@ def tools_present(node, *tools):
     for t in tools:
         r = run('cloonix cli %s ssh %s "command -v %s"' % (NET, node, t))
         if r.returncode:
-            sys.exit("%s has no %s: this is not the perf image.\n"
+            unavailable("%s has no %s: this is not the perf image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -508,13 +488,13 @@ def main():
     story("    a whole round trip AND makes the sender halve its window,")
     story("    which then takes many round trips to grow back. The two")
     story("    impairments multiply, and that combination is what a bad")
-    story("    wifi link or a congested transit really is.")
+    story("    wifi link or a congested transit is.")
     story()
     story("      retransmissions counted by the sender: %s"
           % (both["retr"] if both["retr"] is not None else "not reported"))
     story()
 
-    step("ACT 4: a rate limit, two flows, and what the wire really carried")
+    step("ACT 4: a rate limit, two flows, and what the wire carried")
     story()
     cable_clear()
     cable_set("rate", 50)
@@ -598,7 +578,7 @@ def main():
         sys.exit("\n" + "\n".join("  " + b for b in bad))
 
     story("""
-the network is left up, with the cable clean. Things worth trying:
+the network is left up, with the cable clean. Things to try:
 
   set one direction only, and watch an asymmetric path behave:
     cloonix cli %s cnf cable A2B delay=200
@@ -611,21 +591,9 @@ the network is left up, with the cable clean. Things worth trying:
     cloonix cli %s ssh sender "sysctl -w net.ipv4.tcp_congestion_control=reno"
 
   and udp instead of tcp, which does not back off at all and shows what
-  the loss really is:
+  the loss is:
     cloonix cli %s ssh sender "iperf3 -c %s -u -b 100M -t 5"
 """ % (NET, NET, NET, NET, RCV_IP))
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit as stop:
-        if stop.code:
-            sys.stderr.write("%s\n" % stop.code)
-            up = [n for n in list(ALL) + [CABLE] if in_lst(n)]
-            if up:
-                sys.stderr.write("Still running: %s\n" % ", ".join(up))
-            raise SystemExit(1)
-        raise
-    except RuntimeError as err:
-        sys.stderr.write("%s\n" % err)
-        raise SystemExit(1)
+    guarded(main, list(ALL) + [CABLE])

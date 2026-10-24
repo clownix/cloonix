@@ -5,6 +5,7 @@
 #else
 #define VIRTIOPORT "/dev/virtio-ports/net.cloon.0"
 #endif
+#define CRUNSOCK           "/cloonixmnt/mountbear/sock"
 #define UNIX_CXP_SOCK      "/cloonixmnt/tmp/unix_cloonix_cxp_sock"
 
 /* One open byte pipe: the llid the host knows it by, and the socket to the
@@ -21,6 +22,8 @@ typedef struct t_pipe_ctx
   struct t_pipe_ctx *next;
 } t_pipe_ctx;
 
+void agent_init(void);
+void agent_run(int fd);
 void send_to_virtio(int dido_llid, int vwifi_base, int vwifi_cid,
                     int type, int val, int len, char *msg);
 int virtio_tx_high(void);

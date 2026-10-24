@@ -46,7 +46,7 @@ The same four moves in every package:
 1. **Run.** Paste the demo line. The terminal shows the cloonix commands,
    each one ready to be pasted again by hand.
 2. **Read.** On the canvas the items appear at the places of the figure.
-   From the Demo panel, the History popup tells each act and what it
+   From the Demo panel, the Comments panel tells each act and what it
    proved; its *About* view holds the drawing and the docstring.
 3. **Catch.** Put a sniffer on the interface named in the package. The
    filter runs in the switch; its grammar is a subset of tcpdump's: *ip ip6
@@ -81,17 +81,23 @@ Two machines, one lan, one ping: the smallest network, as containers then as vir
    :align: center
    :width: 100%
 
-**Needs:** image *trixie* for cnt.py, *trixie.qcow2* for kvm.py.
+**Needs:** image *trixie* for cnt.py, *trixie.qcow2* for kvm.py; for
+all.py, the images of each demo: it stops at the first demo that cannot run
+or fails.
 
 **The demos, in this order**::
 
+    cloonix cli nemo demo all.py                 every demo of this list in a row, stopping at the first problem
     cloonix cli nemo demo cloonix/cnt.py         two containers, one lan, one ping
     cloonix cli nemo demo cloonix/kvm.py         the same with two virtual machines
 
 **Steps**
 
+0. *all.py* plays every demo of this chapter in its order, nothing to press:
+   start it from the Demo panel and watch, or skip it and take them one by
+   one as below.
 1. Run *cnt.py*. Nine commands are printed: two *add cnt*, two *plug*, four *ssh* setting addresses, one ping.
-2. On the canvas: two circles, one lan between them, interface 0 of each as a green dot.
+2. On the canvas: two circles, one lan between them, interface 0 of each as a cyan dot, born without capture; the packet below turns the one of cnt1 green.
 3. Double-click *cnt1*: a root shell opens in a panel. Type *ip addr*: eth0 carries 1.1.1.1/24.
 4. Run *kvm.py*. The circles are larger, the wait before the first *ssh* is a kernel boot.
 5. Type the nine lines by hand, from the chapter *First run*, with other names and addresses.
@@ -134,7 +140,7 @@ The objects cloonix provides, used by every package after this one: a shaped cab
 
 **Steps**
 
-1. Run *a2b.py*. The ping times printed in the History popup change with each *cnf <a2b> A2B* line.
+1. Run *a2b.py*. The ping times printed in the Comments panel change with each *cnf <a2b> A2B* line.
 2. The a2b panel of the canvas holds the same loss, delay and rate as sliders, per direction.
 3. Run *snf.py*: four subscriptions on one interface, each with its filter and its count.
 4. Run *nat.py*: the guest gets its address by DHCP from the nat item and pings a name of the internet.
@@ -209,20 +215,20 @@ What a host needs before anything else: an address, a resolver, a clock.
 
 **Steps**
 
-1. Run *dhcp.py*. The client is two lans away from the server; the relay *r1* carries the request.
+1. Run *dhcp.py*. The client is two lans away from the server; the relay *relay1* carries the request.
 2. Run *ipv6.py*. No server this time: each host makes its address from the prefix *r1* advertises and from its own mac.
 3. Run *dns.py*, then *unbound.py* and *knot.py* as a pair: the resolver a client asks, and the server that holds the zone.
 4. Run *ntp.py*. The offset printed by the client decreases between two readings.
 
 **The packet**::
 
-    cloonix cli nemo sniff r1 eth0 --dump udp port 67 or udp port 68
+    cloonix cli nemo sniff relay1 eth0 --dump udp port 67 or udp port 68
     cloonix cli nemo sniff r1 eth0 --dump icmp6
     cloonix cli nemo sniff ns eth0 --dump udp port 53
     cloonix cli nemo sniff kp eth0 --dump tcp port 53
     cloonix cli nemo sniff ntps eth0 --dump udp port 123
 
-**Break and repair:** in *dhcp*, take down the interface of *r1* toward the server and ask for a lease again from the client: the DISCOVER is on *r1* 0, nothing leaves by *r1* 1.
+**Break and repair:** in *dhcp*, take down the interface of *relay1* toward the server and ask for a lease again from the client: the DISCOVER is on *relay1* eth0, nothing leaves by *relay1* eth1.
 
 **Known after this package:** DHCP is a broadcast that needs a relay to cross a router; an IPv6 host makes its own address from a router advertisement, icmp6 replacing arp; DNS is udp 53 and a zone transfer is tcp 53; NTP is udp 123.
 
@@ -250,7 +256,7 @@ A packet reaching a machine that is not on the same wire. Each demo adds one ide
 
 **Steps**
 
-1. Run *frrspider.py*. The canvas draws the web; the History popup gives the time taken for every router to hold every route.
+1. Run *frrspider.py*. The canvas draws the web; the Comments panel gives the time taken for every router to hold every route.
 2. Open a shell on *cod1* and type *vtysh -c "show ip route"*: the table computed by frr.
 3. Run *frrmix.py*: two protocols, and the redistribution between them.
 4. Run *bird.py* after *frrspider.py*: the same OSPF packets from a different program.
@@ -280,7 +286,7 @@ One connection encrypted end to end, then four tunnels: ways to cross a wire tha
    :align: center
    :width: 100%
 
-**Needs:** *openvpn_trixie* for tls, *wg_trixie*, *openvpn_trixie*, *tinc_trixie*, *strongswan_trixie*; for openvpn and tinc, on the host, *sudo modprobe tun*.
+**Needs:** *openvpn_trixie* for tls, *wg_trixie*, *openvpn_trixie*, *tinc_trixie*, *strongswan_trixie* and *libreswan_trixie* for ipsec; for openvpn and tinc, on the host, *sudo modprobe tun*.
 
 **The demos, in this order**::
 
@@ -422,7 +428,7 @@ A layer 2 network carried over a routed core, one logical network over several h
    :align: center
    :width: 100%
 
-**Needs:** *frr_trixie* and, on the host, *sudo modprobe vxlan*; *ovn_trixie* and, on the host, *sudo modprobe openvswitch*; *python_trixie.qcow2* for phy and realnet; *perf_trixie* for perf.
+**Needs:** *frr_trixie* and, on the host, *sudo modprobe vxlan*; *ovn_trixie* and, on the host, *sudo modprobe openvswitch*; *python_trixie.qcow2* and *trixie* for phy and realnet, *trixie.qcow2* too for realnet; *perf_trixie* for perf.
 
 **The demos, in this order**::
 
@@ -462,7 +468,7 @@ radios start on the air *kvmwifi*.
    :align: center
    :width: 100%
 
-**Needs:** for the containers, on the host *sudo modprobe mac80211_hwsim radios=0* and *trixie*; for the kvm, *trixie.qcow2* and nothing on the host.
+**Needs:** for the containers, on the host *sudo modprobe mac80211_hwsim radios=0* and *trixie*; for the kvm, *trixie.qcow2* and nothing on the host; *dhcp_trixie* for cntkvm_home, *radius_trixie* for cntkvm_enterprise.
 
 **The demos, in this order**::
 
@@ -560,7 +566,7 @@ as its only argument, and driving the server as the client does::
     ssh("cnt1", "ip addr add 1.1.1.1/24 dev eth0")
 
 The shortest way in: build the topology on the canvas, *Commands* in the
-Demo window, and put the lines it prints in a python programme. The chapter
+Demo panel, and put the lines it prints in a python programme. The chapter
 *Writing a demo* of the
 developer book has the house rules:
 the docstring, the ascii art, the packet to catch, the erase and the placing

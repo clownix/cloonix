@@ -42,7 +42,7 @@ uint64_t cloonix_get_msec(void)
   return result;
 }
 
-/* Wall clock, for timestamps only: it jumps, cloonix_get_usec does not.   */
+/* Wall clock, for timestamps only: it jumps, cloonix_get_usec does not. */
 uint64_t cloonix_get_epoch_usec(void)
 {
   struct timespec ts;
@@ -212,7 +212,7 @@ void rpct_init(t_rpct_tx rpc_tx)
   strncpy(g_bound_list[bnd_rpct_pid_resp],       "hop_pid_resp",  MAX_CLOWNIX_BOUND_LEN-1);
 }
 
-/* Weak default for a receiver the linking process does not define.        */
+/* Weak default for a receiver the linking process does not define. */
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #define RECV_DEFAULT(name, args) \
 __attribute__((weak)) void name args \

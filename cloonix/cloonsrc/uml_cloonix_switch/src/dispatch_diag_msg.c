@@ -81,7 +81,7 @@ void rpct_recv_sigdiag_msg(int llid, int tid, char *line)
     }
   else
     {
-    KERR("CANNOT DISPATCH %s", line);
+    KERR("ERROR no handler for the diag message %s", line);
     }
 }
 

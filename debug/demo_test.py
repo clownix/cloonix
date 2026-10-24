@@ -25,7 +25,12 @@ WHAT IT ASSERTS, WHICH IS MORE THAN "IT EXITED ZERO"
 
   before   the image the demo names can carry a container. A demo skipped
            for a missing image is a SKIP and says which script builds it,
-           because that is a different fact from a failure
+           because that is a different fact from a failure; the
+           HOST_MODULES of the demos absent from the host are loaded by
+           modprobe through passwordless sudo first, and a demo whose
+           module stays absent is a SKIP with the modprobe that loads it;
+           so is a demo marked NEEDS_ROOT on a net whose server does not
+           run as root
   during   the output is captured whole, and the run is killed at the
            timeout rather than left to hang the batch
   after    exit code, and the demo's own last words when it failed -- every
@@ -53,10 +58,13 @@ Standard library only.
 """
 import os
 import re
+import shutil
 import subprocess
+import syslog
 import threading
 import sys
 import time
+from testitall import sudo, sudo_ok
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -142,16 +150,9 @@ def net_up(net=None):
 # The nets a demo drives beside NET; started here when they do not answer,
 # and the ones started here are killed at the end.
 EXTRA_NETS = {"cloonix/c2c.py": ("fido", "mito")}
-# Alone too: the demos that boot a kvm. A kvm boots from the same disk the
-# other worker's first-use extractions of tar.gz images hammer, and two kvm
-# stayed unanswered for two minutes under it.
-# The kvm wifi demos too: 2 to 4 kvm each, and a medium, the agents and
-# doorways, that must beat every 100 ms; beside the other worker the guests
-# starved, beacons were lost and the pings failed, cnt radios included.
-# The two frr spiders too: 60 routers each, side by side the machine went to
-# 94% system time and paged, every loop stalled 20 s and bgp never started.
-# stp too: its act 2 is a real broadcast storm, the machine went to 94%
-# softirq and the loops of both nets stalled 7 s.
+# Alone too: kvm-booting demos (disk shared with the other worker's
+# extractions), kvm wifi demos (100 ms beats starve), the two frr
+# spiders (60 routers each) and stp (a real broadcast storm).
 ALONE = set(EXTRA_NETS) | {"cloonix/phy.py", "cloonix/realnet.py",
                            "cloonix/kvm.py", "freebsd.py", "windows.py",
                            "cisco.py", "cloonix/kvmwifi.py",
@@ -165,9 +166,35 @@ ALONE = set(EXTRA_NETS) | {"cloonix/phy.py", "cloonix/realnet.py",
                            "switching/stp.py"}
 g_started_nets = []
 
+def stale_server(net):
+    """The server of the net runs a binary replaced since it started (an
+    install over a running net): its exe is a deleted file."""
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            with open("/proc/%s/cmdline" % pid, "rb") as f:
+                argv = f.read().split(b"\0")
+            exe = os.readlink("/proc/%s/exe" % pid)
+        except OSError:
+            continue
+        argv = [a for a in argv if a]
+        if (argv and argv[0].endswith(b"cloonix-main-server") and
+                argv[-1] == net.encode() and exe.endswith(" (deleted)")):
+            return True
+    return False
+
 def nets_for(name):
     """The extra nets of a demo up, or the reason they are not."""
     for net in EXTRA_NETS.get(name, ()):
+        if net_up(net) and stale_server(net):
+            print("  %s runs the binaries of an earlier install: restarted"
+                  % net)
+            subprocess.run(CLOONIX + ["stop", net], capture_output=True,
+                           text=True, timeout=60, stdin=subprocess.DEVNULL)
+            end = time.time() + 40
+            while time.time() < end and net_up(net):
+                time.sleep(1)
         if net_up(net):
             continue
         subprocess.run(CLOONIX + ["start", net], capture_output=True,
@@ -264,22 +291,90 @@ def images_of(path):
         needed.append(m.group(1))
     return (list(dict.fromkeys(choices)), list(dict.fromkeys(needed)))
 
+def modules_of(path):
+    """The kernel modules the host must have loaded, HOST_MODULES of the
+    demo, read out of its source without running it."""
+    try:
+        with open(path) as f:
+            text = f.read()
+    except OSError:
+        return []
+    m = re.search(r"^HOST_MODULES\s*=\s*\((.*?)\)", text, re.S | re.M)
+    return re.findall(r"[\"']([^\"']+)[\"']", m.group(1)) if m else []
+
+def host_has_module(mod):
+    """Loaded on the host: /sys/module/<name>, underscores for dashes."""
+    return any(os.path.isdir("/sys/module/" + n)
+               for n in (mod, mod.replace("-", "_")))
+
+def load_host_modules(found):
+    """The HOST_MODULES of the demos to run that the host lacks, loaded by
+    modprobe through passwordless sudo, as sub_air_medium.py loads its own:
+    cloonix never loads a module, its containers cannot."""
+    mods = sorted({m for name, path, _ in found if wanted(name)[0]
+                   for m in modules_of(path) if not host_has_module(m)})
+    if not mods:
+        return
+    if not sudo_ok():
+        print("  not loaded, no passwordless sudo: %s, their demos skipped"
+              % " ".join(mods))
+        return
+    r = sudo("modprobe", "-a", *mods)
+    left = [m for m in mods if not host_has_module(m)]
+    if left:
+        print("  still not loaded: %s, their demos skipped (%s)"
+              % (" ".join(left), (r.stderr or r.stdout).strip()
+                 or "modprobe exit %d" % r.returncode))
+
+def plays_the_packages(path):
+    """all.py: PLAYS_THE_PACKAGES = True, every other demo in a row."""
+    try:
+        with open(path) as f:
+            return re.search(r"^PLAYS_THE_PACKAGES\s*=\s*True\b", f.read(),
+                             re.M) is not None
+    except OSError:
+        return False
+
+def needs_root(path):
+    """NEEDS_ROOT = True in the demo source: it works on a root net only."""
+    try:
+        with open(path) as f:
+            return re.search(r"^NEEDS_ROOT\s*=\s*True\b", f.read(), re.M) is not None
+    except OSError:
+        return False
+
+def net_runs_as_root(net):
+    """The uid of cloonix-main-server <config> <net>, read in /proc."""
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            with open("/proc/%s/cmdline" % pid, "rb") as f:
+                argv = f.read().split(b"\0")
+            if (len(argv) > 2 and os.path.basename(argv[0]) ==
+                    b"cloonix-main-server" and argv[2].decode() == net):
+                with open("/proc/%s/status" % pid) as f:
+                    uid = re.search(r"^Uid:\s+(\d+)", f.read(), re.M)
+                return uid is not None and uid.group(1) == "0"
+        except OSError:
+            continue
+    return False
+
 BULK = "/var/lib/cloonix/bulk"
 
-# Not the toy's: mount.py names a directory of the host's /tmp, and a toy
-# sees nothing of the host but its bulk, as /root/bulk_host; limit.py caps a
-# container's cpu and ram, and a container of the toy has no cgroup; c2c.py
-# drives a third net, fido, that "cloonix start" starts from the bundle, and a
-# toy is one net per extraction (the c2c itself is checked in phase 3); nat.py
-# ends by publishing a host-loopback service and fetching it from inside
-# through DNAT, which does not cross the toy's extra layer of nesting (the
-# masquerade itself is checked in phase 3).
-TOY_NO = ("cloonix/mount.py", "cloonix/limit.py", "cloonix/c2c.py",
-          "cloonix/nat.py")
-# Not the toy's either when it runs with a single uid mapping
-# (TESTITALL_TOY_SINGLE_IDMAP, set by testitalltoy.sh from config/idmap):
-# setgroups is denied inside, and these daemons drop their privileges at
-# start, so they die there.
+# Not the toy's: toy_targz/toy_drop, the demos the toy leaves out.
+def toy_drop():
+    path = os.path.join(HERE, "..", "toy_targz", "toy_drop")
+    try:
+        with open(path) as f:
+            return tuple(l.split()[0] for l in f
+                         if l.strip() and not l.startswith("#"))
+    except OSError:
+        return ()
+# c2c.py needs a third net, fido, which the toy runs do not start.
+TOY_NO = toy_drop() + ("cloonix/c2c.py",)
+# Nor with a single uid mapping (TESTITALL_TOY_SINGLE_IDMAP): setgroups is
+# denied, daemons that drop privileges die.
 TOY_SINGLE_NO = ("address/dns.py", "address/dhcp.py", "services/smtp.py",
                  "services/mqtt.py", "services/proxy.py",
                  "services/asterisk.py", "cloonix/nginx.py")
@@ -296,10 +391,8 @@ def wanted(name):
     if os.environ.get("TESTITALL_TOY_SINGLE_IDMAP") and name in TOY_SINGLE_NO:
         return False, ("toy: single uid mapping, setgroups denied, its daemon "
                        "cannot drop privileges (see TOY_SINGLE_NO)")
-    # cloonix never loads a module, and RHEL has none to load: the demo is
-    # for a machine where it is loaded (sub_cntwifi.py loads it in the suite).
-    # The kvm radios are made in the guests: nothing needed on the host,
-    # a cnt radio, cntkvm demos included, needs the module.
+    # cloonix never loads a module (RHEL has none): cnt radios need it loaded
+    # (sub_cntwifi.py does), kvm radios nothing on the host.
     if (name in ("cloonix/cntwifi.py", "cloonix/cntkvmwifi.py") or
             name.startswith("wifi/cnt")) and not hwsim_loaded():
         return False, ("mac80211_hwsim is not loaded: "
@@ -362,17 +455,41 @@ def builder_for(image):
             return "vm_create/%s/cnt_%s.sh" % (d, image)
     return "vm_create/cnt_kvm_demo/cnt_%s.sh (not in this tree)" % image
 
-def syslog_size():
+def kerr_source():
+    """Where the KERR lines are read: the syslog file, else the journal (a
+    host without rsyslog has no /var/log/syslog), else nowhere, said."""
     if NO_SYSLOG:
         return None
-    try:
-        return os.path.getsize(SYSLOG)
-    except OSError:
-        return None
+    if os.path.isfile(SYSLOG):
+        return "file"
+    if shutil.which("journalctl"):
+        return "journal"
+    return None
+
+KERR_SOURCE = kerr_source()
+
+def syslog_size():
+    """A mark in the log: an offset in the file, a time in the journal."""
+    if KERR_SOURCE == "file":
+        try:
+            return os.path.getsize(SYSLOG)
+        except OSError:
+            return None
+    if KERR_SOURCE == "journal":
+        return ("journal", time.time())
+    return None
 
 def syslog_since(offset):
     if offset is None:
         return []
+    if isinstance(offset, tuple):
+        r = subprocess.run(["journalctl", "-q", "-o", "cat", "--since",
+                            "@%d" % int(offset[1])], capture_output=True,
+                           text=True, stdin=subprocess.DEVNULL)
+        if r.returncode != 0 or (not r.stdout and r.stderr.strip()):
+            print("  WARNING journalctl: %s, the KERR of this demo are not "
+                  "counted" % (r.stderr.strip() or "exit %d" % r.returncode))
+        return r.stdout.split("\n")
     try:
         with open(SYSLOG, "rb") as f:
             f.seek(offset)
@@ -471,6 +588,14 @@ def tail_story(got, n):
 
 g_print_lock = threading.Lock()
 
+def phase(name):
+    """A marker in the syslog: every KERR after it belongs to this demo."""
+    try:
+        syslog.syslog("CLOONIX-PHASE %s" % name)
+    except Exception:
+        pass
+
+
 def run_demo(name, path, images, net, say):
     """One demo on one net: the verdict, printed through say()."""
     want, why = wanted(name)
@@ -489,6 +614,24 @@ def run_demo(name, path, images, net, say):
         say("        build it:  ./%s" % builder_for(missing[0]))
         return {"name": name, "verdict": "SKIP", "took": 0.0, "kerr": {},
                 "crash": [], "why": "no %s" % missing[0]}
+    unloaded = [m for m in modules_of(path) if not host_has_module(m)]
+    if unloaded:
+        say("  SKIP  %-32s host module not loaded: %s"
+            % (name, " ".join(unloaded)))
+        say("        load it:")
+        say("sudo modprobe %s" % " ".join(unloaded) if len(unloaded) == 1
+            else "sudo modprobe -a %s" % " ".join(unloaded))
+        return {"name": name, "verdict": "SKIP", "took": 0.0, "kerr": {},
+                "crash": [], "why": "module %s" % unloaded[0]}
+    if plays_the_packages(path):
+        say("  SKIP  %-32s plays the others, each tested on its own" % name)
+        return {"name": name, "verdict": "SKIP", "took": 0.0, "kerr": {},
+                "crash": [], "why": "plays the others"}
+    if needs_root(path) and not net_runs_as_root(net):
+        say("  SKIP  %-32s needs a net run as root, %s is not" % (name, net))
+        return {"name": name, "verdict": "SKIP", "took": 0.0, "kerr": {},
+                "crash": [], "why": "net not root"}
+    phase("demo %s" % name)
     why = nets_for(name)
     if why:
         say("  FAIL  %-32s %s" % (name, why))
@@ -603,6 +746,10 @@ def main():
     print("  net      %s" % " ".join(NETS))
     print("  logs     %s" % LOGS)
     print("  timeout  %d s per demo" % TIMEOUT)
+    print("  kerr     %s" % {"file": SYSLOG, "journal": "the journal (no %s)"
+                             % SYSLOG}.get(KERR_SOURCE, "NOT COUNTED: no %s "
+                             "and no journalctl" % SYSLOG
+                             if not NO_SYSLOG else "not counted, --no-syslog"))
     print()
 
     if LIST_ONLY:
@@ -624,6 +771,7 @@ def main():
                      "clear: %s\n  every result after this would be about "
                      "the wrong demo." % (net, why))
     print("  the net is empty, so the first demo starts from nothing")
+    load_host_modules(found)
     print()
 
     results = []

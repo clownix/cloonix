@@ -102,6 +102,7 @@ static void extremely_last_action(void *data)
     if (tot == 0)
       {
       clownix_free(lst, __FUNCTION__);
+      KERR("INFO stopped");
       exit(0);
       }
     }
@@ -133,59 +134,59 @@ void last_action_self_destruction(void *data)
   unlink(path);
   if (rm_work_dir(utils_get_ovs_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_dtach_sock_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_snf_pcap_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_log_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_crun_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_c2c_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_nat_main_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_nat_proxy_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_a2b_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_run_config_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(utils_get_run_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(cfg_get_work(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(cfg_get_root_work(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   if (rm_work_dir(get_proxymous_dir(), err))
     {
-    KERR("ERROR DELETE PROBLEM: %s\n", err);
+    KERR("ERROR DELETE PROBLEM: %s", err);
     }
   KTRC("shutdown stage 4: directories cleared, the switch exits next");
   clownix_timeout_add(20, extremely_last_action, NULL, NULL, NULL);
@@ -268,8 +269,11 @@ void auto_self_destruction(int llid, int tid, char *reason)
 {
   t_llid_tid *llid_tid = (t_llid_tid *) clownix_malloc(sizeof(t_llid_tid), 11);
   /* Name the caller: this stops the entire net and there are two ways in. */
-  KERR("%snet stopping, asked by: %s (llid=%d tid=%d)",
-       llid ? "" : "WARNING ", reason ? reason : "nobody said", llid, tid);
+  if (llid)
+    KTRC("net stopping, asked by: %s (llid=%d tid=%d)",
+         reason ? reason : "a client", llid, tid);
+  else
+    KERR("WARNING net stopping, asked by: %s", reason ? reason : "nobody said");
   glob_req_self_destruction = 1;
   llid_tid->llid = llid;
   llid_tid->tid = tid;

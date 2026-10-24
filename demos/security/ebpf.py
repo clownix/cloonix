@@ -43,15 +43,12 @@ import os
 import sys
 
 HISTORY = """\
-eBPF grew out of the Berkeley Packet Filter, the small in-kernel virtual
-machine tcpdump has used since the 1990s. From 2014 Alexei Starovoitov and
-Daniel Borkmann in the linux kernel community turned it into a general way to
-run safe, verified programs inside the kernel, attached to many kinds of
-hook. XDP, the eXpress Data Path, is the hook that runs on a raw frame at the
-driver, before any allocation, and is the fastest place to drop or redirect a
-packet. It is the machinery under modern load balancers, firewalls and
-observability tools. This demo is the smallest useful XDP program: drop one
-protocol.
+eBPF grew out of the Berkeley Packet Filter that tcpdump has used since the
+1990s. From 2014 Alexei Starovoitov and Daniel Borkmann turned it into a
+general way to run safe, verified programs inside the kernel. XDP, the
+eXpress Data Path, is the hook that runs on a raw frame at the driver,
+before any allocation: the earliest point of the kernel where a packet can
+be dropped or redirected.
 """
 
 import base64
@@ -64,9 +61,11 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
     NET, build, check_net, choose_rootfs, count_on, cut_off, erase_net, hold,
-    place, reached, ssh, step, story, tools_present)
+    place, reached, ssh, step, story, tools_present, unavailable)
 
 ROOTFS_CHOICES = ("ebpf_trixie",)
+# XDP loads are checked against the initial user namespace
+NEEDS_ROOT = True
 
 H1, H2 = "h1", "h2"
 ALL = (H1, H2)
@@ -82,6 +81,7 @@ BPF_C = """\
 #include <linux/bpf.h>
 #include <linux/if_ether.h>
 #include <linux/ip.h>
+#include <linux/in.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
 
@@ -127,7 +127,7 @@ def attach():
                 "sec xdp 2>&1; ip -d link show dev eth0 | grep -q xdp "
                 "&& echo ATTACHED || echo NO", check=False)
     if "ATTACHED" not in r:
-        sys.exit("the XDP program would not attach.\n"
+        unavailable("the XDP program would not attach.\n"
                  "  loading an XDP program is checked against the initial user\n"
                  "  namespace, which a container run as your normal user does\n"
                  "  not have, and no host command grants it. This one demo\n"
@@ -211,7 +211,7 @@ def main():
                  % (ok_before, ok_dropped, ok_after))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the loaded program, and attach or detach it by hand:
     cloonix cli %s ssh h2 "bpftool prog show"

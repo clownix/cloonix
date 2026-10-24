@@ -1,8 +1,7 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
 
-/* One TU: cloonix_gui_server.c includes this, the web_*.c, then topo_web.c.
- * Routes: GET /ws-<sock>/ snf proxy, /vnc-<vm>/ vnc proxy, /sh-<net>/<kind>/
- * pty bridge, /topo /images ws push, POST /ctl/ commands, GET /<path> static. */
+/* One TU: cloonix_gui_server.c includes web_*.c then topo_web.c. Routes: /ws-,
+ * /vnc-, /sh-<net>/<kind>/ pty, /topo /images ws, POST /ctl/, static files. */
 
 #ifndef WEB_COMMON_H
 #define WEB_COMMON_H
@@ -69,6 +68,7 @@ void topo_web_add_phy(char *name, int macvlan);
 void topo_web_cnf_a2b(char *name, int dir, char *cmd, int val);
 void topo_web_position(char *name, int x, int y);
 void topo_web_poseth(char *name, int num, int deg);
+void topo_web_note(char *name, char *txt);
 void topo_web_add_c2c(char *name_and_dest);
 void topo_web_del_node(char *name);
 void topo_web_reboot_vm(char *name);

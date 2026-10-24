@@ -47,14 +47,12 @@ from demolib import (
     put, ssh, step, story, tools_present)
 
 HISTORY = """\
-RADIUS -- Remote Authentication Dial-In User Service -- was written by Carl
-Rigney at Livingston Enterprises in 1991 for dial-up modem banks, and
-standardised as RFC 2865. It is the protocol that sits behind "log in and be
-let onto the network": a device that guards access, the client, asks a central
-server whether a set of credentials is good, and the server answers accept or
-reject. FreeRADIUS, begun in 1999 and long led by Alan DeKok, is the dominant
-open implementation and runs a large share of the world's wifi and wired
-authentication.
+RADIUS, Remote Authentication Dial-In User Service, was written by Carl
+Rigney at Livingston Enterprises in 1991 and standardised as RFC 2865. It is
+the protocol behind logging in and being let onto a network: a device that
+guards access asks a central server whether credentials are good, and the
+server answers accept or reject. FreeRADIUS, led for years by Alan DeKok, is
+the open implementation run here.
 """
 
 ROOTFS_CHOICES = ("radius_trixie",)
@@ -180,7 +178,7 @@ def main():
                         check=False)))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   authenticate by hand, right and wrong:
     cloonix cli %s ssh rac "radtest alice secret123 10.0.0.2 0 %s 0 10.0.0.10"

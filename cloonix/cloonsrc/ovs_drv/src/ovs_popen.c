@@ -26,7 +26,7 @@ static char *make_cmd_str(char **argv)
     {
     if (len + (int)strlen(argv[i]) + 2 > (int)sizeof(result))
       {
-      KERR("NOT POSSIBLE");
+      KERR("ERROR command line too long, cut");
       break;
       }
     len += snprintf(result+len, sizeof(result)-len, "%s ", argv[i]);
@@ -49,6 +49,14 @@ static void add_cmd_to_log(char *ovs_dir, char *argv[])
     }
 }
 
+/* The parent and its netns child both run commands: one output file per
+   process, named by the pid of the process that runs and reads it. */
+static void out_file(char *path, char *ovs_dir, int pid)
+{
+  memset(path, 0, MAX_PATH_LEN);
+  snprintf(path, MAX_PATH_LEN-1, "%s/ovs_cmd_out_%d.txt", ovs_dir, pid);
+}
+
 /* The non-empty lines the last command printed, trimmed, at most max. */
 int ovs_popen_read_lines(char *ovs_dir, char lines[][MAX_NAME_LEN], int max)
 {
@@ -57,8 +65,7 @@ int ovs_popen_read_lines(char *ovs_dir, char lines[][MAX_NAME_LEN], int max)
   FILE *fp;
   int nb = 0, len;
   char *ptr;
-  memset(errfile, 0, MAX_PATH_LEN);
-  snprintf(errfile, MAX_PATH_LEN-1, "%s/ovs_cmd_stderr.txt", ovs_dir);
+  out_file(errfile, ovs_dir, getpid());
   fp = fopen(errfile, "r");
   if (!fp)
     return -1;
@@ -87,8 +94,7 @@ int ovs_popen_last_said(char *ovs_dir, char *needle)
   char line[512];
   FILE *fp;
   int found = 0;
-  memset(errfile, 0, MAX_PATH_LEN);
-  snprintf(errfile, MAX_PATH_LEN-1, "%s/ovs_cmd_stderr.txt", ovs_dir);
+  out_file(errfile, ovs_dir, getpid());
   fp = fopen(errfile, "r");
   if (!fp)
     return 0;
@@ -110,8 +116,7 @@ static void log_what_the_command_said(char *ovs_dir)
   char line[512];
   FILE *fp;
   int nb = 0;
-  memset(errfile, 0, MAX_PATH_LEN);
-  snprintf(errfile, MAX_PATH_LEN-1, "%s/ovs_cmd_stderr.txt", ovs_dir);
+  out_file(errfile, ovs_dir, getpid());
   fp = fopen(errfile, "r");
   if (!fp)
     return;
@@ -152,6 +157,7 @@ static int enter_netns(char *netns)
 static int ovs_popen(char *ovs_dir, char *argv[], char *netns)
 {
   int exited_pid, timeout_pid, worker_pid, chld_state, pid, status=97;
+  int caller = getpid();
   pid_t rc_pid;
   add_cmd_to_log(ovs_dir, argv);
   if ((pid = fork()) < 0)
@@ -166,8 +172,7 @@ static int ovs_popen(char *ovs_dir, char *argv[], char *netns)
       {
       char errfile[MAX_PATH_LEN];
       int efd;
-      memset(errfile, 0, MAX_PATH_LEN);
-      snprintf(errfile, MAX_PATH_LEN-1, "%s/ovs_cmd_stderr.txt", ovs_dir);
+      out_file(errfile, ovs_dir, caller);
       efd = open(errfile, O_WRONLY|O_CREAT|O_TRUNC, 0644);
       if (efd >= 0)
         {
@@ -199,7 +204,7 @@ static int ovs_popen(char *ovs_dir, char *argv[], char *netns)
       if (WIFEXITED(chld_state))
         status = WEXITSTATUS(chld_state);
       if (WIFSIGNALED(chld_state))
-        KERR("Child exited via signal %d\n",WTERMSIG(chld_state));
+        KERR("ERROR child killed by signal %d", WTERMSIG(chld_state));
       kill(timeout_pid, SIGKILL);
       }
     else
@@ -215,12 +220,12 @@ static int ovs_popen(char *ovs_dir, char *argv[], char *netns)
     if (WIFEXITED(chld_state))
       status = WEXITSTATUS(chld_state);
     if (WIFSIGNALED(chld_state))
-      KERR("Child exited via signal %d\n",WTERMSIG(chld_state));
+      KERR("ERROR child killed by signal %d", WTERMSIG(chld_state));
     }
   else
     {
     if (errno != ECHILD)
-      KERR("Unexpected error %s", strerror(errno));
+      KERR("ERROR waitpid: %s", strerror(errno));
     }
   return status;
 }
@@ -231,7 +236,7 @@ int call_ovs_popen(char *ovs_dir, char **argv, int quiet,
   return call_ovs_popen_ns(ovs_dir, argv, quiet, fct, line, NULL);
 }
 
-/* netns: the cloonix net namespace the command runs in, NULL for none.    */
+/* netns: the cloonix net namespace the command runs in, NULL for none. */
 int call_ovs_popen_ns(char *ovs_dir, char **argv, int quiet,
                       const char *fct, int line, char *netns)
 {

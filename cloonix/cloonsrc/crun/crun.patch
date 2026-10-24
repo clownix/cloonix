@@ -1,7 +1,7 @@
 diff -Naur crun/src/libcrun/cgroup-utils.c crun_tainted/src/libcrun/cgroup-utils.c
---- crun/src/libcrun/cgroup-utils.c	2026-09-19 07:04:31.000000000 +0000
-+++ crun_tainted/src/libcrun/cgroup-utils.c	2026-09-20 17:40:44.613186950 +0000
-@@ -39,6 +39,15 @@
+--- crun/src/libcrun/cgroup-utils.c	2026-10-24 11:33:08.000000000 +0200
++++ crun_tainted/src/libcrun/cgroup-utils.c	2026-10-24 12:05:24.076947332 +0200
+@@ -41,6 +41,15 @@
  #include <fcntl.h>
  #include <libgen.h>
  
@@ -17,7 +17,7 @@ diff -Naur crun/src/libcrun/cgroup-utils.c crun_tainted/src/libcrun/cgroup-utils
  struct symlink_s
  {
    const char *name;
-@@ -1074,6 +1083,9 @@
+@@ -1325,6 +1334,9 @@
  int
  libcrun_move_process_to_cgroup (pid_t pid, pid_t init_pid, const char *path, bool create_if_missing, libcrun_error_t *err)
  {
@@ -28,8 +28,8 @@ diff -Naur crun/src/libcrun/cgroup-utils.c crun_tainted/src/libcrun/cgroup-utils
    if (UNLIKELY (cgroup_mode < 0))
      return cgroup_mode;
 diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
---- crun/src/libcrun/error.c	2026-09-19 07:04:31.000000000 +0000
-+++ crun_tainted/src/libcrun/error.c	2026-09-20 17:40:44.613443910 +0000
+--- crun/src/libcrun/error.c	2026-10-24 11:33:08.000000000 +0200
++++ crun_tainted/src/libcrun/error.c	2026-10-24 12:05:24.076947332 +0200
 @@ -42,6 +42,15 @@
  static int log_format;
  static int output_verbosity = LIBCRUN_VERBOSITY_ERROR;
@@ -47,11 +47,11 @@ diff -Naur crun/src/libcrun/error.c crun_tainted/src/libcrun/error.c
  libcrun_make_error (libcrun_error_t *err, int status, const char *msg, ...)
  {
 diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
---- crun/src/libcrun/linux.c	2026-09-19 07:04:31.000000000 +0000
-+++ crun_tainted/src/libcrun/linux.c	2026-09-20 17:41:31.770707362 +0000
-@@ -118,6 +118,15 @@
- /* The per-mount flags a remount clears unless they are explicitly set.  */
- #define REMOUNT_CLEAR_FLAGS (MS_RDONLY | MS_NOSUID | MS_NODEV | MS_NOEXEC | MS_NOSYMFOLLOW)
+--- crun/src/libcrun/linux.c	2026-10-24 11:33:08.000000000 +0200
++++ crun_tainted/src/libcrun/linux.c	2026-10-24 12:05:24.080947288 +0200
+@@ -156,6 +156,15 @@
+   return flags;
+ }
  
 +/*-------------------------------------------------------------------------*/
 +#include <syslog.h>
@@ -65,7 +65,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
  struct remount_s
  {
    struct remount_s *next;
-@@ -2178,7 +2187,7 @@
+@@ -2272,7 +2281,7 @@
    return crun_make_error (err, 0, "unknown cgroup mode `%d`", cgroup_mode);
  }
  
@@ -74,7 +74,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
                                    { "/dev/zero", "c", 1, 5, 0666, 0, 0 },
                                    { "/dev/full", "c", 1, 7, 0666, 0, 0 },
                                    { "/dev/tty", "c", 5, 0, 0666, 0, 0 },
-@@ -2224,6 +2233,16 @@
+@@ -2318,6 +2327,16 @@
      }
  }
  
@@ -91,7 +91,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
  /* Check if the specified path is a direct child of /dev.  If it is
   return a pointer to the basename.  */
  static const char *
-@@ -2458,17 +2477,30 @@
+@@ -2593,17 +2612,30 @@
          return ret;
      }
  
@@ -130,7 +130,7 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
  
    for (i = 0; symlinks[i].target; i++)
      {
-@@ -2647,9 +2679,9 @@
+@@ -2838,9 +2870,9 @@
    if (strcmp (destination, "/dev/pts") == 0)
      {
        if (container->host_uid == 0)

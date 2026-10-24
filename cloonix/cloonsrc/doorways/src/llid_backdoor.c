@@ -36,6 +36,12 @@ enum
   ping_ko,
 };
 
+/* A delete tells suid_power to stop the guest and doorways to forget it, so
+   the backdoor may close first; the switch frees a guest whose process died
+   once its eths are released, seconds on a loaded host. A close is said
+   only of a guest still known this long after it. */
+#define BACKDOOR_CLOSE_GRACE_MS 10000
+
 int sock_nonblock_client_unix(char *pname);
 static void action_bvm_connect_backdoor(t_backdoor_vm *bvm);
 static void timer_bvm_connect_backdoor(void *data);
@@ -240,7 +246,17 @@ static void llid_setup(t_backdoor_vm *bvm, int llid, int fd)
     KOUT("ERROR  ");
   bvm->backdoor_llid = llid;
   bvm->backdoor_fd   = fd;
+  bvm->closed_ms = 0;
   g_llid_backdoor[llid] = bvm;
+}
+
+static void backdoor_closed(t_backdoor_vm *bvm, char *how)
+{
+  if (bvm->closed_ms == 0)
+    {
+    bvm->closed_ms = cloonix_get_msec();
+    snprintf(bvm->closed_how, MAX_NAME_LEN, "%s", how);
+    }
 }
 
 static void llid_dido_traf_end_all(t_backdoor_vm *bvm)
@@ -443,9 +459,7 @@ void llid_backdoor_cloonix_down_and_not_running(char *name)
     {
     bvm->cloonix_up_and_running = 0;
     kvmwifi_agent_down(bvm);
-    /* Backdoor dropped: the agent is relaunched (qga in a kvm, init in a cnt)
-       on the same socket, so keep retrying: drop the llid, reset the count,
-       re-arm. plug_to_backdoor_llid sets up_and_running again on success. */
+    /* Backdoor dropped: the agent restarts on the same socket, retry. */
     if (bvm->backdoor_llid)
       llid_unsetup(bvm);
     else
@@ -492,12 +506,12 @@ static void vm_err_cb (int llid, int err, int from)
   bvm = vm_get_with_backdoor_llid(llid);
   if (bvm)
     {
+    char how[MAX_NAME_LEN];
     if ((err == ECONNRESET) || (err == EPIPE))
-      KERR("WARNING %s: its backdoor closed, the guest is gone (reset, "
-           "data was in flight)", bvm->name);
+      snprintf(how, MAX_NAME_LEN, "reset, data was in flight");
     else
-      KERR("WARNING %s: its backdoor channel llid %d closed (err=%d "
-           "from=%d)", bvm->name, llid, err, from);
+      snprintf(how, MAX_NAME_LEN, "llid %d err=%d from=%d", llid, err, from);
+    backdoor_closed(bvm, how);
     if ((llid != bvm->backdoor_llid))
       KERR("ERROR %s: llid %d is not its backdoor llid %d",
            bvm->name, llid, bvm->backdoor_llid);
@@ -550,7 +564,7 @@ static int vm_rx_cb(int llid, int fd)
       msg_delete_channel(llid);
     if (bvm)
       {
-      KERR("WARNING %s: its backdoor closed, the guest is gone", bvm->name);
+      backdoor_closed(bvm, "end of stream");
       llid_backdoor_cloonix_down_and_not_running(bvm->name);
       }
     }
@@ -559,7 +573,11 @@ static int vm_rx_cb(int llid, int fd)
     len = 0;
     if ((errno != EAGAIN) && (errno != EINTR))
       {
-      KERR("ERROR BAD BACKDOOR 4 %s errno:%d", bvm->name, errno);
+      if (errno == ECONNRESET)
+        backdoor_closed(bvm, "reset, data was in flight");
+      else
+        KERR("ERROR %s: reading its backdoor failed: %s", bvm->name,
+             strerror(errno));
       if (msg_exist_channel(llid))
         msg_delete_channel(llid);
       llid_backdoor_cloonix_down_and_not_running(bvm->name);
@@ -633,6 +651,18 @@ static void timer_ga_heartbeat(void *data)
     {
     bvm->heartbeat_abeat = 0;
     bvm->heartbeat_ref = 0;
+    if ((bvm->closed_ms) &&
+        (cloonix_get_msec() - bvm->closed_ms >= BACKDOOR_CLOSE_GRACE_MS))
+      {
+      if (cloonix_get_msec() - bvm->reboot_ms < REBOOT_QUIET_MS)
+        KTRC("%s: its backdoor closed (%s) after the reboot asked for",
+             bvm->name, bvm->closed_how);
+      else
+        KERR("WARNING %s: its backdoor closed (%s), and %d s later the guest "
+             "is neither deleted nor reconnected", bvm->name, bvm->closed_how,
+             BACKDOOR_CLOSE_GRACE_MS / 1000);
+      bvm->closed_ms = 0;
+      }
     if (bvm->cloonix_not_yet_connected)
       {
       bvm->cloonix_not_yet_connected = 0;

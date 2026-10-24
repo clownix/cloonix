@@ -3,7 +3,7 @@
 
     ./systemd.py [net]                  default net: nemo
 
-A cloonix container runs NO INIT unless it asks for one::
+A cloonix container runs no init unless it asks for one::
 
       sysd1 ---- lan1 ---- plain1
     10.0.0.1             10.0.0.2
@@ -11,72 +11,40 @@ A cloonix container runs NO INIT unless it asks for one::
        lan1 ---- plain2
                10.0.0.3
 
-sysd1 is created with startup_env=CLOONIX_WITH_SYSTEMD=1 and the plain
-trixie_systemd image. The other two are created with nothing extra, because
-no systemd is the default and there is no flag that says so.
+sysd1 is created on the image trixie_systemd with
+startup_env=CLOONIX_WITH_SYSTEMD=1, the other two with nothing extra: no
+systemd is the default, and no flag says so.
 
   ACT 1  the three containers, the lan, the addresses
   ACT 2  the ping, which works for all three
   ACT 3  the difference, read from inside: pid 1, systemctl, process count
-  ACT 4  the host side, the inotify instances and the limit they count against
-
-The default was turned over for a measured reason, not a taste: every
-systemd wants several inotify instances, the kernel counts them per USER
-across every container, and past the limit a container dies at once with
-nothing logged. ACT 4 shows how close this machine is to that.
-
-Standard library only, like cloonix itself.
+  ACT 4  the host side: the inotify instances and the limit they count against
 
 Image: trixie_systemd for the one with init, trixie for the others
 Size:  3 containers, 1 lan
 
-WHY THIS DEMO EXISTS
---------------------
-A cloonix container runs NO INIT unless it asks for one:
+WHY NO INIT BY DEFAULT
+----------------------
+Each systemd takes several inotify instances, counted by the kernel per
+user across every container of the machine. With the debian default of
+128, near the twenty-fourth container inotify_init returns EMFILE, systemd
+exits, pid 1 with it, and the container disappears having logged nothing: a
+soak run measured 66 of 1324 containers dying that way, between 0.2 and 4.8
+seconds old, the crun scope reporting success. A guest that routes packets
+has no use for an init.
 
-    cloonix cli nemo add cnt sysd1 eth=1 trixie_systemd \
-            startup_env=CLOONIX_WITH_SYSTEMD=1
-
-Nothing is passed for the other two. No systemd is what happens by
-default, and there is no flag that says so.
-
-The default used to be the other way round, and the reason it was turned
-over is measurable rather than a matter of taste. Each systemd wants
-several inotify instances, and the kernel counts those PER USER across
-every container on the machine, not per container. With the debian
-default of 128 the twenty-fourth container or so starts failing --
-inotify_init returns EMFILE, systemd exits at once, pid 1 goes with it,
-and the container disappears having logged nothing. A soak run measured
-66 of 1324 containers dying that way, between 0.2 and 4.8 seconds old,
-with the crun scope reporting success.
-
-That is why a demo of the feature is also a warning about it. A guest
-that routes packets has no use for an init, which is the normal cloonix
-case, and paying an inotify instance for each one caps the whole host at
-two dozen containers for a service almost nothing needs.
-
-WHEN YOU WANT ONE
------------------
-When the thing being demonstrated IS a service unit: something started by
-systemd, ordered against another unit, socket-activated, or restarted by
-it. For everything else the plain container is smaller, faster to start,
-and does not spend a scarce host resource.
-
-If you do want many of them, raise the limit on the host first:
+An init is for a demonstration whose subject is a service unit: started by
+systemd, ordered against another unit, socket-activated or restarted by it.
+For many of them, raise the limit on the host first, and make it permanent
+in /etc/sysctl.d/:
 
     sudo sysctl -w fs.inotify.max_user_instances=1024
 
-and make it permanent in /etc/sysctl.d/. Count on several instances per
-container and leave room for the rest of the session.
-
 Important
-  This needs the trixie_systemd image, which is a separate build from the
-  plain trixie -- every other cnt image is built without systemd:
+  trixie_systemd is a build of its own, every other cnt image being built
+  without systemd; the demo stops and says so when it is absent:
 
     cd vm_create/cnt_kvm && ./cnt_trixie_systemd.sh
-
-  The demo says so and stops if the image is not there, rather than
-  silently making three ordinary containers and demonstrating nothing.
 """
 import os
 import subprocess
@@ -90,7 +58,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    ACK_FAST, CLOONIX, NET, cli, erase_net, ssh, step, story)
+    ACK_FAST, CLOONIX, NET, cli, erase_net, ssh, step, story, unavailable,
+    guarded)
 
 SYSD_ROOTFS = "trixie_systemd"
 PLAIN_ROOTFS_CHOICES = ("trixie",)
@@ -127,7 +96,7 @@ def wait_exists(name, timeout=20):
 
 def check_net():
     if cli("dump", "commands").returncode:
-        sys.exit("no answer from %s\n"
+        unavailable("no answer from %s\n"
                  "  start it:  cloonix start %s" % (NET, NET))
 
 def probe_image(cand, extra=()):
@@ -150,7 +119,7 @@ def probe_image(cand, extra=()):
 def choose_images():
     said = probe_image(SYSD_ROOTFS, (WITH_SYSTEMD,))
     if said:
-        sys.exit(
+        unavailable(
             "this demo needs the %s image and the server would not start\n"
             "  a container on it. It said: %s\n"
             "\n"
@@ -171,7 +140,7 @@ def choose_images():
         said = probe_image(cand)
         if said is None:
             return cand
-    sys.exit("the server would not start a plain container on %s.\n"
+    unavailable("the server would not start a plain container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -362,13 +331,4 @@ def main():
         story("    cloonix cli %s del %s" % (NET, name))
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit as stop:
-        if stop.code:
-            sys.stderr.write("%s\n" % stop.code)
-            up = [n for n in ALL if in_lst(n)]
-            if up:
-                sys.stderr.write("Still running: %s\n" % ", ".join(up))
-            raise SystemExit(1)
-        raise
+    guarded(main, ALL)

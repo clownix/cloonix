@@ -73,7 +73,8 @@ any of them::
     grep -n "rpct_recv" src/*.c
     grep -n "string_server_unix" src/*.c
 
-The *main* of every daemon ends with *daemon(0,0)* then *msg_mngt_loop()*.
+Every daemon ends its *main* in *msg_mngt_loop()* after *daemon(0,0)*; the main
+server calls *daemon(0,0)* once the net is ready, *timer_everything_is_ready*.
 
 
 Content

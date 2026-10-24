@@ -1,8 +1,6 @@
 #!/bin/bash
-# Build the kvm_autotest_<distro>.qcow2 machines of autotest.sh, one per
-# kvm_autotest_<distro>.sh here, each from the base <distro>.qcow2 of bulk
-# (vm_create/cnt_kvm/doitall.sh --kvm). Needs cloonix installed and the
-# mirror: each builder boots its machine on nemo with a nat to 10.117.0.1.
+# Builds every kvm_autotest_<distro>.qcow2 from <distro>.qcow2 of bulk;
+# needs cloonix and the mirror (each boots on nemo, nat to 10.117.0.1).
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
 BULK="/var/lib/cloonix/bulk"

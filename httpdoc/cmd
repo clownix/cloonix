@@ -19,6 +19,12 @@ fi
 VERSION_NUM=$(grep -m1 '^CLOONIX_VERSION=' "${CFG}")
 VERSION_NUM=${VERSION_NUM#*=}
 VERSION_NUM=${VERSION_NUM%-*}
+# the two pages that name the version take the one of the config
+for page in index.html downloads.html; do
+  sed -i -E -e "s/cloonix-(source|targz_store)-[0-9]+/cloonix-\1-${VERSION_NUM}/g" \
+            -e "s/(<p class=\"ver\">AGPLv3, version )[0-9]+/\1${VERSION_NUM}/" \
+            "${HERE}/${page}"
+done
 
 build_book()
 {

@@ -446,8 +446,8 @@ void ovs_rpct_recv_sigdiag_msg(int llid, int tid, char *line)
       }
     else if (!strcmp(line, "ovs_resp_suidroot_ko"))
       {
-      KERR("ERROR: cloonix-ovs is not suid root");
-      KERR("sudo chmod u+s %s", pthexec_cloonfs_ovs_vswitchd());
+      KERR("ERROR cloonix-ovs is not suid root: sudo chmod u+s %s",
+           pthexec_cloonfs_ovs_vswitchd());
       ovs_destroy();
       }
     else if (!strcmp(line, "ovs_resp_ovsdb_ko"))

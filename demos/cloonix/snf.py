@@ -27,8 +27,6 @@ The filter runs in the switch. What it rejects is never encoded, never sent
 and never decoded -- so the numbers below are not a display convenience,
 they are work that did not happen.
 
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
 
 Image: any trixie image
 Size:  4 containers, 1 lan
@@ -41,13 +39,13 @@ THE PACKET TO CATCH
     cloonix cli nemo cnf alice eth0 sniff=on
     cloonix cli nemo sniff alice eth0 --dump not udp portrange 10000-10100
 
-  Nothing about the lan changes between the acts. n1 sends at the same rate
+  Nothing about the lan changes between the acts. noisy1 sends at the same rate
   throughout and alice's interface carries all of it -- the difference is
   that the switch throws it away instead of sending it on.
 
 Important
   The noise is broadcast on purpose. An ovs lan learns where machines are
-  and stops flooding unicast to everybody, so a flood between n1 and n2
+  and stops flooding unicast to everybody, so a flood between noisy1 and noisy2
   would never reach alice's interface and there would be nothing to filter.
 """
 import os
@@ -65,7 +63,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, create_cnt, erase_net,
     in_parallel, net_answers, parse_bytes_line, show, step, story, trace,
-    trace_ssh, wait_ready)
+    trace_ssh, wait_ready, unavailable)
 
 # Any image with python3 in it.
 ROOTFS_CHOICES = ("wg_trixie", "proxy_trixie", "smtp_trixie", "mqtt_trixie")
@@ -108,8 +106,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -150,7 +148,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  either will do; build one:\n"
              "    cd vm_create/cnt_kvm_demo && ./cnt_wg_trixie.sh"
@@ -162,7 +160,7 @@ def tools_present(node, *tools):
                             "command -v %s >/dev/null 2>&1" % t],
                            capture_output=True, stdin=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit("%s has no %s: this image has no python3.\n"
+            unavailable("%s has no %s: this image has no python3.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -371,7 +369,7 @@ def run_filter(filt, seconds=WINDOW):
         w.stop()
         return None
     try:
-        time.sleep(1.5)          # let the subscription really start
+        time.sleep(1.5)          # let the subscription start
         w.reset()
         time.sleep(seconds)
         total, kinds, samples = w.result()
@@ -512,7 +510,7 @@ def main():
         story("    A different question, a different filter, the same")
         story("    interface and the same second. Nothing was restarted.")
         story()
-        story("    The unreachables in that list are worth a look. Nothing")
+        story("    Look at the unreachables in that list. Nothing")
         story("    on bob listens on port 53, so every beacon is answered")
         story("    by bob's kernel saying so -- and \"icmp\" catches that")
         story("    reply as readily as it catches the pings, because it is")
@@ -533,7 +531,7 @@ def main():
               % (r["filter"] if r["filter"] else "(none)",
                  r["total"], r["rate"], 100.0 * r["total"] / base))
     story()
-    story("    The last column is the part worth taking away. Everything")
+    story("    The last column is the result. Everything")
     story("    not counted was rejected inside the switch: not encoded,")
     story("    not sent, not decoded. On a busy lan that is most of the")
     story("    work a subscriber was previously doing to find out that a")
@@ -551,7 +549,7 @@ def main():
 
     story("""
 the network is left up, and quiet: the noise and the beacons were stopped.
-Things worth trying:
+Things to try:
 
   start the noise again and watch it live, unfiltered, to see why anyone
   would want a filter:

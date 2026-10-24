@@ -8,6 +8,25 @@ if [ ! -e cloonfs/etc/cloonix.cfg ]; then
   echo cloonfs/etc/cloonix.cfg
   exit
 fi
+# A net of the installed cloonix keeps running its binaries once they are
+# replaced: stopped first. The toys run their own.
+running=""
+for pid in $(pgrep -f "cloonix-main-server" 2>/dev/null); do
+  case "$(readlink /proc/${pid}/exe 2>/dev/null)" in
+    /usr/libexec/cloonix/*)
+      running="${running} $(tr '\0' ' ' < /proc/${pid}/cmdline | awk '{print $NF}')"
+      ;;
+  esac
+done
+if [ -n "${running}" ]; then
+  printf "\n\tERROR: nets of the installed cloonix still run, they would keep\n"
+  printf "\tthe binaries this install replaces. Stop them first:\n\n"
+  for net in $(echo ${running} | tr ' ' '\n' | sort -u); do
+    echo "cloonix stop ${net}"
+  done
+  echo
+  exit 1
+fi
 rm -rf /usr/libexec/cloonix
 # Every /usr/bin/cloonix* goes, not just the names this version uses.
 rm -f  /usr/bin/cloonix*
@@ -19,6 +38,7 @@ chown -R root:root /usr/libexec/cloonix
 cp -vf /usr/libexec/cloonix/cloonfs/bin/cloonix /usr/bin
 cp -vf /usr/libexec/cloonix/cloonfs/bin/cloonix_*.py /usr/bin
 chmod 755 /usr/bin/cloonix /usr/bin/cloonix_*.py
+ln -sf /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg /usr/bin/cloonix_config.py
 rm -f /usr/share/bash-completion/completions/cloonix
 rm -f /etc/bash_completion.d/cloonix
 chmod -R 755 /usr/libexec/cloonix/
@@ -88,5 +108,6 @@ chmod 644 /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg \
           /usr/bin/cloonix_config.py
 if grep -q "clown$" /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg; then
   echo "  the cloonix_passwd of the nets are the ones shipped in the tarball:"
-  echo "  change them in cloonix_config.py before opening a port to others"
+  echo "  change them in /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg before"
+  echo "  opening a port to others (/usr/bin/cloonix_config.py is that file)"
 fi

@@ -1,5 +1,5 @@
 #!/bin/sh
-# cloonixsbininit - pid 1 of every cloonix container and virtual machine.
+# cloonixsbininit - pid 1 of every cloonix container.
 CLOONIX_INIT_LOG=/tmp/cloonix_sbin_init.log
 if [ -d /cloonixmnt/tmp ]; then
   CLOONIX_INIT_LOG=/cloonixmnt/tmp/cloonix_sbin_init.log
@@ -8,17 +8,23 @@ fi
 exec > "${CLOONIX_INIT_LOG}" 2>&1
 echo "STARTING cloonixsbininit"
 echo "log is ${CLOONIX_INIT_LOG}"
+# A /var that comes empty (the tmpfs of a self_rootfs container) gets the
+# skeleton of a normal system before anything runs: /var/run, /var/log...
+if [ -z "$(ls -A /var 2>/dev/null)" ]; then
+  mkdir -p /var/log /var/lib /var/cache /var/spool /var/tmp /var/opt \
+           /var/local /var/mail /var/backups /run/lock
+  chmod 1777 /var/tmp
+  ln -s ../run /var/run
+  ln -s ../run/lock /var/lock
+  echo "empty /var: skeleton made"
+fi
 /cloonixmnt/cnf_fs/cloonix-agent
 echo "/cloonixmnt/cnf_fs/cloonix-agent"
 /cloonixmnt/cnf_fs/cloonix-cxp-srv
 echo "/cloonixmnt/cnf_fs/cloonix-cxp-srv"
 
-# Keep the two agents alive. This must run whether or not the guest hands over
-# to systemd: a killed cloonix-agent left a container unreachable for ever,
-# because the keep-alive used to live only on the no-systemd branch and the
-# systemd path exec'd init before reaching it. Backgrounded here, it survives
-# that exec and covers every path. A kvm recovers by its own qemu-guest-agent
-# relaunch; a container has only this.
+# Keep the two agents alive on every path, systemd or not: backgrounded, it
+# survives the exec of init; a container has no other relaunch.
 cloonix_keep_agents_alive() {
   while true; do
     sleep 5
@@ -64,10 +70,8 @@ case "${STARTUP_ENV}" in
   *CLOONIX_WITH_SYSTEMD=1*) WANT_SYSTEMD=1 ;;
 esac
 echo "startup_env = '${STARTUP_ENV}', systemd wanted = ${WANT_SYSTEMD}"
-# systemd as pid 1 must create its cgroups. A toy that was given no cgroup
-# of its own (no systemd user manager on the host, or none asked) has none
-# to write in, and systemd would hang there: the container comes up without
-# it and says why.
+# systemd as pid 1 needs cgroups of its own: a toy without them comes up
+# without systemd, saying why.
 if [ "${WANT_SYSTEMD}" = "1" ]; then
   if mkdir /sys/fs/cgroup/cloonix_probe 2>/dev/null; then
     rmdir /sys/fs/cgroup/cloonix_probe

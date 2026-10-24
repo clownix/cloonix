@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-r"""a2b - a cable that can be told to be bad, and what tcp does about it.
+r"""a2b - a cable that can be told to be bad, each direction apart.
 
     ./a2b.py [net]                 the net defaults to nemo
 
@@ -8,50 +8,35 @@ Two machines and one cable::
   hostA -- lanA -- [ a2b ] -- lanB -- hostB
  10.0.0.1                            10.0.0.2
 
-An a2b is a cloonix object with no equivalent in the other demos: a piece of
-wire that can be told to misbehave, in each direction separately::
+An a2b is a piece of wire told to misbehave, each direction apart; both
+sides are one broadcast domain, a cable and not a router, so the two
+machines share a subnet::
 
   cnf cable A2B delay=100      100 ms one way
   cnf cable A2B loss=100       1% of packets dropped
   cnf cable A2B rate=100       100 kilo-octets per second
   cnf cable A2B silentms=200   bursty, 200 ms at a time
 
-Both sides are one broadcast domain -- it is a cable, not a router -- so the
-two machines share a subnet and nothing has to be routed.
+  ACT 1  a clean cable: a slow ping, the same packet timed leaving one wire
+         and arriving on the other, the method before the finding.
+  ACT 2  100 ms each way: the round trip doubles, and the two halves are
+         measured separately on the same packets.
+  ACT 3  1% loss, with ping -f: five hundred numbered packets go in, and the
+         demo names the sequence numbers that never came out.
+  ACT 4  a rate cap, with udp sent 30% faster than it allows: the excess is
+         the datagrams that entered the cable and never left it.
 
-Both ends are sniffed throughout, and that is the point. A tool at one end
-reports a round trip and a loss percentage; two sniffers report which
-DIRECTION the time went in, and which particular packets never arrived.
-
-  ACT 1  a clean cable. A slow ping, and the same packet timed leaving one
-         wire and arriving on the other, so the method is established
-         before there is anything to find.
-  ACT 2  100 ms each way. The round trip doubles, and the two halves are
-         measured SEPARATELY on the same packets -- which is what one tool
-         at one end cannot do.
-  ACT 3  1% loss, with ping -f. Five hundred numbered packets go in, and
-         the demo names the sequence numbers that never came out.
-  ACT 4  a rate cap, with udp sent 30% faster than it allows. udp does not
-         back off, so the excess is visible as datagrams that entered the
-         cable and never left it.
-
-The traffic is chosen deliberately. icmp for the first three: one packet
-out, one back, a sequence number on each, no window and no congestion
-control, so what the cable does is not mixed up with what a protocol
-decided to do about it. udp for the last: a rate cap and tcp argue with
-each other -- tcp finds the ceiling and sits under it, so the measurement
-comes out at the cap and proves only that tcp works.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+icmp for the first three acts: one packet out, one back, a sequence number
+on each and no window, so what the cable does is not mixed with what a
+protocol decides. udp for the rate: tcp finds the ceiling and sits under
+it, so a measure over tcp comes out at the cap and shows only tcp.
 
 Image: wg_trixie or proxy_trixie
 Size:  2 containers, 2 lans, 1 a2b
 
 THE PACKET TO CATCH
 -------------------
-  This is the demo where snf is the instrument and not an illustration.
-  Nothing else can answer the question it asks.
+  Both ends sniffed, the same packets on the two wires:
 
     cloonix cli nemo cnf hostA eth0 sniff=on
     cloonix cli nemo cnf hostB eth0 sniff=on
@@ -59,18 +44,10 @@ THE PACKET TO CATCH
     cloonix cli nemo sniff hostA eth0 --dump icmp
     cloonix cli nemo sniff hostB eth0 --dump icmp
 
-  The packet to catch is the one that appears on the first and never on
-  the second. A tool at one end reports a percentage; two captures at the
-  two ends of the same cable say which DIRECTION the loss was in and
-  exactly which packets never arrived.
-
-  With delay set, the same pair gives the one-way time rather than the
-  round trip, which ping cannot separate.
-
-Important
-  udp for the rate act and icmp for the rest, deliberately. tcp finds the
-  ceiling and sits under it, so a rate measurement over tcp comes out at
-  the cap and proves only that tcp works.
+  The packet to catch is the one on the first wire and never on the
+  second. A tool at one end gives a round trip and a percentage; the two
+  captures give the direction of the loss, the packets lost, and with a
+  delay the one-way time, which ping cannot separate.
 """
 import os
 import subprocess
@@ -87,7 +64,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, create_cnt, erase_net,
     in_parallel, net_answers, parse_bytes_line, show, step, story, trace,
-    trace_ssh, wait_ready)
+    trace_ssh, wait_ready, unavailable)
 
 # Any image with python3 and curl in it.
 ROOTFS_CHOICES = ("wg_trixie", "proxy_trixie")
@@ -129,8 +106,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -171,7 +148,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  either will do; build one:\n"
              "    cd vm_create/cnt_kvm_demo && ./cnt_wg_trixie.sh"
@@ -183,7 +160,7 @@ def tools_present(node, *tools):
                             "command -v %s >/dev/null 2>&1" % t],
                            capture_output=True, stdin=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit("%s has no %s: this image has no python3 or curl.\n"
+            unavailable("%s has no %s: this image has no python3 or curl.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -333,7 +310,7 @@ class Wire:
         return None
 
     def udp(self):
-        """count, bytes, and the rate over the span this wire actually saw.
+        """count, bytes, and the rate over the span this wire saw.
 
         Dividing by the six seconds the sender was told to run for is wrong
         in both directions: the sender takes a moment to start, and a shaped
@@ -401,7 +378,7 @@ def one_way(wires, what, seq):
 
     The same packet, seen leaving one wire and arriving on the other. Two
     sniffers with their own clocks are a few milliseconds apart, so this is
-    only worth reading when the answer is tens of milliseconds -- which is
+    only meaningful when the answer is tens of milliseconds -- which is
     exactly when it is interesting.
     """
     a = wires[0].first(what, seq)
@@ -710,7 +687,7 @@ def main():
                  "\n  the history says where: on a terminal, CLOONIX_DEMO_STORY=1 prints it")
 
     story("""
-the cable is left in place, and clean. Things worth trying:
+the cable is left in place, and clean. Things to try:
 
   a satellite link, and the same ping caught at both ends -- half a second
   up and down, and every crossing visible on its own:
@@ -718,7 +695,7 @@ the cable is left in place, and clean. Things worth trying:
     cloonix cli %s cnf %s B2A delay=250
     cloonix cli %s ssh %s "ping -c 5 %s"
 
-  spoil ONE direction only, which is what an asymmetric link really is,
+  spoil ONE direction only, which is what an asymmetric link is,
   and watch the two halves of the round trip stop matching:
     cloonix cli %s cnf %s A2B delay=200
 

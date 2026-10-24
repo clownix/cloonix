@@ -51,7 +51,9 @@ ITEM_KINDS = ("kvm", "cnt", "tap", "nat", "a2b", "c2c", "phy")
 
 COMPLETE_SNIFF = {"sniff=on": "capturable", "sniff=off": "not capturable"}
 COMPLETE_ANGLE = {"angle=90": "its place around the item, 0 top, 90 right"}
-COMPLETE_PLACE = {"x=300": "then y=, the item on the canvas, pinned there"}
+COMPLETE_PLACE = {"x=300": "then y=, the item on the canvas, pinned there",
+                  "note=gateway": "a comment shown on the canvas, quoted for "
+                                  "spaces, note= removes it"}
 
 # cnf <name>, what comes next, by the kind of the name: an interface, a
 # direction or a key; no two kinds share a key.
@@ -205,7 +207,7 @@ COMPLETE_USAGE = [
      "<kvm|win|freebsd|cisco|cnt|tap|nat|a2b|c2c|phy> ...", []),
     (["cli", "*", "del"],      "<name>    or all", ["cnt1"]),
     (["cli", "*", "cnf"],
-     "<name> [ethN|A|B|A2B|B2A] <key=value>    sniff= x= y= angle= "
+     "<name> [ethN|A|B|A2B|B2A] <key=value>    sniff= x= y= angle= note= "
      "publish= cpu= ram= rstp= mac_mangle= delay= loss= rate= silentms=",
      ["cnt1", "eth0", "sniff=on"]),
     (["cli", "*", "dump", "ip"], "<nat> <guest>", ["nat1", "vm1"]),
@@ -273,13 +275,9 @@ def places_repeat(syntax):
 def line_is_command(client, words):
     """True when the line can be run as it stands.
 
-    False means a word is missing OR a word is wrong, and both are an error
-    from a script and a question from a terminal -- see guide() at the end
-    of this file.
-
-    The client is handed over the way guide() and run() take it: this is
-    called before either of them, and the demo test below reaches back
-    through it for load_sibling.
+    False is a word missing or a word wrong: an error from a script, a question
+    from a terminal, guide(). Called before guide() and run(); the demo test
+    reaches load_sibling through it.
     """
     global CL
     CL = client
@@ -305,24 +303,13 @@ def line_is_command(client, words):
 def trim_to_menu(client, words):
     """The line back to the first word its place does not take.
 
-    A word that is no word of its place leads nowhere: every place after it
-    was typed for a command that does not exist, so the whole tail goes and
-    not the end alone. What is left is the place that refused it, which is
-    the place the guide then asks again -- and the menu it prints under the
-    prompt is, exactly, the words that place does take.
-
-    ONLY A MENU OF THIS CLIENT COUNTS. The net and the guests are asked of a
-    server, and a word missing from one of those lists is proof of nothing:
-    a net that did not answer inside 0.7 s is still a net, and a guest made
-    a second ago is still a guest. Their places are written <net> and
-    <guest> and carry no list, so nothing here can trim them.
-
-    The demos are the exception, and for the reason demo_table gives: they
-    are read off the disk this client runs on, which is where they are
-    played from, so a name that reaches neither a demo nor a directory of
-    them names nothing. Trimmed word by word, "demo mobile" coming back at
-    "demo" with the areas under it rather than at a place with nothing to
-    offer.
+    The whole tail after that word goes, typed for a command that does not
+    exist; the place left is the one the guide asks again, its menu under the
+    prompt. Only a menu of this client counts: a net or a guest missing from a
+    server's list proves nothing, a net silent for 0.7 s or a guest made a
+    second ago, so <net> and <guest> are never trimmed. The demos are read off
+    this disk, demo_table, so a demo name that reaches nothing is trimmed word
+    by word.
     """
     global CL
     CL = client
@@ -352,16 +339,9 @@ def complete_entry(words):
     return None
 
 def demo_usage(words):
-    """The line above a demo choice: what is built, then what is asked next.
-
-    Every other place shows the whole tail of its command at once, because
-    the whole tail is typed at once. A demo name is not: it is walked a
-    directory at a time, so the line grows with it and names the one place
-    being answered -- <area>, then <demo>. Same shape at
-    every step, a choice and the next choice.
-
-    Until it reaches a demo, where it says so like every other finished
-    command does.
+    """The line above a demo choice: what is built, then what is asked next. A
+    demo name is walked a directory at a time, so the line names the place
+    being answered, <area> then <demo>, until it reaches a demo.
     """
     demo = demo_helper()
     place = "<demo>"
@@ -379,12 +359,11 @@ def demo_usage(words):
 def complete_usage(words):
     """The syntax of the command being typed, or "".
 
-    Matched on the words already given, so "cli nemo add kvm" finds the kvm
-    entry whatever the net is called. What comes back is the command from
-    its first word, so it reads as one whole line under the prompt -- the
-    words of the pattern as they were typed, then the places that follow.
-    What has been put in those places is NOT repeated: the line is the
-    syntax, and the line above it is what has been built so far."""
+    Matched on the words given, so "cli nemo add kvm" finds the kvm entry
+    whatever the net. The command comes back from its first word, the words
+    typed then the places that follow; what was put in those places is not
+    repeated.
+    """
     if len(words) > 2 and words[0] == "cli" and words[2] == "demo":
         return demo_usage(words)
     entry = complete_entry(words)
@@ -396,16 +375,11 @@ def complete_usage(words):
 def complete_example(words):
     """One typical value for the place being typed, or "".
 
-    On a fixed shape -- plug, unplug, save -- the place is counted from
-    the end of the matched pattern: the third word after "unplug" is the
-    third example.
-
-    Where options and a required word mix -- add kvm, add win, add freebsd,
-    add cisco, add cnt -- counting breaks as soon as an option is skipped,
-    so there the examples are walked instead and the first one not already
-    on the line is the answer. The example command is thus built in its own
-    order whatever the user puts in, and a line that wants nothing more is
-    offered nothing.
+    On a fixed shape, plug, unplug, save, the place is counted from the end of
+    the matched pattern. Where options and a required word mix, add kvm, win,
+    freebsd, cisco, cnt, the examples are walked and the first one not on the
+    line answers, so the example command keeps its own order and a finished
+    line is offered nothing.
     """
     if len(words) > 2 and words[0] == "cli" and words[2] == "demo":
         return ""
@@ -434,22 +408,14 @@ def complete_example(words):
 GUEST_KINDS = ("kvm", "cnt")
 
 def objects_of(net, nets):
-    """Every object of a running net, as {name: kind}, asked of the server.
+    """Every object of a running net as {name: kind}, asked of the server.
 
-    The answer to list_commands_req is the script that would rebuild the
-    net, one command per entry of an "items" json array:
-
-        cloonix cli nemo add kvm vm1 ram=2000 cpu=2 eth=1 trixie.qcow2 wlan=1
-        cloonix cli nemo add cnt c1 eth=1 trixie
-        cloonix cli nemo plug c1 eth0 lan1
-
-    so word 4 is the kind and word 5 the name of an add, and a plug names a
-    lan, or an air for a wlan, in its last word. The airs a radio starts on
-    are in no plug: a wlan= says they are there.
-
-    It costs a round trip behind a keypress, so the timeout is short and
-    every failure is silent: no server, no net, wrong password, all give no
-    candidates rather than a pause or a message."""
+    list_commands_req answers the script that rebuilds the net, one command per
+    entry of an "items" array: word 4 of an add is the kind, word 5 the name,
+    the last word of a plug a lan, or an air for a wlan; the airs a radio
+    starts on are in no plug, its wlan= says they exist. A round trip behind a
+    keypress: a short timeout, and every failure silent, no candidates.
+    """
     try:
         ip, port, passwd = CL.resolve(net, nets, None)
         door = CL.Doorways(ip, port, passwd, 1.0)
@@ -533,19 +499,12 @@ NET_PROBE_FRESH = 10.0
 _PROBE = {"nets": None, "answered": None, "threads": None, "t0": 0.0}
 
 def probe_start(nets):
-    """Ask every net now, so the answers are in before anybody asks for them.
+    """Ask every net now, so the answers are in before anybody needs them.
 
-    THE WHOLE POINT IS THAT IT DOES NOT WAIT. It is called at the top of the
-    guide, where a person is about to read a list of verbs and type one, and
-    that reading is seconds of a machine with nothing to do. By the time the
-    line reaches the net position the answers have landed and the tab waits
-    for nothing.
-
-    Nothing calls this on a line that is already a command: such a line goes
-    straight to the server and no candidate list is ever built for it.
-
-    Started again when the last answers are older than NET_PROBE_FRESH, or
-    when the config in hand is not the one they were asked of.
+    It does not wait: called at the top of the guide, while the person reads
+    the verbs, so the tab at the net position waits for nothing. A line already
+    a command never calls it. Started again when the answers are older than
+    NET_PROBE_FRESH, or were asked of another config.
     """
     fresh = (_PROBE["answered"] is not None
              and _PROBE["nets"] is nets
@@ -569,19 +528,11 @@ def probe_start(nets):
                   t0=time.monotonic())
 
 def nets_running(nets):
-    """The nets whose server answers, every one of them asked at once.
+    """The nets whose server answers, all asked at once.
 
-    The question is server_version's, which is work_dir_req: recv_from_client
-    answers it on the spot, one round trip, nothing subscribed. That matters
-    here more than anywhere. This position DID carry an "already on" mark
-    once and it was taken out, because the probe of the day subscribed to
-    event_topo and waited on a 100 beat timer, so a net that was running
-    answered too late and was called dead. The cause was the question, not
-    the probing, and the question has changed.
-
-    A thread per net, so the wait is one timeout and not one per net -- and
-    when probe_start ran early enough, no wait at all: the threads are
-    finished and the join returns at once.
+    The question is server_version's, work_dir_req, answered on the spot. A
+    thread per net, so the wait is one timeout, none when probe_start ran early
+    enough.
     """
     probe_start(nets)
     left = NET_PROBE_TIMEOUT + 0.2 - (time.monotonic() - _PROBE["t0"])
@@ -596,16 +547,9 @@ def demo_helper():
 def demo_table(words):
     """What comes next in a demo name, one directory level at a time.
 
-    The one candidate list read from the local filesystem, and the reason is
-    the reason the rule exists rather than an exception to it. A rootfs in
-    bulk lives on the SERVER, so a list of them read here would be right on
-    one machine and wrong on the next. A demo is the opposite: it is a
-    programme this client runs HERE and drives the server with, so the disk
-    under this client is not a guess at the answer, it IS the answer. A
-    laptop with no demos can play none, and an empty list says so.
-
-    Asked of cloonix_demo.py, which is what "demo" runs them with, so what
-    is offered and what can be played are one list.
+    The one candidate list read from the local disk: a demo is a programme this
+    client runs here, while a bulk image lives on the server. Asked of
+    cloonix_demo.py, so what is offered and what plays are one list.
     """
     demo = demo_helper()
     if not demo:
@@ -640,18 +584,12 @@ def demo_kept(rest):
     return kept
 
 def demo_is_named(words):
-    """True when the words after the net leave nothing left to choose.
+    """True when the words after the net leave nothing to choose.
 
-    The count of places cannot answer this one. A demo name is walked a
-    directory at a time, so "cli nemo demo routing" has a word in the place
-    and is still not a command, while "cli nemo demo frrmix" has one word
-    and is.
-
-    What settles it is the player: the name reaches a file, or it does not.
-    A directory holding one demo reaches it -- "cli nemo demo cloonix a2b"
-    is a2b.py, there being nothing else it could be, and asking for the file
-    would be asking a question with one answer. A directory holding several
-    reaches nothing, and the walk goes on.
+    A demo name is walked a directory at a time, so the count of places cannot
+    tell; the player can, the name reaching a file or not. A directory holding
+    one demo reaches it, "cli nemo demo cloonix a2b" being a2b.py; one holding
+    several reaches nothing.
     """
     demo = demo_helper()
     if not demo or len(words) < 4:
@@ -662,27 +600,13 @@ def demo_is_named(words):
         return False
 
 def net_table(nets, verb=None):
-    """The nets this verb can be given, where each one is, and its web ports.
+    """The nets this verb can be given, with their address and web ports.
 
-    Which nets those are depends on the verb, because the two halves of the
-    question are opposite. "start" STARTS a server, so a net already running
-    is the one thing that cannot be typed there and it is left out. Every
-    other verb SPEAKS to a server that is up, so a net with nothing on it is
-    a line that can only fail and only the nets that answer are offered.
-
-    THE TWO SIDES DO NOT FAIL THE SAME WAY, which is why "start" can be
-    filtered at all. Silence is the doubtful answer: a net that is up can be
-    called down by a timeout. An answer is not doubtful -- a version came
-    back over the wire, so something is running there. "start" hides the
-    nets that ANSWERED, so it only ever hides on proof; every other verb
-    hides the nets that stayed silent, which is the direction that can be
-    wrong.
-
-    So that direction gives way when it learns nothing. No net running and
-    the probe not working are the same silence from here, and when not one
-    net answers the whole config comes back: the worst a broken probe can do
-    is behave as this place behaved before there was one. One net answering
-    shows the probe works, and a net that stayed silent beside it is silent.
+    start starts a server: the nets that answered are left out. Every other
+    verb speaks to a running server: the nets that stayed silent are left out.
+    An answer is proof, a silence may be a timeout, so start hides only on
+    proof; when no net answers at all, the whole config comes back, as before
+    there was a probe.
     """
     show = nets
     if verb in ("start", "stop", "cli"):
@@ -702,17 +626,11 @@ def net_table(nets, verb=None):
 def complete_table(words, nets):
     """The candidates for the word about to be typed, each with its line.
 
-    words holds what is already on the line after "cloonix", so its length
-    IS the position of the word being completed:
-
-        words = []                            -> the top verb
-        words = ["cli"]                       -> the net
-        words = ["cli", "nemo"]               -> the verb of cli
-        words = ["cli", "nemo", "add"]        -> what to add
-        words = ["cli", "nemo", "add", "cnt"] -> the name, which nobody knows
-
-    A candidate with nothing to say about itself -- a guest -- has an empty
-    line, and two_columns puts those together instead of in a column.
+    words holds what is on the line after "cloonix", so its length is the
+    position completed: [] the top verb, ["cli"] the net, ["cli", "nemo"] the
+    verb of cli, ["cli", "nemo", "add"] what to add, ["cli", "nemo", "add",
+    "cnt"] the name, which nobody knows. A candidate with nothing to say, a
+    guest, has an empty line, put together by two_columns.
     """
     n = len(words)
 
@@ -966,14 +884,10 @@ def _bind_tab(rl, nets):
 def _example(words, table):
     """The example for the place being typed, ready to print, or "".
 
-    With no candidate the example is all there is. With candidates they are
-    the answer for that place -- the guests of a running net, the verbs of a
-    menu -- and a made-up word beside them would be noise.
-
-    The add kvm, add win, add freebsd, add cisco and add cnt line is the
-    exception the whole thing is for: what is offered there are the options,
-    while the image that closes the command can be offered by nobody, so the
-    example is the only thing that says how the line ends.
+    With no candidate the example is all there is. Candidates, guests or verbs,
+    are the answer and no example is shown, but on the add kvm, win, freebsd,
+    cisco and cnt line, where the options are offered and only the example says
+    how the line ends, with its image.
     """
     example = complete_example(words)
     if not example:
@@ -984,12 +898,9 @@ def _example(words, table):
     return ("\n" if table else "") + "  for example:  %s\n" % example
 
 def _hint(words, nets):
-    """The syntax of the place, then every word that fits it with its line.
-
-    A place with nothing to say is a word that is no verb -- a typo, or the
-    old "help", which this list always was. Answering it with the verbs is
-    the answer to both, and it keeps the promise that no place on the line
-    is met with silence.
+    """The syntax of the place, then every word that fits it with its line. A
+    word that is no verb, a typo, is answered with the verbs, so no place is
+    met with silence.
     """
     out = ""
     usage = complete_usage(words)
@@ -1028,18 +939,14 @@ def _tab(buf, pos, nets):
     return buf, pos
 
 def _ask_keys(kb, line, nets):
-    """The windows line editor: what readline gives, in what msvcrt gives.
+    """The windows line editor, on msvcrt: type, backspace, left, right, home,
+    end, delete, up and down through the history, tab for the candidates,
+    enter. A redraw is a carriage return and the line, so a line wider than
+    the console smears.
 
-    Only what the guide needs -- type, backspace, left, right, home, end,
-    delete, up and down through the history, tab for the candidates, enter
-    to hand the line over. Redrawing is one \\r and the line again, so a
-    line longer than the console is wide will smear; nothing cloonix asks
-    for is that long.
-
-    NEVER RUN ON A WINDOWS MACHINE, like the powershell hook above: written
-    from the documented msvcrt api and reviewed, not exercised. If it
-    misbehaves, drop the _keys() branch in _ask and the plain prompt under
-    it takes over.
+    Written from the documented msvcrt api, never run on windows: if it
+    misbehaves, the _keys() branch of _ask goes and the plain prompt takes
+    over.
     """
     buf = (line + " ") if line else ""
     pos = shown = len(buf)
@@ -1119,12 +1026,9 @@ def split(line):
 def guide(client, nets, words, hinted=False):
     """Ask until the line is a command, and give back its words.
 
-    hinted means the caller has already shown what the first place accepts
-    -- bare cloonix prints its help, which is that list -- so it is not
-    printed twice.
-
-    None when the person added nothing: an unchanged line is a give up, and
-    it is also what stops this from ever looping.
+    hinted: the caller has shown what the first place accepts, bare cloonix
+    printing its help, so it is not printed twice. None when the person added
+    nothing, an unchanged line being a give up, which also ends the loop.
     """
     global CL
     CL = client

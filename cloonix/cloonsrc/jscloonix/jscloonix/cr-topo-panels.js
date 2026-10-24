@@ -29,7 +29,15 @@ function handleDblClick(mx, my) {
   // Double-click on an air: its capture; on a lan: select/deselect
   const lhit = lanAt(mx, my);
   if (lhit && isAir(lhit.name)) {
-    openAirWebshark(lhit.name, lhit);
+    if (g_air_snf.has(lhit.name)) { openAirWebshark(lhit.name, lhit); return; }
+    const sc = worldToScreen(lhit.x, lhit.y);
+    const tip = document.createElement("div");
+    tip.textContent = `the air ${lhit.name} is not captured, right-click for "Sniff on"`;
+    tip.style.cssText = `position:fixed; left:${sc.x+10}px; top:${sc.y-24}px;
+      background:#7e5109; color:#e0e0e0; font:11px monospace;
+      padding:3px 8px; border-radius:3px; pointer-events:none; z-index:9000;`;
+    document.body.appendChild(tip);
+    setTimeout(()=>tip.remove(), 2000);
     return;
   }
   if (lhit) {
@@ -41,11 +49,17 @@ function handleDblClick(mx, my) {
   if (ehit) {
     const { node, ethIdx } = ehit;
     if (isWlan(node, ethIdx)) {
+      // a wlan is captured with its air: the capture of the air opens
       const air = airOf(node, ethIdx);
+      if (air && g_air_snf.has(air)) {
+        openAirWebshark(air, g_lans.find(l => l.name === air));
+        return;
+      }
       const ep = ethPos(node, ethIdx);
       const sc = worldToScreen(ep.x, ep.y);
       const tip = document.createElement("div");
-      tip.textContent = air ? `the capture is the air's: double-click ${air}`
+      tip.textContent = air ? `wlan${wlanIdx(node, ethIdx)}: its air ${air} is ` +
+                              `not captured, right-click for "Sniff on"`
                             : `wlan${wlanIdx(node, ethIdx)}: on no air`;
       tip.style.cssText = `position:fixed; left:${sc.x+10}px; top:${sc.y-24}px;
         background:#7e5109; color:#e0e0e0; font:11px monospace;
@@ -87,6 +101,40 @@ function raisePanel(panel) {
   if (g_panel_z > 900) g_panel_z = CANVAS_Z + 1;
   panel.style.zIndex = g_panel_z;
 }
+
+// Keyboard to an xterm: its window needs the focus first (an iframe panel
+// keeps it, xterm prevents the click default).
+function focusTerm(term) {
+  const doc = (term.element && term.element.ownerDocument) || document;
+  try {
+    const a = doc.activeElement;
+    if (a && a.tagName === "IFRAME") a.blur();
+  } catch(_){}
+  try { doc.defaultView.focus(); } catch(_){}
+  try { term.focus(); } catch(_){}
+}
+
+// The keyboard stays with the panel clicked last: a focus fallen on nothing,
+// or taken by an iframe nobody clicked (a vnc reconnecting), goes back to it.
+let g_kbd_panel = null;  // { panel, focus }
+
+function kbdKept(a) {
+  if (!a || a === document.body) return false;
+  if (a.tagName === "IFRAME")
+    return !a._kbdHooked || (g_kbd_panel && g_kbd_panel.panel.contains(a));
+  return a.matches("input,textarea,select,[contenteditable]");
+}
+
+function kbdCheck() {
+  setTimeout(() => {
+    const k = g_kbd_panel;
+    if (!k || !k.panel.isConnected || k.panel.ownerDocument !== document) return;
+    if (!document.hasFocus() || kbdKept(document.activeElement)) return;
+    k.focus();
+  }, 0);
+}
+document.addEventListener("focusout", kbdCheck, true);
+window.addEventListener("focus", kbdCheck);
 
 function lowerAllPanels() {
   const lower = p => { if (p && p.panel) p.panel.style.zIndex = PANEL_Z_BG; };
@@ -163,6 +211,19 @@ function panelAtScreen(clientX, clientY) {
   try { Object.values(g_demo_panels).forEach(consider); } catch(e){}
   try { Object.values(g_traffic_panels).forEach(consider); } catch(e){}
   return best;
+}
+
+// Panel border under the canvas at this point if nothing covers it:
+// { panel, dir } or null (elementsFromPoint, paint order).
+function panelBorderAtScreen(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  const w = screenToWorld(clientX - r.left, clientY - r.top);
+  if (nodeAt(w.x, w.y) || lanAt(w.x, w.y) || ethAt(w.x, w.y)) return null;
+  const els = document.elementsFromPoint(clientX, clientY);
+  const k = els.indexOf(canvas);
+  const el = (k >= 0) ? els[k + 1] : null;
+  if (!el || !el.dataset || !el.dataset.rdir) return null;
+  return { panel: el.parentElement, dir: el.dataset.rdir };
 }
 
 function panelBarAtScreen(clientX, clientY) {
@@ -296,17 +357,28 @@ function makePanelShell(title, onClose, w, h, panelRef) {
   wrap.appendChild(panel);
 
   raisePanel(panel);
-  // iframe panels: the keyboard only reaches the embedded canvas if the iframe document has focus.
-  function focusPanelIframe() {
+  // One click raises the panel and gives it the keyboard: panelRef.focus
+  // (a terminal), else the iframe, whose canvas needs its document focused.
+  function focusPanel() {
+    if (panelRef && panelRef.focus) { try { panelRef.focus(); } catch(_){} return; }
     const f = panel.querySelector("iframe");
     if (!f) return;
     try { f.focus(); } catch(_){}
     try { if (f.contentWindow) f.contentWindow.focus(); } catch(_){}
   }
-  panel.addEventListener("mousedown", ()=>{
-    raisePanel(panel);
-    focusPanelIframe();
-    setTimeout(focusPanelIframe, 0);
+  function own() {
+    if ((panelRef && panelRef.focus) || panel.querySelector("iframe"))
+      g_kbd_panel = { panel, focus: focusPanel };
+  }
+  // Also called by the canvas: a lowered panel is under it, the click lands there.
+  panel._take = ()=>{ raisePanel(panel); own(); focusPanel(); };
+  panel.addEventListener("mousedown", panel._take, true);
+  // A click inside an iframe never reaches this document.
+  panel.addEventListener("load", e=>{
+    const f = e.target;
+    if (f.tagName !== "IFRAME") return;
+    try { f.contentWindow.addEventListener("mousedown", own, true); f._kbdHooked = true; }
+    catch(_){}
   }, true);
 
   let pdragging=false, pdx=0, pdy=0, hasMoved=false;
@@ -315,16 +387,23 @@ function makePanelShell(title, onClose, w, h, panelRef) {
     panel.querySelectorAll("iframe").forEach(f => f.style.pointerEvents = val);
   }
 
-  bar.addEventListener("mousedown", e=>{
-    if(e.button!==0) return;
+  function startDrag(e) {
     pdragging=true; hasMoved=false;
     const pr=panel.getBoundingClientRect();
     pdx=e.clientX-pr.left; pdy=e.clientY-pr.top;
     setIframePointerEvents("none");  // let mouse events pass through iframe
     e.preventDefault(); e.stopPropagation();
+  }
+  // Also called by the canvas: a lowered panel's bar is under it.
+  panel._drag = startDrag;
+  bar.addEventListener("mousedown", e=>{
+    if(e.button!==0) return;
+    startDrag(e);
   });
+  // A button released out of the window: no mouseup, seen at the next move.
   document.addEventListener("mousemove", e=>{
     if(!pdragging) return;
+    if(!(e.buttons & 1)) { stopDrag(null); return; }
     const wr=wrap.getBoundingClientRect();
     const pw=panel.offsetWidth, ph=panel.offsetHeight;
     let nx=e.clientX-wr.left-pdx, ny=e.clientY-wr.top-pdy;
@@ -342,46 +421,78 @@ function makePanelShell(title, onClose, w, h, panelRef) {
     setIframePointerEvents("");  // restore iframe interaction
   }
   document.addEventListener("mouseup", stopDrag);
-  // Safety: also stop on blur (e.g.
-  window.addEventListener("blur", ()=>{ if(pdragging) stopDrag(null); });
 
+  // Resized from any border or corner, as a desktop window; the corner
+  // bottom right keeps its drawn grip.
   const MIN_W = 180, MIN_H = 120;
-  const grip = document.createElement("div");
-  grip.style.cssText = `
-    position:absolute; right:0; bottom:0; width:16px; height:16px;
-    cursor:nwse-resize; z-index:10;
-    background:linear-gradient(135deg, transparent 50%, #30363d 50%, #30363d 60%,
-               transparent 60%, transparent 72%, #30363d 72%, #30363d 82%, transparent 82%);`;
-  panel.appendChild(grip);
+  // the top corners are small, the close button sits near the right one
+  const EDGE = 6, CORNER = 14, TOP_CORNER = 8;
+  const CURSOR = { n:"ns-resize", s:"ns-resize", e:"ew-resize", w:"ew-resize",
+                   ne:"nesw-resize", sw:"nesw-resize",
+                   nw:"nwse-resize", se:"nwse-resize" };
+  const PLACE = {
+    n:  `top:0; left:${TOP_CORNER}px; right:${TOP_CORNER}px; height:${EDGE}px;`,
+    s:  `bottom:0; left:${CORNER}px; right:${CORNER}px; height:${EDGE}px;`,
+    w:  `left:0; top:${TOP_CORNER}px; bottom:${CORNER}px; width:${EDGE}px;`,
+    e:  `right:0; top:${TOP_CORNER}px; bottom:${CORNER}px; width:${EDGE}px;`,
+    nw: `top:0; left:0; width:${TOP_CORNER}px; height:${TOP_CORNER}px;`,
+    ne: `top:0; right:0; width:${TOP_CORNER}px; height:${TOP_CORNER}px;`,
+    sw: `bottom:0; left:0; width:${CORNER}px; height:${CORNER}px;`,
+    se: `bottom:0; right:0; width:16px; height:16px;
+         background:linear-gradient(135deg, transparent 50%, #30363d 50%, #30363d 60%,
+         transparent 60%, transparent 72%, #30363d 72%, #30363d 82%, transparent 82%);`,
+  };
 
-  let rsz=false, rsx=0, rsy=0, rsw=0, rsh=0;
-  grip.addEventListener("mousedown", e=>{
-    if(e.button!==0) return;
-    rsz=true;
-    const pr=panel.getBoundingClientRect();
-    rsx=e.clientX; rsy=e.clientY; rsw=pr.width; rsh=pr.height;
+  let rsz=null, rsx=0, rsy=0, rsl=0, rst=0, rsw=0, rsh=0;
+  function startResize(e, dir) {
+    rsz = dir;
+    rsx = e.clientX; rsy = e.clientY;
+    rsl = panel.offsetLeft; rst = panel.offsetTop;
+    rsw = panel.offsetWidth; rsh = panel.offsetHeight;
+    panel.style.right = "auto"; panel.style.bottom = "auto";
+    panel.style.left = rsl + "px"; panel.style.top = rst + "px";
     setIframePointerEvents("none");  // iframes swallow mousemove/up otherwise
     raisePanel(panel);
+    // pinned from the start: the zoom follow would undo the size meanwhile
+    if (panelRef) panelRef.pinned = true;
     e.preventDefault(); e.stopPropagation();
+  }
+  // the se grip last: cr-play.js inserts its content before lastChild
+  ["n", "s", "w", "e", "nw", "ne", "sw", "se"].forEach(dir => {
+    const h = document.createElement("div");
+    h.style.cssText = `position:absolute; z-index:10; cursor:${CURSOR[dir]}; ${PLACE[dir]}`;
+    h.dataset.rdir = dir;
+    h.addEventListener("mousedown", e => {
+      if (e.button !== 0) return;
+      startResize(e, dir);
+    });
+    panel.appendChild(h);
   });
+  // Also called by the canvas: the border of a lowered panel is under it.
+  panel._resize = startResize;
+
   document.addEventListener("mousemove", e=>{
     if(!rsz) return;
-    let nw=rsw+(e.clientX-rsx), nh=rsh+(e.clientY-rsy);
-    nw=Math.max(MIN_W,nw); nh=Math.max(MIN_H,nh);
-    panel.style.width=nw+"px"; panel.style.height=nh+"px";
+    if(!(e.buttons & 1)) { stopResize(null); return; }
+    const dx = e.clientX - rsx, dy = e.clientY - rsy;
+    let l = rsl, t = rst, w = rsw, h = rsh;
+    if (rsz.includes("e")) w = Math.max(MIN_W, rsw + dx);
+    if (rsz.includes("s")) h = Math.max(MIN_H, rsh + dy);
+    if (rsz.includes("w")) { w = Math.max(MIN_W, rsw - dx); l = rsl + rsw - w; }
+    if (rsz.includes("n")) { h = Math.max(MIN_H, rsh - dy); t = rst + rsh - h; }
+    panel.style.left = l + "px"; panel.style.top = t + "px";
+    panel.style.width = w + "px"; panel.style.height = h + "px";
     e.preventDefault();
   });
   function stopResize(e){
     if(!rsz) return;
     if(e && e.button!==0) return;
-    rsz=false;
-    if(panelRef) panelRef.pinned = true;  // keep manual size against zoom
+    rsz=null;
     setIframePointerEvents("");
   }
   document.addEventListener("mouseup", stopResize);
-  window.addEventListener("blur", ()=>{ if(rsz) stopResize(null); });
 
-  return { panel, bar };
+  return { panel, bar, own };
 }
 
 function openBackgroundTab(url) {
@@ -614,7 +725,7 @@ function openVncPanel(vmName, url, nodeObj) {
     delete g_vnc_panels[vmName];
   }
   const panelRef = { pinned: false };
-  const { panel, bar } = makePanelShell(
+  const { panel, bar, own } = makePanelShell(
     `Desktop: ${vmName}`,
     ()=>closeVnc(),
     800, 520, panelRef);
@@ -626,6 +737,7 @@ function openVncPanel(vmName, url, nodeObj) {
   frame.tabIndex = 0;  // focusable, so clicking the panel can hand it the keyboard
   frame.style.cssText = "flex:1; border:none; width:100%;";
   panel.appendChild(frame);
+  own();
 
   function closeVnc(){
     try { panel.remove(); } catch(e){}
@@ -645,13 +757,18 @@ function openVncPanel(vmName, url, nodeObj) {
   updatePanelPositions();
 }
 // An air has one capture, opened from the air: raised when already open.
-function openAirWebshark(air, lanObj) {
+function openAirWebshark(air, lanObj, filter) {
   const p = g_webshark_panels[`${air}_0`];
-  if (p && p.panel) { raisePanel(p.panel); return; }
-  openWebsharkPanel(air, 0, lanObj, `webshark: air ${air}`);
+  if (p && p.panel) {
+    raisePanel(p.panel);
+    if (filter && p.setFilter) p.setFilter(filter);
+    return;
+  }
+  openWebsharkPanel(air, 0, lanObj, `webshark: air ${air}`, filter);
 }
 
-function openWebsharkPanel(nodeName, ethNum, nodeObj, airTitle) {
+// filter: a display filter the capture opens with (a sniff line of a demo).
+function openWebsharkPanel(nodeName, ethNum, nodeObj, airTitle, filter) {
   const key = `${nodeName}_${ethNum}`;
   // One webshark per name_eth: close any existing one and relaunch fresh.
   if (g_webshark_panels[key]) {
@@ -666,7 +783,8 @@ function openWebsharkPanel(nodeName, ethNum, nodeObj, airTitle) {
 
   // A running PcapRec on this interface is not in the way: the snf has one
   // dumpcap, webshark reads its fifo and the record its socket.
-  launchWebshark(nodeName, ethNum, nodeObj, key, snfSock, sockName, url, title);
+  launchWebshark(nodeName, ethNum, nodeObj, key, snfSock, sockName, url, title,
+                 filter);
 }
 
 // A small read-only panel shown when a webshark is refused because the main
@@ -702,7 +820,8 @@ function showWebsharkRefused(nodeName, ethNum, nodeObj, title, text) {
   updatePanelPositions();
 }
 
-function launchWebshark(nodeName, ethNum, nodeObj, key, snfSock, sockName, url, title) {
+function launchWebshark(nodeName, ethNum, nodeObj, key, snfSock, sockName, url, title,
+                        filter) {
   const panelRef = { pinned: false };
   const { panel, bar } = makePanelShell(title, ()=>closeShark(), 720, 420, panelRef);
   bar.style.background = "#0d2137";
@@ -721,6 +840,7 @@ function launchWebshark(nodeName, ethNum, nodeObj, key, snfSock, sockName, url, 
     const d = ev.data;
     if (!d || typeof d !== "object" || !("cloonix_webshark" in d)) return;
     if (d.cloonix_webshark === "connected") {
+      if (!everConnected && filter) setFilter(filter);
       everConnected = true;
     } else if (d.cloonix_webshark === "disconnected") {
       if (everConnected || Date.now() > graceUntil)
@@ -730,6 +850,12 @@ function launchWebshark(nodeName, ethNum, nodeObj, key, snfSock, sockName, url, 
   window.addEventListener("message", onMsg);
 
   // Never running (iframe got a 502, no postMessage at all): give up after the grace.
+  // the page applies it as if typed in its Filter box
+  function setFilter(f) {
+    try { frame.contentWindow.postMessage({ cloonix_webshark_filter: f }, "*"); }
+    catch(e){}
+  }
+
   let graceTimer = setTimeout(function(){
     if (!everConnected) closeShark();
   }, 12500);
@@ -752,8 +878,10 @@ function launchWebshark(nodeName, ethNum, nodeObj, key, snfSock, sockName, url, 
                ()=> transferPanelToTab(panel, title, g_webshark_panels, key));
 
   g_webshark_panels[key] = { panel, anchorNode: nodeObj, vmKey: nodeName, popup: null,
-                              close: closeShark, panelRef,
-                              refused: ()=>closeShark(`no capture on ${nodeName} eth${ethNum}: the switch refused it (no snf, or one starting)`),
+                              close: closeShark, panelRef, setFilter,
+                              refused: ()=>closeShark(isAir(nodeName)
+                                ? `no capture of the air ${nodeName}: not captured, or its capture not up after 10 s`
+                                : `no capture on ${nodeName} eth${ethNum}: no snf, or its snf not up after 10 s`),
                               onReturn: ()=>{ try { updatePanelPositions(); } catch(e){} },
                               get pinned(){ return panelRef.pinned; } };
   updatePanelPositions();
@@ -771,11 +899,8 @@ function launchWebshark(nodeName, ethNum, nodeObj, key, snfSock, sockName, url, 
   .catch(()=> fetch(startUrl));  // launch webshark even if RPC fails
 }
 
-// Middle-click paste, the last selection wins. A web selection (a terminal,
-// or text of the page) is seen when made. A host selection is not: it is
-// deduced at the paste, when every cloonix window lost the focus after the
-// last web selection and the browser's own paste text is not the one of the
-// paste before.
+// Middle-click paste, last selection wins: a web selection is seen when
+// made; a host one is deduced at the paste (focus lost, new paste text).
 let g_primary_selection = "";
 let g_web_at = 0;
 let g_away_at = 0;
@@ -810,7 +935,9 @@ function hookSelectionWindow(win){
   });
 }
 
-function openSshPanel(vmName, net, nodeObj, kindOverride) {
+// firstCmd: a command typed in the shell once it has shown its prompt (a
+// terminal line of the Comments panel).
+function openSshPanel(vmName, net, nodeObj, kindOverride, firstCmd) {
   // kind: "ssh" cloonix exec pipe, "shk" qemu serial console, "crun" container shell.
   const kind = kindOverride ? kindOverride
               : nodeObj && nodeObj.type === "kvm" ? "shk"
@@ -836,7 +963,7 @@ function openSshPanel(vmName, net, nodeObj, kindOverride) {
                 + location.host + url + '/ws';
 
   const panelRef = { pinned: false };
-  const { panel, bar } = makePanelShell(
+  const { panel, bar, own } = makePanelShell(
     `${net} / ${vmName} [${label}]`,
     ()=>closePanel(panelKey),
     540, 280, panelRef);
@@ -868,6 +995,8 @@ function openSshPanel(vmName, net, nodeObj, kindOverride) {
   term.open(termDiv);
   fitAddon.fit();
   term.focus();
+  panelRef.focus = () => focusTerm(term);
+  own();
 
   let ws=null, destroyed=false, g_popup=null;
   // Reconnect policy: retry a healthy session that drops, but give up when
@@ -875,6 +1004,22 @@ function openSshPanel(vmName, net, nodeObj, kindOverride) {
   const MAX_DEAD_RETRIES = 4;
   const STABLE_MS = 2000;
   let deadRetries = 0, openedAt = 0;
+  // the first output of the shell, then a quiet moment: the prompt is there
+  let cmdPending = firstCmd || "", cmdTimer = null;
+  function cmdSoon(){
+    if (!cmdPending) return;
+    clearTimeout(cmdTimer);
+    cmdTimer = setTimeout(()=>{
+      if (cmdPending && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(new TextEncoder().encode(cmdPending + "\r"));
+        cmdPending = "";
+      }
+    }, 300);
+  }
+  function shellOut(e){
+    term.write(e.data instanceof ArrayBuffer ? new Uint8Array(e.data) : e.data);
+    cmdSoon();
+  }
   function sendResize(){
     if(ws&&ws.readyState===WebSocket.OPEN)
       ws.send(JSON.stringify({cols:term.cols,rows:term.rows}));
@@ -887,8 +1032,7 @@ function openSshPanel(vmName, net, nodeObj, kindOverride) {
     ws.binaryType='arraybuffer';
     ws.onopen =()=>{ openedAt = Date.now();
                      term.write('\x1b[32mConnected\x1b[0m\r\n'); sendResize(); };
-    ws.onmessage=e=>term.write(
-      e.data instanceof ArrayBuffer?new Uint8Array(e.data):e.data);
+    ws.onmessage=shellOut;
     // term is rebound by wireTerm() when the panel changes window.
     ws.onclose=()=>{
       if(destroyed) return;
@@ -911,8 +1055,7 @@ function openSshPanel(vmName, net, nodeObj, kindOverride) {
         ws.send(new TextEncoder().encode(data));
     });
     term.onResize(()=>sendResize());
-    if(ws) ws.onmessage = e => term.write(
-      e.data instanceof ArrayBuffer ? new Uint8Array(e.data) : e.data);
+    if(ws) ws.onmessage = shellOut;
     wireSelection();
   }
 
@@ -920,9 +1063,8 @@ function openSshPanel(vmName, net, nodeObj, kindOverride) {
     term.onSelectionChange(() => webSelection(term.getSelection()));
     hookSelectionWindow(termDiv.ownerDocument.defaultView);
 
-    // The browser pastes at the release of the middle button: the choice is
-    // made there, its text in hand. No paste event (middlemouse.paste off):
-    // the web selection goes PASTE_MS after the release.
+    // The browser pastes on middle release: chosen there; without a paste
+    // event the web selection goes PASTE_MS after the release.
     const PASTE_MS = 200;
     let middle = false, timer = null;
 

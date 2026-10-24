@@ -62,10 +62,13 @@ typedef struct t_crun
   int delete_mount_retry;
   int deleting;
   int pid_missing;
-  /* the start in three loop turns: whom to answer, and the stage */
+  /* the start in loop turns: whom to answer, and the stage */
   int start_llid;
   int start_tid;
   int start_stage;
+  /* a slow step runs in a child, so the loop goes on: its pid */
+  int start_child;
+  int delete_child;
   struct t_crun *prev;
   struct t_crun *next;
 } t_crun;
@@ -175,19 +178,67 @@ static void teardown_start(t_crun *cur)
   cur->delete_first_finalization_countdown = DELETE_SETTLE_BEATS;
 }
 
-static void delete_first_finalization(t_crun *cur)
-{   
+/* -1 while the child of a slow step works, else its exit status, 255 when
+   it did not exit. */
+static int child_status(int *child, char *name)
+{
+  int status = 0, pid = waitpid(*child, &status, WNOHANG);
+  if (pid == 0)
+    return -1;
+  *child = 0;
+  if (pid < 0)
+    {
+    KERR("ERROR %s: the child of a slow step is lost: %s", name,
+         strerror(errno));
+    return 255;
+    }
+  if (!WIFEXITED(status))
+    {
+    KERR("ERROR %s: the child of a slow step ended on signal %d", name,
+         WIFSIGNALED(status) ? WTERMSIG(status) : 0);
+    return 255;
+    }
+  return WEXITSTATUS(status);
+}
+
+/* 1 when the namespace of the container went with it. */
+static int delete_step(t_crun *cur)
+{
   char cmd[MAX_PATH_LEN];
-  CLOG("%s step 1: umount %s/tmp then crun delete", cur->name,
-       cur->mountbear);
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1,
            "%s %s/tmp", pthexec_umount_bin(), cur->mountbear);
   execute_cmd(cmd, 0, 0);
-  crun_utils_delete_crun_delete(cur->name, cur->nspacecrun,
-                                cur->vm_id, cur->nb_eth,
-                                cur->uid_image, cur->is_privileged);
+  return crun_utils_delete_crun_delete(cur->name, cur->nspacecrun,
+                                       cur->vm_id, cur->nb_eth,
+                                       cur->uid_image, cur->is_privileged);
+}
+
+static void delete_step_done(t_crun *cur, int nspace_deleted)
+{
+  if (nspace_deleted)
+    crun_utils_nspace_deleted(cur->name, cur->nspacecrun);
   cur->delete_second_finalization_countdown = 1;
+}
+
+/* The eths of a big container take seconds to delete: in a child, which
+   touches no channel; crun_beat collects it. */
+static void delete_first_finalization(t_crun *cur)
+{   
+  int pid;
+  CLOG("%s step 1: umount %s/tmp then crun delete", cur->name,
+       cur->mountbear);
+  pid = fork();
+  if (pid == 0)
+    _exit(delete_step(cur) ? 2 : 0);
+  if (pid < 0)
+    {
+    KERR("ERROR %s: no child for the delete (%s), done in the loop",
+         cur->name, strerror(errno));
+    delete_step_done(cur, delete_step(cur));
+    }
+  else
+    cur->delete_child = pid;
 }
 
 static void delete_second_finalization(t_crun *cur)
@@ -252,11 +303,22 @@ void crun_beat(int llid)
 {
   char resp[MAX_PATH_LEN];
   int pid;
+  int rc;
   t_crun *next, *cur = g_head_crun;
   while (cur)
     {
     next = cur->next;
-    if (cur->delete_first_finalization_countdown)
+    if (cur->start_child)
+      {
+      /* polled by timer_start_stage: the delete waits for the eths */
+      }
+    else if (cur->delete_child)
+      {
+      rc = child_status(&(cur->delete_child), cur->name);
+      if (rc >= 0)
+        delete_step_done(cur, (rc == 2));
+      }
+    else if (cur->delete_first_finalization_countdown)
       {
       cur->delete_first_finalization_countdown -= 1;
       if (cur->delete_first_finalization_countdown == 0)
@@ -405,9 +467,7 @@ static void create_config_json(char *line, char *resp, t_crun *cur,
   char *brandtype = cur->brandtype;
   cnt_dir = cur->cnt_dir;
   image = cur->image;
-  if (!strcmp(image, "self_rootfs"))
-    snprintf(cur->rootfs_path, MAX_PATH_LEN-1, "%s/%s", cur->bulk, image);
-  else if (!is_persistent)
+  if (!is_persistent)
     snprintf(cur->rootfs_path, MAX_PATH_LEN-1,"%s/%s/%s",
              cnt_dir, name, ROOTFS);
   else if (is_privileged)
@@ -508,8 +568,8 @@ static void create_overlay(char *line, char *resp, t_crun *cur)
     }
 }
 
-/* The start is three turns of the loop: crun create, the eths, then the
-   radios and crun start; in one turn a 32 eth container held it 2 s. */
+/* The start in turns of the loop: crun create, the eths made by a child (a
+   32 eth container held the loop 3 s), then the radios and crun start. */
 static void start_answer(t_crun *cur, char *resp)
 {
   if (msg_exist_channel(cur->start_llid))
@@ -529,14 +589,40 @@ static void start_ko(t_crun *cur, char *reason)
   start_answer(cur, resp);
 }
 
+static void timer_start_stage(void *data);
+
+static void start_stage_again(t_crun *cur)
+{
+  char *nm = strdup(cur->name);
+  clownix_timeout_add(1, timer_start_stage, (void *) nm, NULL, NULL);
+}
+
 static void timer_start_stage(void *data)
 {
   char *nm = (char *) data;
   t_crun *cur = find_crun(nm);
   char resp[MAX_PATH_LEN];
+  int rc;
   free(nm);
   if ((!cur) || (!cur->start_stage))
     return;
+  if (cur->start_stage == 2)
+    {
+    rc = child_status(&(cur->start_child), cur->name);
+    if (rc < 0)
+      {
+      start_stage_again(cur);
+      return;
+      }
+    if (rc)
+      {
+      KERR("ERROR %s: the %d eth(s) of this container could not be created "
+           "in namespace %s", cur->name, cur->nb_eth, cur->nspacecrun);
+      start_ko(cur, "veth_creation");
+      return;
+      }
+    cur->start_stage = 3;
+    }
   if (cur->deleting)
     {
     start_ko(cur, "deleted_while_starting");
@@ -544,18 +630,21 @@ static void timer_start_stage(void *data)
     }
   if (cur->start_stage == 1)
     {
-    if (crun_utils_user_eth_create(cur->name, cur->nspacecrun,
-                                   cur->cloonix_rank, cur->vm_id,
-                                   cur->nb_eth, cur->eth_mac))
+    /* the child touches no channel: its exit status is the answer */
+    rc = fork();
+    if (rc == 0)
+      _exit(crun_utils_user_eth_create(cur->name, cur->nspacecrun,
+                                       cur->cloonix_rank, cur->vm_id,
+                                       cur->nb_eth, cur->eth_mac) ? 1 : 0);
+    if (rc < 0)
       {
-      KERR("ERROR %s: the %d eth(s) of this container could not be created "
-           "in namespace %s", cur->name, cur->nb_eth, cur->nspacecrun);
+      KERR("ERROR %s: no child for the eths: %s", cur->name, strerror(errno));
       start_ko(cur, "veth_creation");
       return;
       }
+    cur->start_child = rc;
     cur->start_stage = 2;
-    nm = strdup(cur->name);
-    clownix_timeout_add(1, timer_start_stage, (void *) nm, NULL, NULL);
+    start_stage_again(cur);
     return;
     }
   if ((cur->nb_vwif) &&
@@ -586,7 +675,6 @@ static void timer_start_stage(void *data)
 static void create_crun_start(int llid, int tid, char *resp, t_crun *cur)
 {
   char *name = cur->name;
-  char *nm;
   CLOG("%s CREATE start: the last step of the create", name);
   crun_utils_prepare_with_delete(name, cur->nspacecrun, cur->vm_id,
                                  cur->nb_eth, cur->uid_image,
@@ -616,8 +704,7 @@ static void create_crun_start(int llid, int tid, char *resp, t_crun *cur)
     cur->start_llid = llid;
     cur->start_tid = tid;
     cur->start_stage = 1;
-    nm = strdup(name);
-    clownix_timeout_add(1, timer_start_stage, (void *) nm, NULL, NULL);
+    start_stage_again(cur);
     }
 }
 

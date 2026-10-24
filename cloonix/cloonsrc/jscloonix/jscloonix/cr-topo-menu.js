@@ -107,12 +107,21 @@ function buildCtxMenu(mx, my, clientX, clientY) {
     const isEths = etype === "eths";
     const menu = makeMenu(clientX, clientY);
     if (etype === "wlan") {
+      // a wlan is captured with its air: the choices of the air
       const air = airOf(nd, i);
-      const dead = menuItem(air ? `wlan${wlanIdx(nd, i)} on the air ${air}: ` +
-                                  `double-click the air for its capture`
-                                : `wlan${wlanIdx(nd, i)}: on no air`, null);
-      dead.style.opacity = "0.5"; dead.style.cursor = "default";
-      menu.appendChild(dead);
+      if (!air) {
+        const dead = menuItem(`wlan${wlanIdx(nd, i)}: on no air`, null);
+        dead.style.opacity = "0.5"; dead.style.cursor = "default";
+        menu.appendChild(dead);
+      } else if (!g_air_snf.has(air)) {
+        menu.appendChild(menuItem(`Sniff on  (capture the air ${air}, open webshark)`,
+          ()=> snfSet(air, 0, 1, ()=> websharkWhenSniffable(air, null))));
+      } else {
+        menu.appendChild(menuItem(`Webshark  the air ${air}`,
+          ()=> openAirWebshark(air, g_lans.find(l => l.name === air))));
+        menu.appendChild(menuItem(`Sniff off  (stop capturing the air ${air})`,
+          ()=> snfSet(air, 0, 0)));
+      }
       return;
     }
 
@@ -136,8 +145,8 @@ function buildCtxMenu(mx, my, clientX, clientY) {
         menu.appendChild(menuItem(`Sniff off  (make non-sniffable)`,
           ()=> snfSet(nd.name, i, 0)));
       else
-        menu.appendChild(menuItem(`Sniff on  (make sniffable)`,
-          ()=> snfSet(nd.name, i, 1)));
+        menu.appendChild(menuItem(`Sniff on  (make sniffable, open webshark)`,
+          ()=> snfSet(nd.name, i, 1, ()=> websharkWhenSniffable(nd.name, i))));
     }
     return;
   }
@@ -151,15 +160,21 @@ function buildCtxMenu(mx, my, clientX, clientY) {
       ()=>{ lhit._locked = !lhit._locked;
             if (!lhit._locked) reviveLayout(120);
             if (typeof draw === "function") draw(); }));
+    menu.appendChild(menuItem(`Note\u2026  a comment on ${lhit.name}`,
+      ()=> noteEdit(lhit.name)));
     menu.appendChild(menuSep());
     if (isAir(lhit.name)) {
       // an air is born not captured: cnf <air> sniff=on|off
-      menu.appendChild(menuItem(`Sniff on  (capture the air)`,
-        ()=> snfSet(lhit.name, 0, 1)));
-      menu.appendChild(menuItem(`Sniff off  (stop capturing it)`,
-        ()=> snfSet(lhit.name, 0, 0)));
-      menu.appendChild(menuItem(`Webshark  the air ${lhit.name}`,
-        ()=> openAirWebshark(lhit.name, lhit)));
+      if (!g_air_snf.has(lhit.name))
+        menu.appendChild(menuItem(`Sniff on  (capture the air, open webshark)`,
+          ()=> snfSet(lhit.name, 0, 1,
+                      ()=> websharkWhenSniffable(lhit.name, null))));
+      else {
+        menu.appendChild(menuItem(`Sniff off  (stop capturing it)`,
+          ()=> snfSet(lhit.name, 0, 0)));
+        menu.appendChild(menuItem(`Webshark  the air ${lhit.name}`,
+          ()=> openAirWebshark(lhit.name, lhit)));
+      }
       menu.appendChild(menuItem(`Select, to plug or unplug a wlan`,
         ()=>{ g_selected_lan = lhit.name; draw(); }));
       menu.appendChild(menuSep());
@@ -202,6 +217,8 @@ function buildCtxMenu(mx, my, clientX, clientY) {
       ()=>{ nhit._locked = !nhit._locked;
             if (!nhit._locked) reviveLayout(120);
             if (typeof draw === "function") draw(); }));
+    menu.appendChild(menuItem(`Note\u2026  a comment on ${nhit.name}`,
+      ()=> noteEdit(nhit.name)));
     menu.appendChild(menuSep());
 
     if (nhit.type === "kvm") {
@@ -347,14 +364,16 @@ function buildCtxMenu(mx, my, clientX, clientY) {
   menu.appendChild(menuItem(g_brand==="brandkvm"?"kvm config":"cnt config",
     ()=>showConfigDialog(g_brand)));
 
-  menu.appendChild(menuSep());
-  // Only two node kinds now: kvm and cnt.
-  [["brandkvm","kvm"],["brandcnt","cnt"]].forEach(([b,lbl])=>{
-    menu.appendChild(menuRadio(lbl, g_brand===b, ()=>{
-      g_brand=b; removeCtxMenu(); subImg.remove();
-      buildCtxMenu(mx,my,clientX,clientY);
-    }));
-  });
+  // Two node kinds, kvm and cnt; cnt alone when there is no kvm.
+  if (!g_kvm_absent) {
+    menu.appendChild(menuSep());
+    [["brandkvm","kvm"],["brandcnt","cnt"]].forEach(([b,lbl])=>{
+      menu.appendChild(menuRadio(lbl, g_brand===b, ()=>{
+        g_brand=b; removeCtxMenu(); subImg.remove();
+        buildCtxMenu(mx,my,clientX,clientY);
+      }));
+    });
+  }
 
   menu.appendChild(menuSep());
   menu.appendChild(menuItem("lan", ()=>{
@@ -472,7 +491,7 @@ function showConfigDialog(brand) {
   }
 
   const inpName=row("Name:",inp(cfg.name));
-  let inpCpu,inpMem,cbPers,cbWin,cbCisco,cbBsd,inpWif,inpEnv,inpMnt,inpNbEth;
+  let inpCpu,inpMem,cbPers,cbWin,cbCisco,cbBsd,inpWif,inpEnv,inpNbEth;
 
   const MAX_ETH = 8;
 
@@ -613,7 +632,6 @@ const BEAT_DEAD_MS = 4000;
 
 let g_last_beat = Date.now();
 let g_overlay = null;
-let g_srv_up = true;
 let g_topo_ws = null;
 let g_dead_confirm = 0;
 
@@ -706,11 +724,9 @@ function connectTopo() {
         }
         if (m.srv !== 0) {
           g_srv_down_count = 0;
-          g_srv_up = true;
           overlayHide();
         }
         else if (++g_srv_down_count >= SRV_DOWN_BEATS) {
-          g_srv_up = false;
           overlayShow("NET IS DOWN",
             "the web server is answering but the cloonix net behind it is " +
             "not<br><br>start it again with <b>cloonix start &lt;net&gt;</b>" +
@@ -744,6 +760,7 @@ function connectTopo() {
       }
       else if(m.type==="itempos") applyItemPos(m.name, m.x, m.y);
       else if(m.type==="itemposeth") applyItemPosEth(m.name, m.num, m.deg);
+      else if(m.type==="itemnote") applyItemNote(m.name, m.txt);
       else if(m.type==="pending_lans"){
         g_pending_lans = m.lans||[];
         // Re-apply the last real topo so nodes are never lost
@@ -779,6 +796,8 @@ function connectImages() {
       const m=JSON.parse(ev.data);
       if(m.type==="images"){
         g_images.kvm=m.kvm||[]; g_images.cnt=m.cnt||[];
+        g_kvm_absent=!!m.kvm_absent;
+        if(g_kvm_absent) g_brand="brandcnt";
         if(!g_kvm_cfg.image&&g_images.kvm.length) g_kvm_cfg.image=g_images.kvm[0];
         if(!g_cnt_cfg.image&&g_images.cnt.length) g_cnt_cfg.image=g_images.cnt[0];
       }
@@ -847,8 +866,10 @@ document.addEventListener("DOMContentLoaded",()=>{
     const w=screenToWorld(e.clientX-r.left, e.clientY-r.top);
     mdWorldX=w.x; mdWorldY=w.y;
 
+    const border = panelBorderAtScreen(e.clientX, e.clientY);
+    if (border) { border.panel._take(); border.panel._resize(e, border.dir); return; }
     const barPnl = panelBarAtScreen(e.clientX, e.clientY);
-    if (barPnl) { raisePanel(barPnl); return; }
+    if (barPnl) { barPnl._take(); barPnl._drag(e); return; }
 
     const hitEth = g_selected_lan ? null : ethAt(w.x,w.y);
     const hitLan = lanAt(w.x,w.y);
@@ -858,7 +879,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       lowerAllPanels();
     } else {
       const pnl = panelAtScreen(e.clientX, e.clientY);
-      if (pnl) { raisePanel(pnl); return; }   // bring the panel to the front
+      if (pnl) { pnl._take(); e.preventDefault(); return; }
       lowerAllPanels();
     }
     if(hitEth){

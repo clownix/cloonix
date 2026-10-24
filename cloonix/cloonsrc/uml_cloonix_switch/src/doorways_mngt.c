@@ -121,7 +121,7 @@ void doorways_err_cb (int llid)
       return;
     if (get_killing_cloonix())
       return;
-    KERR("ERROR Ctrl access to cloonix-doorways broken, re-launching\n");
+    KERR("ERROR Ctrl access to cloonix-doorways broken, re-launching");
     doorways_start();
     }
 }

@@ -3,9 +3,8 @@ r"""windows - a windows guest and two trixie containers pinging on one lan.
 
     ./windows.py [net] [--no-fw]        default net: nemo
 
-Every other demo here configures linux from linux. This one is about the
-other side: what a windows guest needs before it is on the network, sent
-from the host over "cloonix cli ssh"::
+What a windows guest needs before it is on the network, sent from the host
+over "cloonix cli ssh"::
 
       Win1 ---- lan1 ---- trix1
     10.0.0.1            10.0.0.2
@@ -13,81 +12,55 @@ from the host over "cloonix cli ssh"::
       lan1 ---- trix2
               10.0.0.3
 
-A container arrives on a lan ready: the address is the only missing thing.
-Windows arrives with an adapter that may be disabled, no address on it, and
-a firewall that drops the echo request without telling anybody -- so it
-pings out and cannot be pinged, which reads like a broken lan and is not.
+    getmac /v /fo csv /nh                       which adapter is eth0
+    netsh interface set interface ... enable    it may be disabled
+    netsh interface ip set address ... static   the address
+    netsh advfirewall firewall add rule ...     let the echo request in
+
+A container arrives on a lan with its address the only thing missing.
+Windows arrives with an adapter that may be disabled, no address, and a
+firewall that drops the echo request: it pings out and cannot be pinged,
+which reads as a broken lan and is not.
 
   ACT 1  the machines, the lan, the containers addressed
   ACT 2  trix1 pings trix2, so the lan is known good before windows
-  ACT 3  the windows adapter found BY ITS MAC, enabled, addressed, opened
+  ACT 3  the windows adapter found by its mac, enabled, addressed, opened
   ACT 4  the ping both ways
 
---no-fw leaves out the firewall rule of act 3, which is the state a windows
-guest is really in when it is first put on a lan. The demo then fails in
-one direction only, which is the point: sniff Win1 eth0 and the echo
-request is on the capture with no reply behind it.
-
-Needs win.qcow2 in bulk, prepared as the windows chapter describes, and the
-trixie container image. Standard library only, like cloonix itself.
+--no-fw leaves out the firewall rule of act 3, the state of a windows guest
+first put on a lan: the demo then fails one way only. win.qcow2 is prepared
+as the windows chapter of the user book describes.
 
 Image: win.qcow2 in bulk, and trixie for the container
 Size:  1 kvm, 2 containers, 1 lan
 
 THE PACKET TO CATCH
 -------------------
-  Sniff the windows interface, and run the demo with the firewall rule
-  left out (--no-fw), which is the state a windows guest is in when it is
-  first put on a lan:
+  The windows interface, the demo run with --no-fw:
 
     cloonix cli nemo cnf Win1 eth0 sniff=on
     cloonix cli nemo sniff Win1 eth0 --dump icmp
 
-  The packet to catch is the echo request that ARRIVES and is never
-  answered. It is on the capture, so it crossed the lan, reached the
-  interface and was accepted by the driver -- and no reply follows it.
-  Nothing inside windows reports this: the drop is in the firewall, above
-  the capture point and below anything a user sees.
-
-  That is the whole difference between "the network is broken" and "the
-  host is not answering", and one capture separates them.
-
-Important
-  The windows guest is the slow one. A container answers ssh in a second
-  or two, windows takes a minute or more to boot before its agent pings,
-  so the demo waits for the node rather than assuming it. If it never
-  comes, the machine is up but its agent is not: see the windows chapter.
-
-WHY THIS DEMO EXISTS
---------------------
-Every other demo here configures linux from linux. This one is the
-reference for the three commands a windows guest needs before it is on the
-network at all, all of them sent from the host over "cloonix cli ssh":
-
-    getmac /v /fo csv /nh                       which adapter is eth0
-    netsh interface set interface ... enable    it may be disabled
-    netsh interface ip set address ... static   the address
-    netsh advfirewall firewall add rule ...     let the echo request in
-
-The fourth is the one that is always forgotten. Windows answers a ping it
-sent, so the guest looks connected from inside itself while every ping
-from the lan is dropped before anything in the guest sees it.
+  The packet to catch is the echo request that arrives and is never
+  answered: it crossed the lan and reached the interface, and the firewall
+  dropped it above the capture point, with nothing reported inside windows.
+  The capture tells a host that does not answer from a broken network.
 
 WHICH ADAPTER IS eth0
 ---------------------
-Windows names an adapter after its pci slot, not after the order of the
-qemu line, and cloonix pins one slot per interface. The name is stable but
-it is not "eth0": with one interface it is "Ethernet", with several the
-numbering follows the order the miniports finished installing.
-
-The mapping is read and not assumed. The last byte of the mac is the
-cloonix interface number, and getmac prints name and mac together:
+Windows names an adapter after its pci slot, cloonix pinning one slot per
+interface: "Ethernet" with one interface, with several a numbering in the
+order the miniports finished installing. The last byte of the mac is the
+cloonix interface number, and getmac prints name and mac together, csv with
+no header, which the demo parses:
 
     "Ethernet","Red Hat VirtIO...","02-3F-A1-90-2C-00","\Device\..."
-                                                 ^^
-                                                 eth0
+                                                 ^^ eth0
 
-csv with no header, so the demo parses it rather than guessing.
+Important
+  windows boots for a minute or more before its agent answers; the demo
+  waits for the node. A node that never turns blue is up without its agent:
+  the windows chapter of the user book has the cases.
 """
 import csv
 import io
@@ -103,7 +76,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    ACK_FAST, CLOONIX, NET, cli, erase_net, show, step, story)
+    ACK_FAST, CLOONIX, NET, cli, erase_net, show, step, story, unavailable,
+    EXIT_UNAVAILABLE)
 
 WANT_FW = "--no-fw" not in sys.argv[1:]
 
@@ -140,7 +114,7 @@ def ssh(node, cmd, check=True, timeout=None):
     return r.stdout
 
 def in_lst(name):
-    """Ask the server what it really has: "dump commands" prints the commands
+    """Ask the server what it has: "dump commands" prints the commands
     that would rebuild the topology, so anything that exists is in it."""
     return name in cli("dump", "commands", quiet=True).stdout.split()
 
@@ -155,7 +129,7 @@ def answers(node, timeout=3):
 
 def check_net():
     if cli("dump", "commands").returncode:
-        sys.exit("no answer from %s\n"
+        unavailable("no answer from %s\n"
                  "  start it:  cloonix start %s" % (NET, NET))
 
 def choose_rootfs():
@@ -173,7 +147,7 @@ def choose_rootfs():
         else:
             said = (r.stdout + r.stderr).strip()
     cli("del", "probe_win", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -467,7 +441,7 @@ def main():
     win_configure(adapter, ADDR[WIN], WANT_FW)
     if not WANT_FW:
         story("  --no-fw: the icmp rule is NOT added, which is how a windows")
-        story("  guest really arrives on a lan")
+        story("  guest arrives on a lan")
     win_show(adapter)
 
     step("ACT 4: the ping, both ways")
@@ -503,7 +477,7 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit as stop:
-        if stop.code:
+        if stop.code and stop.code != EXIT_UNAVAILABLE:
             sys.stderr.write("%s\n" % stop.code)
             leftovers()
             raise SystemExit(1)

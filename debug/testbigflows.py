@@ -234,10 +234,8 @@ def pps(node, secs, net=None):
             (b1 - b0) * 8 / 1e6 / secs)
 
 
-# The maximum of every device, one line each, found by search: tcp is
-# iperf3's own maximum; udp and frames are the highest rate the path
-# carries with at most MAX_LOSS_OK% lost, a binary search under the
-# unbounded figure. Printed at the end and written to TESTBIGFLOWS_MAX.
+# Maximum per device, by search: tcp is iperf3's, udp and frames the highest
+# rate under MAX_LOSS_OK% loss; printed at the end, in TESTBIGFLOWS_MAX.
 MAXF = []
 MAX_LOSS_OK = 1.0
 MAX_SECS = max(4, min(SECS, 6))
@@ -1322,9 +1320,8 @@ def t_c2c_both_ways():
     snd, rcv, _ = iperf_run(A, "10.8.8.9", secs=SECS, extra="-P 8")
     wait_bg(bg, SECS)
     mbits("c2c tcp 8 streams, with 8 the other way at once", snd, rcv)
-    # No iperf3 here: an unbounded flood both ways leaves the c2c losing 97%
-    # each way and iperf3's tcp control connection with it. 1400-byte frames
-    # both ways, what comes out read on the receiving eth of each end.
+    # No iperf3 (an unbounded flood kills its control connection): 1400-byte
+    # frames both ways, counted on each receiving eth.
     mac_p, mac_a = mac_of(P, PEER), mac_of(A)
     trafgen_cfg(A, mac_p, "10.8.8.1", "10.8.8.9", size=1400)
     trafgen_cfg(P, mac_a, "10.8.8.9", "10.8.8.1", size=1400, net=PEER)
@@ -1394,9 +1391,8 @@ def t_a2b_more():
     wait_bg([bg], SECS)
     print("      a2b clean, 64-byte frames flat out: %.0f kpps offered, %.0f "
           "kpps come out" % (tx / 1000, rx / 1000))
-    # Under a cable that loses, iperf3 loses its own control connection, so
-    # the loss is read on frames counted at both ends, paced under the a2b's
-    # ceiling so every drop is the cable's, and on a ping.
+    # A lossy cable kills iperf3's control connection: loss read on frames
+    # counted at both ends, paced under the a2b ceiling, and on a ping.
     for cnf in ("A2B loss=1000", "B2A loss=1000"):
         must(cli("cnf", "bfa2b", cnf), "cnf a2b")
     sent, got = frames_run(C, D, SECS, gap="500us")
@@ -1424,10 +1420,8 @@ def t_a2b_more():
     for cnf in ("A2B silentms=0", "B2A silentms=0",
                 "A2B rate=5000", "B2A rate=5000"):
         must(cli("cnf", "bfa2b", cnf), "cnf a2b")
-    # No iperf3 here (as for the c2c): unbounded udp both ways into a 40
-    # Mbit/s limiter loses 97% each way and iperf3's tcp control connection
-    # with it, and its client then never returns. 1400-byte frames both
-    # ways, what comes out read on the receiving eth of each end.
+    # No iperf3, as for the c2c (40 Mbit/s limiter: 97% loss, client hangs):
+    # 1400-byte frames both ways, counted on each receiving eth.
     mac_c, mac_d = mac_of(C), mac_of(D)
     trafgen_cfg(C, mac_d, "10.8.8.3", "10.8.8.4", size=1400)
     trafgen_cfg(D, mac_c, "10.8.8.4", "10.8.8.3", size=1400)
@@ -1527,9 +1521,8 @@ def t_nat_more():
                                                      "publish=, udp unbounded")):
                 show("iperf3 -c 127.0.0.1 -p %d -t %d -f m %s" % (pport, SECS,
                                                                   extra))
-                # the server in the guest is single threaded: right after a
-                # test it is still tearing the streams down, and a control
-                # connection made in that gap is reset; three tries 2 s apart
+                # the single-threaded server resets a control connection made while it
+                # tears the last test down: three tries 2 s apart
                 for attempt in range(3):
                     r = subprocess.run(["iperf3", "-c", "127.0.0.1", "-p",
                                         str(pport), "-t", str(SECS), "-f",
@@ -1878,9 +1871,8 @@ SCENARIOS = (
 )
 
 
-# TESTBIGFLOWS_FROM=<start of a scenario name>: setup and the kvm flows, which
-# the scenarios after them build on, then from that scenario to the end.
-# The all-at-once uses what c2c both ways, a2b more and nat more leave up.
+# TESTBIGFLOWS_FROM=<scenario prefix>: setup and kvm flows, then from that
+# scenario on; the all-at-once uses what c2c, a2b and nat leave up.
 PRELUDE = ("setup", "kvm flows, sniff on a kvm port, scp and ssh to a kvm")
 
 
@@ -1902,6 +1894,7 @@ def main():
           "%ds per flood" % (NET, PEER, SECS))
     for name, fn in chosen():
         t = time.time()
+        ti.phase("bigflows %s" % name)
         print("[%6.1fs] %s" % (t - T0, name))
         try:
             fn()

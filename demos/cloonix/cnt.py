@@ -28,7 +28,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    CLOONIX, NET, STORY, erase_net, show, story)
+    CLOONIX, HOLD, NET, STORY, erase_net, show, story, unavailable)
 
 CNT_ROOTFS = "trixie"
 
@@ -78,12 +78,12 @@ erase_net()
 place("cnt1", "cnt2")
 story("2. two containers on the image trixie, one cable each to lan1")
 story("   A container is an image of bulk run by crun: no kernel to boot, it")
-story("   is there in a second. eth=1 gives it one interface, eth0, of the")
-story("   sniffable kind. plug cables an interface to a lan, which exists")
-story("   from its first cable on: there is no command to create a lan.")
+story("   is there in a second. eth=1 gives it one interface, eth0, born")
+story("   not capturable, a cyan dot. plug cables an interface to a lan,")
+story("   which exists from its first cable on: no command creates a lan.")
 r = run("cloonix cli %s add cnt cnt1 eth=1 %s" % (NET, CNT_ROOTFS))
 if r.returncode:
-    sys.exit("no container on %s:\n  %s\n  build it: cd vm_create/cnt_kvm && "
+    unavailable("no container on %s:\n  %s\n  build it: cd vm_create/cnt_kvm && "
              "./cnt_trixie.sh" % (CNT_ROOTFS, (r.stdout + r.stderr).strip()))
 run("cloonix cli %s add cnt cnt2 eth=1 %s" % (NET, CNT_ROOTFS))
 run("cloonix cli %s plug cnt1 eth0 lan1" % NET)
@@ -99,6 +99,10 @@ ssh("cnt1", "ip addr add dev eth0 1.1.1.1/24")
 ssh("cnt1", "ip link set dev eth0 up")
 ssh("cnt2", "ip addr add dev eth0 1.1.1.2/24")
 ssh("cnt2", "ip link set dev eth0 up")
+story("   cnf note= writes a comment beside an item on the canvas, here its")
+story("   address; the server keeps it for every browser, note= removes it.")
+run('cloonix cli %s cnf cnt1 note="eth0 1.1.1.1/24"' % NET)
+run('cloonix cli %s cnf cnt2 note="eth0 1.1.1.2/24"' % NET)
 
 story("4. the proof: cnt1 pings cnt2 across lan1")
 story("   Five echo requests cross the open vswitch bridge that is lan1. The")
@@ -108,9 +112,9 @@ story()
 story(r.stdout)
 if r.returncode:
     sys.exit("the ping failed")
-# The result stays in the History popup a moment before the erase.
+# The result stays in the Comments panel a moment before the erase.
 if STORY:
-    time.sleep(4)
+    time.sleep(HOLD)
 story()
 story("cnt1 pings cnt2. Erase everything, the server stays:")
 show("cloonix cli %s del all" % NET)

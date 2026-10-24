@@ -319,22 +319,9 @@ static void no_signal_pipe(void)
   sigaction(SIGPIPE, &act, NULL);
 }
 
-static int is_a_crun(void)
+/* Before the port: the process detached, the actions ready. */
+void agent_init(void)
 {
-  struct stat sb;
-  int result = 0;
-  if (lstat("/cloonixmnt/mountbear", &sb) != -1)
-    {
-    if ((sb.st_mode & S_IFMT) == S_IFDIR)
-      result = 1;
-    }
-  return result;
-}
-
-int main(int argc, char *argv[])
-{ 
-  int fd_listen;
-  fd_set infd;
   struct timeval last_tv;
   gettimeofday(&last_tv, NULL);
   srand((int) (last_tv.tv_usec & 0xFFFF));
@@ -347,27 +334,12 @@ int main(int argc, char *argv[])
   nonblock_init();
   action_init();
   g_time_count = 0;
-  if (is_a_crun())
-    {
-    fd_listen = util_socket_listen_unix("/cloonixmnt/mountbear/sock");
-    if (fd_listen < 0)
-      KOUT("Bad crun socket");
-    FD_ZERO(&infd);
-    FD_SET(fd_listen, &infd); 
-    if (select(fd_listen + 1, &infd, NULL, NULL, NULL) <= 0)
-      KOUT("Bad crun socket");
-    if (!FD_ISSET(fd_listen, &infd))
-      KOUT("Bad crun socket");
-    g_fd_virtio = sock_fd_accept(fd_listen);
-    if (g_fd_virtio < 0)
-      KOUT("Bad Virtio port %s", VIRTIOPORT);
-    }
-  else
-    {
-    g_fd_virtio = sock_open_virtio_port(VIRTIOPORT);
-    if (g_fd_virtio < 0)
-      KOUT("Bad Virtio port %s", VIRTIOPORT);
-    }
+}
+
+/* fd: the channel to the host, opened by main_kvm.c or main_cnt.c */
+void agent_run(int fd)
+{
+  g_fd_virtio = fd;
   purge();
   no_signal_pipe();
   nonblock_add_fd(g_fd_virtio);
@@ -375,5 +347,4 @@ int main(int argc, char *argv[])
   kerr_sock_open();
   for (;;)
     select_wait_and_switch();
-  return 0;
 }

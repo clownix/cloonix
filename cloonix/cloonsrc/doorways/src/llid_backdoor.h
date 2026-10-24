@@ -30,6 +30,9 @@ typedef struct t_backdoor_vm
   int said_not_up;
   int cloonix_not_yet_connected;
   uint64_t reboot_ms;
+  /* a close waits BACKDOOR_CLOSE_GRACE_MS for the delete that explains it */
+  uint64_t closed_ms;
+  char closed_how[MAX_NAME_LEN];
   /* the radios of the kvm, see kvmwifi.c */
   int wifi;
   int wifi_nb;

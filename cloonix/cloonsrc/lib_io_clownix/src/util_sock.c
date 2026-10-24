@@ -60,9 +60,6 @@ void util_free_fd(int fd)
   close (fd);
 }
 
-/*
-*/
-
 int util_read (char *ptr, int max, int fd)
 {
   int rx_len;
@@ -79,7 +76,7 @@ int util_read (char *ptr, int max, int fd)
 
 static void tempo_connect(int no_use)
 {
-  KERR("SIGNAL Timeout in connect\n");
+  KERR("ERROR connect timed out");
 }
 
 /* AF_UNIX stream socket and the address of pname, abstract when off is 1
@@ -306,7 +303,7 @@ int util_socket_listen_unix(char *pname)
   unlink (pname);
   fd = socket (AF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
-    KOUT("%d %d\n", fd, errno);
+    KOUT("%d %d", fd, errno);
   memset (&serv, 0, sizeof (struct sockaddr_un));
   serv.sun_family = AF_UNIX;
   strncpy (serv.sun_path, pname, strlen(pname));
@@ -326,7 +323,7 @@ int util_socket_listen_unix(char *pname)
     {
     close(fd);
     fd = -1;
-    KERR("bind failure %s %d\n", pname, errno);
+    KERR("ERROR bind %s: %s", pname, strerror(errno));
     }
   return fd;
 }
@@ -347,7 +344,7 @@ int util_socket_unix_dgram(char *pname)
   unlink (pname);
   fd = socket (AF_UNIX, SOCK_DGRAM, 0);
   if (fd < 0)
-    KOUT("%d %d\n", fd, errno);
+    KOUT("%d %d", fd, errno);
   memset (&serv, 0, sizeof (struct sockaddr_un));
   serv.sun_family = AF_UNIX;
   strncpy (serv.sun_path, pname, strlen(pname));
@@ -436,7 +433,7 @@ char *lio_linear(char *argv[])
     strcat(result, argv[i]);
     if (strlen(result) >= 2*MAX_PATH_LEN)
       {
-      KERR("NOT POSSIBLE");
+      KERR("ERROR command line too long, cut");
       break;
       }
     strcat(result, " ");

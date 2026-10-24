@@ -37,9 +37,8 @@ static int g_reconnect_count;
 
 static void timer_proxycrun(void *data);
 int get_glob_req_self_destruction(void);
-/* Wall clock, not beats: a loaded loop beats late.
-   Time this process did not run through is forgiven, as proxymous
-   forgives this side: a busy machine is not a gone proxymous. */
+/* Wall clock, not beats (a loaded loop beats late); time this process did
+   not run is forgiven, as proxymous does. */
 static long long g_proxy_seen_ms;
 static t_stall g_stall;
 #define WATCH_BEAT_MS   100
@@ -87,34 +86,30 @@ static void timer_watch_proxymous(void *data)
 
 static void proxy_peer_data_to_crun(char *name, int len, char *buf)
 {
-  char *ptrs, *ptre;
+  char *ptrs = strstr(buf, PROXYMARKUP_START);
+  char *ptre = strstr(buf, PROXYMARKUP_END);
   t_ovs_c2c *cur;
   int pair_llid = 0;
-  if ((!buf) || (strlen(buf) == 0))
-    KERR("ERROR %d", len);
+  if ((!ptrs) || (!ptre))
+    KERR("ERROR c2c %s: data of its peer from proxymous without its markers, "
+         "dropped", name);
   else
     {
-    ptrs = strstr(buf, PROXYMARKUP_START);
-    ptre = strstr(buf, PROXYMARKUP_END);
-    if ((!ptrs) || (!ptre))
-      KERR("ERROR %s", buf);
+    ptrs = ptrs + strlen(PROXYMARKUP_START);
+    ptre[0] = 0;
+    if ((int) (strlen(ptrs) + 1) != len)
+      KERR("ERROR c2c %s: data of its peer from proxymous of %d bytes, %d "
+           "announced, dropped", name, (int) strlen(ptrs) + 1, len);
     else
       {
-      ptrs = ptrs + strlen(PROXYMARKUP_START);
-      ptre[0] = 0;
-      if ((int) (strlen(ptrs) + 1) != len)
-        KERR("ERROR %s %lu %d", buf, strlen(ptrs), len);
-      else
-        {
-        cur = find_c2c(name);
-        if (cur)
-          pair_llid = cur->pair_llid;
-        if (doors_io_basic_decoder(pair_llid, len-1, ptrs))
-          KERR("ERROR %s %d %s", name, len, ptrs);
-        }
+      cur = find_c2c(name);
+      if (cur)
+        pair_llid = cur->pair_llid;
+      if (doors_io_basic_decoder(pair_llid, len-1, ptrs))
+        KERR("ERROR c2c %s: a message of its peer that is no c2c message, "
+             "dropped: %.80s", name, ptrs);
       }
     }
-
 }
 
 static void proxy_sig_err_cb (int llid, int err, int from)
@@ -136,7 +131,7 @@ static void proxy_sig_err_cb (int llid, int err, int from)
 static void proxy_sig_rx_cb(int llid, int len, char *buf)
 {
   char name[MAX_NAME_LEN];
-  uint16_t udp_port, tcp_port;
+  uint16_t udp_port;
   uint32_t ip;
   int inlen, pair_llid;
   char *beat_resp = "transcrun_proxy_heartbeat_resp";
@@ -151,11 +146,13 @@ static void proxy_sig_rx_cb(int llid, int len, char *buf)
   if (get_glob_req_self_destruction())
     return;
   if ((!buf) || (strlen(buf) == 0))
-    KERR("ERROR %d", len);
+    KERR("ERROR an empty message from proxymous (len %d), dropped", len);
   else if (!msg_exist_channel(g_llid_proxy_sig))
-    KERR("ERROR llid %d", g_llid_proxy_sig);
+    KERR("ERROR a message from proxymous while its channel (llid %d) is "
+         "closed, dropped", g_llid_proxy_sig);
   else if (llid != g_llid_proxy_sig)
-    KERR("ERROR llid %d %d", g_llid_proxy_sig, llid);
+    KERR("ERROR a message on llid %d, not the channel of proxymous (llid %d), "
+         "dropped", llid, g_llid_proxy_sig);
   else
     {
     if (!strcmp(buf, "transcrun_proxy_heartbeat_req"))
@@ -182,16 +179,13 @@ static void proxy_sig_rx_cb(int llid, int len, char *buf)
       ovs_nat_main_publish_ko(name);
     else if (sscanf(buf,
     "transcrun_req_udp_KO %63s", name) == 1)
-      KERR("ERROR %s", buf);
+      KERR("ERROR c2c %s: proxymous could not open its udp proxy", name);
     else if (sscanf(buf,
     "transcrun_req_udp_OK %63s %hu", name, &udp_port) == 2)
       ovs_c2c_transmit_get_free_udp_port(name, udp_port);
     else if (sscanf(buf,
     "transcrun_dist_udp_ip_port_OK %63s %x %hu", name, &ip, &udp_port) == 3)
       ovs_c2c_proxy_dist_udp_ip_port_OK(name, ip, udp_port);
-    else if (sscanf(buf,
-    "transcrun_dist_tcp_ip_port_OK %63s %x %hu", name, &ip, &tcp_port) == 3)
-      ovs_c2c_proxy_dist_tcp_ip_port_OK(name, ip, tcp_port);
     else if (sscanf(buf,
     "transcrun_proxy_callback_connect %63s %d", name, &pair_llid) == 2)
       {
@@ -207,17 +201,28 @@ static void proxy_sig_rx_cb(int llid, int len, char *buf)
     "transcrun_proxy_data_from_crun_ok %63s", name) == 1)
       peer_doorways_client_tx_status(name, 0);
     else
-      KERR("ERROR %s", buf);
+      KERR("ERROR an unknown message from proxymous, dropped: %s", buf);
     }
+}
+
+/* Without the channel, the verb and the name are said, never what follows
+   them: a password can. */
+static void to_proxymous(int len, char *msg)
+{
+  char *sp = strchr(msg, ' ');
+  int shown = (int) strlen(msg);
+  if (sp)
+    shown = (int) (sp - msg) + 1 + (int) strcspn(sp + 1, " ");
+  if (!msg_exist_channel(g_llid_proxy_sig))
+    KERR("ERROR not sent to proxymous, no channel to it: %.*s", shown, msg);
+  else
+    proxy_sig_tx(g_llid_proxy_sig, len, msg);
 }
 
 void proxycrun_transmit_write_start_status_file_ready(void)
 {
   char *sbuf="transcrun_write_start_status_file_ready";
-  if (!msg_exist_channel(g_llid_proxy_sig))
-    KERR("ERROR llid %d", g_llid_proxy_sig);
-  else
-    proxy_sig_tx(g_llid_proxy_sig, strlen(sbuf)+1, sbuf);
+  to_proxymous(strlen(sbuf)+1, sbuf);
 }
 
 void proxycrun_transmit_proxy_data(char *name, int len, char *buf)
@@ -239,10 +244,7 @@ void proxycrun_transmit_proxy_data(char *name, int len, char *buf)
   memcpy(sbuf + written, PROXYMARKUP_END, strlen(PROXYMARKUP_END));
   written += (int)strlen(PROXYMARKUP_END);
   sbuf[written] = 0;
-  if (!msg_exist_channel(g_llid_proxy_sig))
-    KERR("ERROR llid %d", g_llid_proxy_sig);
-  else
-    proxy_sig_tx(g_llid_proxy_sig, written + 1, sbuf);
+  to_proxymous(written + 1, sbuf);
   clownix_free(sbuf, __FUNCTION__);
 }
 
@@ -251,10 +253,7 @@ void proxycrun_transmit_c2c_del(char *name)
   char buf[MAX_PATH_LEN];
   memset(buf, 0, MAX_PATH_LEN);
   snprintf(buf, MAX_PATH_LEN-1, "transcrun_req_c2c_del %s", name);
-  if (!msg_exist_channel(g_llid_proxy_sig))
-    KERR("ERROR c2c_del %s: no channel to proxymous", name);
-  else
-    proxy_sig_tx(g_llid_proxy_sig, strlen(buf)+1, buf);
+  to_proxymous(strlen(buf)+1, buf);
 }
 
 void proxycrun_transmit_dist_tcp_ip_port(char *name, uint32_t ip,
@@ -264,10 +263,7 @@ void proxycrun_transmit_dist_tcp_ip_port(char *name, uint32_t ip,
   memset(buf, 0, MAX_PATH_LEN);
   snprintf(buf, MAX_PATH_LEN-1,
   "transcrun_dist_tcp_ip_port %s %x %hu %s", name, ip, port, passwd);
-  if (!msg_exist_channel(g_llid_proxy_sig))
-    KERR("ERROR llid %d", g_llid_proxy_sig);
-  else
-    proxy_sig_tx(g_llid_proxy_sig, strlen(buf)+1, buf);
+  to_proxymous(strlen(buf)+1, buf);
 } 
   
 void proxycrun_transmit_dist_udp_ip_port(char *name,
@@ -277,10 +273,7 @@ void proxycrun_transmit_dist_udp_ip_port(char *name,
   memset(buf, 0, MAX_PATH_LEN); 
   snprintf(buf, MAX_PATH_LEN-1,
   "transcrun_dist_udp_ip_port %s %x %hu", name, ip, port);
-  if (!msg_exist_channel(g_llid_proxy_sig))
-    KERR("ERROR llid %d", g_llid_proxy_sig);
-  else
-    proxy_sig_tx(g_llid_proxy_sig, strlen(buf)+1, buf);
+  to_proxymous(strlen(buf)+1, buf);
 }
 
 void proxycrun_transmit_req_udp(char *name, int c2c_udp_port_low)
@@ -289,10 +282,7 @@ void proxycrun_transmit_req_udp(char *name, int c2c_udp_port_low)
   uint16_t port = (uint16_t) c2c_udp_port_low;
   memset(buf, 0, MAX_PATH_LEN); 
   snprintf(buf, MAX_PATH_LEN-1, "transcrun_req_udp %s %hu", name, port);
-  if (!msg_exist_channel(g_llid_proxy_sig))
-    KERR("ERROR llid %d", g_llid_proxy_sig);
-  else
-    proxy_sig_tx(g_llid_proxy_sig, strlen(buf)+1, buf);
+  to_proxymous(strlen(buf)+1, buf);
 }
 
 void proxycrun_transmit_req_nat(char *name, int on, char *ports)
@@ -304,10 +294,7 @@ void proxycrun_transmit_req_nat(char *name, int on, char *ports)
              ((ports) && (strlen(ports))) ? ports : "none");
   else
     snprintf(buf, 2*MAX_PATH_LEN-1, "transcrun_req_nat_off %s", name);
-  if (!msg_exist_channel(g_llid_proxy_sig))
-    KERR("ERROR llid %d", g_llid_proxy_sig);
-  else
-    proxy_sig_tx(g_llid_proxy_sig, strlen(buf)+1, buf);
+  to_proxymous(strlen(buf)+1, buf);
 }
 
 void proxycrun_transmit_req_nat_publish(char *name, char *ports)
@@ -316,10 +303,7 @@ void proxycrun_transmit_req_nat_publish(char *name, char *ports)
   memset(buf, 0, 2*MAX_PATH_LEN);
   snprintf(buf, 2*MAX_PATH_LEN-1, "transcrun_req_nat_pub %s %s", name,
            ((ports) && (strlen(ports))) ? ports : "none");
-  if (!msg_exist_channel(g_llid_proxy_sig))
-    KERR("ERROR llid %d", g_llid_proxy_sig);
-  else
-    proxy_sig_tx(g_llid_proxy_sig, strlen(buf)+1, buf);
+  to_proxymous(strlen(buf)+1, buf);
 }
 
 static int proxycrun_transmit_config(char *passwd)

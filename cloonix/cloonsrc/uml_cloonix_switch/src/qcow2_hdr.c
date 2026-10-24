@@ -1,5 +1,5 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* qcow2 header read and write, in place of qemu-img create and info.     */
+/* qcow2 header read and write, in place of qemu-img create and info. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

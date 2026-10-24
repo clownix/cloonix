@@ -1,10 +1,12 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
 char *pthexec_agent_iso_amd64(void);
+char *pthexec_agent_dir_cnt(void);
 char *pthexec_agent_iso_win(void);
 char *pthexec_agent_iso_bsd(void);
 FILE *pthexec_popen(char *cmd, int *child_pid);
 int   pthexec_pclose(FILE *iop, int child_pid);
 char *pthexec_iw_bin(void);
+char *pthexec_qemu_bin(void);
 char *pthexec_ovmf_code(void);
 char *pthexec_ovmf_vars(void);
 void  pthexec_set_rank(int rank);
@@ -13,7 +15,7 @@ char *pthexec_ovs_peer(int vm_id, int eth);
 
 char *pthexec_crun_bin(void);
 char *pthexec_ovsdb_tool_bin(void);
-char *pthexec_osirrox_bin(void);
+char *pthexec_cp_bin(void);
 char *pthexec_umount_bin(void);
 char *pthexec_mount_bin(void);
 char *pthexec_bash_bin(void);

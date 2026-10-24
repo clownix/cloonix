@@ -17,9 +17,12 @@
 
 static char g_netns_namespace[MAX_NAME_LEN];
 static char g_tap_name[MAX_NAME_LEN];
+/* the tap and its item, for the KERR of the child */
+static char g_tap_label[MAX_PATH_LEN];
+char *get_nat_name(void);
 
-/* Parent pipe -> tap. Gaps are dropped on purpose upstream: counted only.  */
-/* A refused tap write is a dropped frame, the guest may be resetting.      */
+/* Parent pipe -> tap. Gaps are dropped on purpose upstream: counted only. */
+/* A refused tap write is a dropped frame, the guest may be resetting. */
 static void tx_tap(int fd_tap, int fd_rx_from_parent)
 {
   static unsigned long long gap_total = 0;
@@ -38,7 +41,7 @@ static void tx_tap(int fd_tap, int fd_rx_from_parent)
     gap_since_log += (unsigned long long)gap;
     if (gap_since_log >= 1000)
       {
-      KTRC("tap seq gaps: +%llu (total=%llu) frames dropped upstream",
+      KERR("WARNING tap seq gaps: +%llu (total=%llu) frames dropped upstream",
            gap_since_log, gap_total);
       gap_since_log = 0;
       }
@@ -58,7 +61,7 @@ static void tx_tap(int fd_tap, int fd_rx_from_parent)
 }
 
 /* The parent pipe is served before the tap: the passt side is the one that */
-/* backs up.                                                                */
+/* backs up. */
 static void forked_process_tap(int fd_rx_from_parent, int fd_tx_to_parent)
 {
   int fd, fd_max, result;
@@ -79,7 +82,7 @@ static void forked_process_tap(int fd_rx_from_parent, int fd_tx_to_parent)
       tx_tap(fd, fd_rx_from_parent);
     else if (FD_ISSET(fd, &infd))
       {
-      if (tap_child_to_parent(fd, fd_tx_to_parent, g_tap_name) == 0)
+      if (tap_child_to_parent(fd, fd_tx_to_parent, g_tap_label) == 0)
         KOUT("ERROR READ TAP %s gone", g_tap_name);
       }
     }
@@ -91,6 +94,8 @@ int tun_tap_open(char *net_namespace, char *name, int *fd_rx, int *fd_tx)
   strncpy(g_netns_namespace, net_namespace, MAX_NAME_LEN-1);
   memset(g_tap_name, 0, MAX_NAME_LEN);
   strncpy(g_tap_name, name, MAX_NAME_LEN-1);
+  memset(g_tap_label, 0, MAX_PATH_LEN);
+  snprintf(g_tap_label, MAX_PATH_LEN-1, "nat %s tap %s", get_nat_name(), name);
   return tap_fork_open(g_netns_namespace, g_tap_name, TAP_PIPE_SIZE,
                        forked_process_tap, fd_rx, fd_tx);
 }

@@ -1,9 +1,7 @@
 #!/bin/bash
-# testbigflows.sh - every flow path of cloonix driven above its limit.
+# testbigflows.sh - every flow path driven above its limit (image
+# flow_trixie); starts nemo and mito, the first failure ends it, nets left up.
 #   ./testbigflows.sh
-# Needs the image flow_trixie (vm_create/cnt_kvm_demo/cnt_flow_trixie.sh).
-# Cleans and starts nemo and mito, then runs testbigflows.py on them; the
-# first scenario that does not hold ends it, the nets left as they are.
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 cd "${HERE}"

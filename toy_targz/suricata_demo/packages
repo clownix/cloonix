@@ -1,0 +1,13 @@
+# packages - the suricata_demo part of the Demo picker of the suricata toy,
+# appended to demos/packages by create_suricata_toy_targz.sh. Same format:
+# "<number> <title>", then "<area>/<demo>.py  <one line>". The line is the
+# chapter and section title of the Suricata User Guide the demo plays.
+
+11 Suricata User Guide examples
+suricata_demo/quickstart_alerting.py    Quickstart guide: Alerting
+suricata_demo/rules_format.py           Rules Format
+suricata_demo/adding_your_own_rules.py  Rule Management: Adding Your Own Rules
+suricata_demo/thresholding.py           Thresholding Keywords
+suricata_demo/datasets.py               Datasets
+suricata_demo/afpacket_ips.py           Setting up IPS/inline for Linux: AF_PACKET IPS mode
+suricata_demo/xbits_ssh_blacklist.py    Xbits: Creating a SSH blacklist

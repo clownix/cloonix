@@ -11,58 +11,36 @@ Four machines and two lans::
   lanA 10.1.0.0/24   sensor .10    broker .1
   lanB 10.2.0.0/24   broker .1     display1 .11   display2 .12
 
-Publishers and subscribers never meet. The sensor connects to the broker
-and so do the displays, and that is the only connection any of them has.
-Nobody is told who else is there, or how many, or whether anyone is
-listening at all.
+Publishers and subscribers never meet: the sensor and the displays each
+connect to the broker only, none told who else is there. Publish and
+subscribe shows as a count: one PUBLISH crosses lanA and two cross lanB, two
+machines having subscribed; the sensor sent one message.
 
-That is the whole shape of publish and subscribe, and it is visible here as
-a count: one PUBLISH crosses lanA and two cross lanB, because two machines
-had said they were interested. The sensor sent one message and does not
-know it became two.
-
-  ACT 1  the two displays connect and subscribe. CONNECT, CONNACK,
-         SUBSCRIBE, SUBACK -- four packets and a topic filter.
-  ACT 2  the sensor publishes once. One packet in, two out.
-  ACT 3  a wildcard. display2 asked for a whole branch of the topic tree
-         rather than one leaf, so it gets messages display1 never sees.
-  ACT 4  a retained message, and a display that connects AFTERWARDS and is
-         told the last value immediately. This is the part of mqtt that
-         surprises people: the broker keeps one message per topic on
-         purpose, so a screen that has just been switched on does not have
-         to wait for the next reading.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+  ACT 1  the two displays connect and subscribe: CONNECT, CONNACK,
+         SUBSCRIBE, SUBACK, four packets and a topic filter.
+  ACT 2  the sensor publishes once: one packet in, two out.
+  ACT 3  a wildcard: display2 asked for a whole branch of the topic tree,
+         so it gets messages display1 never sees.
+  ACT 4  a retained message: a display connecting afterwards is told the
+         last value at once, the broker keeping one message per topic.
 
 Image: mqtt_trixie (mosquitto and mosquitto-clients)
 Size:  4 containers, 2 lans
 
 THE PACKET TO CATCH
 -------------------
-  MQTT is tcp 1883, and one filter shows the whole shape of it:
+  MQTT is tcp 1883:
 
     cloonix cli nemo cnf broker eth0 sniff=on
     cloonix cli nemo sniff broker eth0 --dump tcp port 1883
     cloonix cli nemo cnf broker eth1 sniff=on
     cloonix cli nemo sniff broker eth1 --dump tcp port 1883
 
-  The packet to catch is one PUBLISH arriving on lanA and the two that
-  leave on lanB a moment later. One message in, several out, and the
-  fan-out visibly happening in the broker rather than on the wire.
-
-  The retained message is the other one worth waiting for. Start a third
-  subscriber after the sensor has stopped, and
-
-    cloonix cli nemo sniff broker eth1 --dump tcp port 1883
-
-  shows a PUBLISH going to it for a message that was sent before it
-  existed. Nothing on lanA at that moment: the broker is speaking from
-  memory.
-
-  The topic string and the payload are plain in the dump, which is worth
-  noticing next to the wg demo: MQTT has no transport security of its
-  own and this is what that means.
+  The packet to catch is one PUBLISH arriving on lanA and the two leaving
+  on lanB: the fan-out happens in the broker. A subscriber started after the
+  sensor stopped receives on lanB a PUBLISH of a message sent before it
+  existed, with nothing on lanA: the retained message. Topic and payload are
+  in clear in the dump: MQTT has no transport security of its own.
 """
 import os
 import subprocess
@@ -79,7 +57,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, create_cnt, erase_net,
     in_parallel, net_answers, parse_bytes_line, show, step, story, trace,
-    trace_ssh, wait_ready)
+    trace_ssh, wait_ready, unavailable,
+    needs_subuid)
 
 ROOTFS_CHOICES = ("mqtt_trixie",)
 
@@ -139,8 +118,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -181,7 +160,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -198,7 +177,7 @@ def tools_present(node, *tools):
                             "command -v %s >/dev/null 2>&1" % t],
                            capture_output=True, stdin=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit("%s has no %s: this is not the mqtt image.\n"
+            unavailable("%s has no %s: this is not the mqtt image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -222,7 +201,7 @@ def enable_forwarding(node):
 
     Not because mqtt needs it -- every client talks only to the broker, and
     the broker is on both lans -- but because a demo where the machines
-    cannot ping each other is confusing for no reason.
+    cannot ping each other would mislead.
     """
     ssh(node, "sysctl -w net.ipv4.ip_forward=1 >/dev/null")
     got = ssh(node, "sysctl -n net.ipv4.ip_forward", check=False).strip()
@@ -236,9 +215,9 @@ def enable_forwarding(node):
 def broker_conf():
     """Anonymous, on both lans, and keeping retained messages on disk.
 
-    allow_anonymous is a terrible idea anywhere real and the only sensible
-    thing here: a demo about topics should not also be a demo about
-    passwords. persistence is what makes act 4 work -- the retained message
+    allow_anonymous has no place on a real broker; here a demo about
+    topics is not also a demo about passwords.
+    persistence is what makes act 4 work -- the retained message
     survives in /var/lib/mosquitto, which is why the image had to claim that
     directory for root.
     """
@@ -351,7 +330,7 @@ def skip_v5_properties(p, i):
 
     The guess: a length of 0 followed by something that reads as a string
     is version 5 with no properties, which is what these clients send. It
-    is a guess and it is worth being honest about, which is why the demo
+    is a guess, said as one, which is why the demo
     also asks its clients for 3.1.1 and does not have to rely on it.
     """
     if i < len(p) and p[i] == 0 and i + 3 <= len(p):
@@ -527,7 +506,7 @@ def watch(do_it, title, settle=2.5):
     return {"out": out, "rows": rows}
 
 def count_publishes(rows, topic=None):
-    """How many PUBLISH packets crossed each wire, which is the whole point."""
+    """How many PUBLISH packets crossed each wire."""
     per = {}
     for r in rows:
         m = r["msg"]
@@ -562,6 +541,7 @@ def place():
         cli("cnf", name, num, "angle=%s" % deg, ack=ACK_FAST)
 
 def main():
+    needs_subuid()
     story(HISTORY)
     step("looking for the image")
     rootfs = choose_rootfs()
@@ -704,13 +684,13 @@ def main():
                  "\n  the history says where: on a terminal, CLOONIX_DEMO_STORY=1 prints it")
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   watch the broker's side live while you publish by hand from the sensor:
     cloonix cli %s sniff broker eth1 --dump
     cloonix cli %s ssh sensor "mosquitto_pub -h %s -t %s -m 30.0"
 
-  subscribe to everything and see how much a broker actually carries. The
+  subscribe to everything and see how much a broker carries. The
   # filter matches every topic there is:
     cloonix cli %s ssh display1 "mosquitto_sub -h %s -t '#' -v"
 

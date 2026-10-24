@@ -1,58 +1,42 @@
 /* dtach - Copyright (C) 2004-2016 Ned T. Crigler  SPDX-License-Identifier: GPL-2.0-or-later */
 #include "dtach.h"
 
-/* The pty struct - The pty information is stored here. */
 struct pty
 {
-	/* File descriptor of the pty */
 	int fd;
-	/* Process id of the child. */
 	pid_t pid;
-	/* The terminal parameters of the pty. Old and new for comparision
-	** purposes. */
+	/* old and new, compared */
 	struct termios term;
-	/* The current window size of the pty. */
 	struct winsize ws;
 };
 
-/* A connected client */
 struct client
 {
-	/* The next client in the linked list. */
 	struct client *next;
-	/* The previous client in the linked list. */
 	struct client **pprev;
-	/* File descriptor of the client. */
 	int fd;
-	/* Whether or not the client is attached. */
 	int attached;
 	/* Whether this client already received the buffer being sent. */
 	int got_this;
 };
 
-/* The list of connected clients. */
 static struct client *clients;
-/* The pseudo-terminal created for the child process. */
 static struct pty the_pty;
 
-/* Unlink the socket */
 static void
 unlink_socket(void)
 {
 	unlink(sockname);
 }
 
-/* Signal */
 static void
 die(int sig)
 {
-	/* Well, the child died. */
 	if (sig == SIGCHLD)
 		return;
 	exit(1);
 }
 
-/* Sets a file descriptor to non-blocking mode. */
 static int
 setnonblocking(int fd)
 {
@@ -74,16 +58,13 @@ setnonblocking(int fd)
 #endif
 }
 
-/* Initialize the pty structure. */
 static int
 init_pty(char **argv, int statusfd)
 {
-	/* Use the original terminal's settings. We don't have to set the
-	** window size here, because the attacher will send it in a packet. */
+	/* the original terminal settings; the attacher sends the window size */
 	the_pty.term = orig_term;
 	memset(&the_pty.ws, 0, sizeof(struct winsize));
 
-	/* Create the pty process */
 	if (!dont_have_tty)
 		the_pty.pid = forkpty(&the_pty.fd, NULL, &the_pty.term, NULL);
 	else
@@ -92,11 +73,9 @@ init_pty(char **argv, int statusfd)
 		return -1;
 	else if (the_pty.pid == 0)
 	{
-		/* Child.. Execute the program. */
 		execvp(*argv, argv);
 
-		/* Report the error to statusfd if we can, or stdout if we
-		** can't. */
+		/* the error to statusfd, else stdout */
 		if (statusfd != -1)
 			dup2(statusfd, 1);
 		else
@@ -107,11 +86,9 @@ init_pty(char **argv, int statusfd)
 		fflush(stdout);
 		_exit(127);
 	}
-	/* Parent.. Finish up and return */
 	return 0;
 }
 
-/* Creates a new unix domain socket. */
 static int
 create_socket(char *name)
 {
@@ -144,7 +121,6 @@ create_socket(char *name)
 		close(s);
 		return -1;
 	}
-	/* chmod it to prevent any suprises */
 	if (chmod(name, 0600) < 0)
 	{
 		close(s);
@@ -153,7 +129,6 @@ create_socket(char *name)
 	return s;
 }
 
-/* Update the modes on the socket. */
 static void
 update_socket_modes(int exec)
 {
@@ -172,8 +147,7 @@ update_socket_modes(int exec)
 		chmod(sockname, newmode);
 }
 
-/* Process activity on the pty - Input and terminal changes are sent out to
-** the attached clients. If the pty goes away, we die. */
+/* pty output to the attached clients; the pty gone, exit. */
 static void
 pty_activity(int s)
 {
@@ -183,14 +157,11 @@ pty_activity(int s)
 	fd_set readfds, writefds;
 	int highest_fd, nclients;
 
-	/* Read the pty activity */
 	len = read(the_pty.fd, buf, sizeof(buf));
 
-	/* Error -> die */
 	if (len <= 0)
 		exit(1);
 
-	/* Get the current terminal settings. */
 	if (tcgetattr(the_pty.fd, &the_pty.term) < 0)
 		exit(1);
 
@@ -214,7 +185,6 @@ top:
 	if (select(highest_fd + 1, &readfds, &writefds, NULL, NULL) < 0)
 		return;
 
-	/* Send the data out to the clients. */
 	for (p = clients, nclients = 0; p; p = p->next)
 	{
 		ssize_t written;
@@ -248,7 +218,6 @@ top:
 		}
 	}
 
-	/* Try again if nothing happened. */
 	if (!FD_ISSET(s, &readfds) && nclients == 0)
 		goto top;
 
@@ -256,14 +225,12 @@ top:
 		p->got_this = 0;
 }
 
-/* Process activity on the control socket */
 static void
 control_activity(int s)
 {
 	int fd;
 	struct client *p;
  
-	/* Accept the new client and link it in. */
 	fd = accept(s, NULL, NULL);
 	if (fd < 0)
 		return;
@@ -273,7 +240,6 @@ control_activity(int s)
 		return;
 	}
 
-	/* Link it in. */
 	p = malloc(sizeof(struct client));
 	p->fd = fd;
 	p->attached = 0;
@@ -285,20 +251,17 @@ control_activity(int s)
 	*(p->pprev) = p;
 }
 
-/* Process activity from a client. */
 static void
 client_activity(struct client *p)
 {
 	ssize_t len;
 	struct packet pkt;
 
-	/* Read the activity. */
 	memset(&pkt, 0, sizeof(struct packet));
 	len = read(p->fd, &pkt, sizeof(struct packet));
 	if (len < 0 && (errno == EAGAIN || errno == EINTR))
 		return;
 
-	/* Close the client on an error. */
 	if (len <= 0)
 	{
 		close(p->fd);
@@ -313,14 +276,12 @@ client_activity(struct client *p)
 	if (len != (ssize_t) sizeof(struct packet))
 		return;
 
-	/* Push out data to the program. */
 	if (pkt.type == MSG_PUSH)
 	{
 		if (pkt.len <= sizeof(pkt.u.buf))
 			write(the_pty.fd, pkt.u.buf, pkt.len);
 	}
 
-	/* Attach or detach from the program. */
 	else if (pkt.type == MSG_ATTACH)
 		p->attached = 1;
 	else if (pkt.type == MSG_DETACH)
@@ -350,8 +311,7 @@ client_activity(struct client *p)
 	}
 }
 
-/* The master process - It watches over the pty process and the attached */
-/* clients. */
+/* The master: watches the pty process and the attached clients. */
 static void
 master_process(int s, char **argv, int statusfd)
 {
@@ -362,14 +322,10 @@ master_process(int s, char **argv, int statusfd)
 
 	int has_attached_client = 0;
 
-	/* Okay, disassociate ourselves from the original terminal, as we
-	** don't care what happens to it. */
 	setsid();
 
-	/* Set a trap to unlink the socket when we die. */
 	atexit(unlink_socket);
 
-	/* Create a pty in which the process is running. */
 	signal(SIGCHLD, die);
 	if (init_pty(argv, statusfd) < 0)
 	{
@@ -382,7 +338,6 @@ master_process(int s, char **argv, int statusfd)
 		exit(1);
 	}
 
-	/* Set up some signals. */
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGXFSZ, SIG_IGN);
 	signal(SIGHUP, SIG_IGN);
@@ -391,12 +346,10 @@ master_process(int s, char **argv, int statusfd)
 	signal(SIGINT, die);
 	signal(SIGTERM, die);
 
-	/* Close statusfd, since we don't need it anymore. */
 	if (statusfd != -1)
 		close(statusfd);
 
-	/* Make sure stdin/stdout/stderr point to /dev/null. We are now a
-	** daemon. */
+	/* daemon: stdin/stdout/stderr on /dev/null */
 	nullfd = open("/dev/null", O_RDWR);
 	dup2(nullfd, 0);
 	dup2(nullfd, 1);
@@ -404,12 +357,10 @@ master_process(int s, char **argv, int statusfd)
 	if (nullfd > 2)
 		close(nullfd);
 
-	/* Loop forever. */
 	while (1)
 	{
 		int new_has_attached_client = 0;
 
-		/* Re-initialize the file descriptor set for select. */
 		FD_ZERO(&readfds);
 		FD_SET(s, &readfds);
 		highest_fd = s;
@@ -428,14 +379,12 @@ master_process(int s, char **argv, int statusfd)
 				new_has_attached_client = 1;
 		}
 
-		/* chmod the socket if necessary. */
 		if (has_attached_client != new_has_attached_client)
 		{
 			update_socket_modes(new_has_attached_client);
 			has_attached_client = new_has_attached_client;
 		}
 
-		/* Wait for something to happen. */
 		if (select(highest_fd + 1, &readfds, NULL, NULL, NULL) < 0)
 		{
 			if (errno == EINTR || errno == EAGAIN)
@@ -443,17 +392,14 @@ master_process(int s, char **argv, int statusfd)
 			exit(1);
 		}
 
-		/* New client? */
 		if (FD_ISSET(s, &readfds))
 			control_activity(s);
-		/* Activity on a client? */
 		for (p = clients; p; p = next)
 		{
 			next = p->next;
 			if (FD_ISSET(p->fd, &readfds))
 				client_activity(p);
 		}
-		/* pty activity? */
 		if (FD_ISSET(the_pty.fd, &readfds))
 			pty_activity(s);
 	}
@@ -466,13 +412,12 @@ master_main(char **argv)
 	int s;
 	pid_t pid;
 
-	/* Create the unix domain socket. */
 	s = create_socket(sockname);
 	if (s < 0 && errno == ENAMETOOLONG)
 	{
 		char *slash = strrchr(sockname, '/');
 
-		/* Try to shorten the socket's path name by using chdir. */
+		/* a long socket path shortened by chdir */
 		if (slash)
 		{
 			int dirfd = open(".", O_RDONLY);
@@ -510,7 +455,6 @@ master_main(char **argv)
 		}
 	}
 
-	/* Fork off so we can daemonize and such */
 	pid = fork();
 	if (pid < 0)
 	{
@@ -520,15 +464,12 @@ master_main(char **argv)
 	}
 	else if (pid == 0)
 	{
-		/* Child - this becomes the master */
 		if (fd[0] != -1)
 			close(fd[0]);
 		master_process(s, argv, fd[1]);
 		return 0;
 	}
-	/* Parent - just return. */
 
-	/* Check if an error occurred while trying to execute the program. */
 	if (fd[0] != -1)
 	{
 		char buf[1024];

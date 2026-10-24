@@ -10703,6 +10703,10 @@ hfinfo_number_value_format_display(const header_field_info *hfinfo, int display,
 					display_to_port_type((field_display_e)display), value);
 			return buf;
 		case BASE_OUI:
+			/* no manufacturer table in this build: the three octets */
+			snprintf(buf, NUMBER_LABEL_LENGTH, "%02x:%02x:%02x",
+				 (value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF);
+			return buf;
 
 		default:
 			REPORT_DISSECTOR_BUG("Invalid base: %d", FIELD_DISPLAY(display));

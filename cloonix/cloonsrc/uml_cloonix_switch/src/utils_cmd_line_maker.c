@@ -66,12 +66,12 @@ int lio_system(char *argv[])
       if (WIFEXITED(chld_state))
         wstatus = WEXITSTATUS(chld_state);
       if (WIFSIGNALED(chld_state))
-        KERR("WARNING Child exited via signal %d\n", WTERMSIG(chld_state));
+        KERR("WARNING Child exited via signal %d", WTERMSIG(chld_state));
       kill(timeout_pid, SIGKILL);
       }
     else
       {
-      KERR("WARNING %s\n", acmd);
+      KERR("WARNING %s", acmd);
       kill(worker_pid, SIGKILL);
       }
     wait(NULL);
@@ -126,7 +126,8 @@ int utils_get_eth_numbers(int nb_tot_eth, t_eth_table *eth_tab, int *eth_nb)
       (*eth_nb)++;
     else
       {
-      KERR("%d %d %d", nb_tot_eth, i, eth_tab[i].endp_type);
+      KERR("ERROR eth %d of %d has the kind %d, not an eth", i, nb_tot_eth,
+             eth_tab[i].endp_type);
       snprintf(info, sizeof(info), "Bad input %d for endp_type", eth_tab[i].endp_type);
       result = -1;
       }
@@ -377,7 +378,7 @@ char *utils_get_qemu_stderr_log_path(char *name)
   return log_path;
 }
 
-/* Per-vm launch script: the netns and qemu command, stderr redirected.     */
+/* Per-vm launch script: the netns and qemu command, stderr redirected. */
 char *utils_get_qemu_launch_script_path(char *name)
 {
   static char script_path[MAX_PATH_LEN];
@@ -486,10 +487,12 @@ void free_wake_up_eths_and_delete_vm(t_vm *vm, int error_death, char *why)
       {
       memset(err, 0, MAX_PATH_LEN);
       snprintf(err, MAX_PATH_LEN-1,
-               "ERROR %d WHILE CREATION, see \"%s\"",
-               error_death, utils_get_qemu_stderr_log_path(vm->kvm.name));
+               "stopped while being created (step %d), its qemu stderr is "
+               "\"%s\"", error_death,
+               utils_get_qemu_stderr_log_path(vm->kvm.name));
       why = err;
       }
+    KERR("ERROR %s: %s", vm->kvm.name, why);
     send_status_ko(llid, tid, why);
     }
   cfg_hysteresis_send_topo_info();
@@ -508,9 +511,43 @@ static void free_wake_up_eths_and_vm_ok(t_vm *vm)
   ovs_nat_main_vm_event();
 }
 
+/* The launch script appends "qemu exit N" when qemu ends: the line before it
+   is what qemu said. */
+static int qemu_ended(char *name, char *why, int len)
+{
+  char buf[4096], *last, *prev;
+  size_t rd;
+  FILE *lf = fopen(utils_get_qemu_stderr_log_path(name), "r");
+  memset(why, 0, len);
+  if (!lf)
+    return 0;
+  if (fseek(lf, -((long) sizeof(buf) - 1), SEEK_END))
+    rewind(lf);
+  rd = fread(buf, 1, sizeof(buf) - 1, lf);
+  fclose(lf);
+  buf[rd] = 0;
+  while (rd && ((buf[rd-1] == '\n') || (buf[rd-1] == '\r')))
+    buf[--rd] = 0;
+  last = strrchr(buf, '\n');
+  last = last ? last + 1 : buf;
+  if (strncmp(last, "qemu exit ", 10))
+    return 0;
+  prev = NULL;
+  if (last > buf)
+    {
+    last[-1] = 0;
+    prev = strrchr(buf, '\n');
+    prev = prev ? prev + 1 : buf;
+    }
+  snprintf(why, len-1, "qemu ended at its start: %s (%s)",
+           (prev && prev[0]) ? prev : "it said nothing", last);
+  return 1;
+}
+
 void utils_finish_vm_init(void *ul_vm_id)
 {
   int vm_id = (unsigned long) ul_vm_id;
+  char why[MAX_PATH_LEN];
   t_vm *vm = find_vm_with_id(vm_id);
   if ((vm) && (vm->wake_up_eths))
     {
@@ -520,7 +557,13 @@ void utils_finish_vm_init(void *ul_vm_id)
       {
       /* A pid is not a running qemu: the ok waits for the monitor to answer. */
       vm->pid = suid_power_get_pid(vm->kvm.vm_id);
-      if ((!vm->pid) || (!qmp_greeting_seen(vm->kvm.name)))
+      if (((!vm->pid) || (!qmp_greeting_seen(vm->kvm.name))) &&
+          (qemu_ended(vm->kvm.name, why, MAX_PATH_LEN)))
+        {
+        KERR("ERROR %s refused: %s", vm->kvm.name, why);
+        free_wake_up_eths_and_delete_vm(vm, error_death_timeout_no_pid, why);
+        }
+      else if ((!vm->pid) || (!qmp_greeting_seen(vm->kvm.name)))
         {
         vm->wake_up_eths->pid_count += 1;
         if (vm->wake_up_eths->pid_count < 100)

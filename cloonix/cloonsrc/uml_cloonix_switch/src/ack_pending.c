@@ -74,3 +74,53 @@ void ack_pending(int llid, int tid, int period_ms, int limit_ms,
   ack->ctx = ctx;
   timer_ack((void *) ack);
 }
+
+#define DEL_WAIT_TRIES 100
+typedef struct t_del_wait
+{
+  int llid;
+  int tid;
+  int tries;
+  char name[MAX_NAME_LEN];
+  char kind[MAX_NAME_LEN];
+  t_del_busy busy;
+  t_del_redo redo;
+} t_del_wait;
+
+static void timer_del_wait(void *data)
+{
+  t_del_wait *w = (t_del_wait *) data;
+  int st;
+  if (!msg_exist_channel(w->llid))
+    KTRC("del %s %s: its client left while it waited", w->kind, w->name);
+  else if ((st = w->busy(w->name)) < 0)
+    send_status_ok(w->llid, w->tid, "ok");
+  else if (st == 0)
+    w->redo(w->llid, w->tid, w->name);
+  else if (++(w->tries) < DEL_WAIT_TRIES)
+    {
+    clownix_timeout_add(10, timer_del_wait, data, NULL, NULL);
+    return;
+    }
+  else
+    {
+    KERR("ERROR del %s %s refused: a request on it did not end in 10 s",
+         w->kind, w->name);
+    send_status_ko(w->llid, w->tid, "a request on it did not end in 10 s");
+    }
+  free(w);
+}
+
+void del_when_free(int llid, int tid, char *name, char *kind,
+                   t_del_busy busy, t_del_redo redo)
+{
+  t_del_wait *w = (t_del_wait *) malloc(sizeof(t_del_wait));
+  memset(w, 0, sizeof(t_del_wait));
+  w->llid = llid;
+  w->tid = tid;
+  strncpy(w->name, name, MAX_NAME_LEN-1);
+  strncpy(w->kind, kind, MAX_NAME_LEN-1);
+  w->busy = busy;
+  w->redo = redo;
+  clownix_timeout_add(10, timer_del_wait, (void *) w, NULL, NULL);
+}

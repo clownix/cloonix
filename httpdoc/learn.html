@@ -6,12 +6,13 @@
 <title>Cloonix &mdash; what you can learn</title>
 <meta name="description" content="Cloonix as a way to learn networking: one python demo per open source project, a running topology for each, and the one packet that carries the point.">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/png" href="img/cloonix32.png">
 </head>
 <body>
 
 <header>
   <nav>
-    <a class="brand" href="index.html">CLOONIX</a>
+    <a class="brand" href="index.html"><img src="img/cloonix64.png" width="28" height="28" alt="">cloonix</a>
     <a href="index.html">Overview</a>
     <a href="learn.html" class="on">Learn</a>
     <a href="demos.html">Demos</a>
@@ -44,7 +45,7 @@ is there to be changed, broken and captured after the last line of the
 script.</p>
 
 <svg viewBox="0 0 840 190" class="fig" role="img" aria-label="run, look, break, capture, explain">
-  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#3b6ea5"/></marker></defs>
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1b63c6"/></marker></defs>
   <rect x="20" y="30" width="145" height="66" rx="6" class="fbox"/>
   <text x="92" y="56" class="ft" text-anchor="middle">1. Run it</text>
   <text x="92" y="78" class="fm" text-anchor="middle">cloonix cli nemo demo</text>
@@ -83,7 +84,7 @@ hands back only what matches a filter &mdash; and the filter is applied on the s
 crosses the wire to you.</p>
 
 <svg viewBox="0 0 840 170" class="fig" role="img" aria-label="the capture chain">
-  <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#3b6ea5"/></marker></defs>
+  <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1b63c6"/></marker></defs>
   <rect x="20" y="46" width="150" height="52" rx="6" class="fbox"/>
   <text x="95" y="70" class="ft" text-anchor="middle">an interface</text>
   <text x="95" y="88" class="fm" text-anchor="middle">eth=1, green</text>
@@ -116,92 +117,33 @@ filter that cannot exist.</p>
 </section>
 
 <section class="wrap">
-<h2>The catalogue</h2>
+<h2>The demos</h2>
 <p>Subject areas, then one python file per demo:
 <code>demos/&lt;area&gt;/&lt;demo&gt;.py</code>. The docstring at the top of each
 one says what the software is and what the demo does with it, then the
-topology as ascii art, then the packet to catch. Its first line is what the
-<b>Demo</b> panel of the canvas shows beside the name.</p>
-<table>
-  <tr><td><code>cloonix/cnt.py</code></td><td>two containers on one lan and a ping: the nine lines of the first run, played by a program</td></tr>
-  <tr><td><code>cloonix/kvm.py</code></td><td>the same with two virtual machines</td></tr>
-  <tr><td><code>cloonix/a2b.py</code></td><td>the cable that can be told to be bad: delay, loss and rate, measured on both wires</td></tr>
-  <tr><td><code>cloonix/c2c.py</code></td><td>three servers, two c2c cables, one router between two subnets, and a ping that crosses them</td></tr>
-  <tr><td><code>cloonix/nat.py</code></td><td>passt: the dhcp answer, the way out, and the loopback of the host reached from inside</td></tr>
-  <tr><td><code>cloonix/nginx.py</code></td><td>a published port: a web page served from a container with no address on the host</td></tr>
-  <tr><td><code>cloonix/snf.py</code></td><td>one noisy lan, four filters, four counts</td></tr>
-  <tr><td><code>cloonix/mount.py</code></td><td>a host directory inside two containers with vmount=, one image in two roles with startup_env=, and what a delete leaves behind</td></tr>
-  <tr><td><code>cloonix/limit.py</code></td><td>cnf cpu= ram=: a cpu and ram cap put on a running container and measured from inside its cgroup</td></tr>
-  <tr><td><code>cloonix/systemd.py</code></td><td>one container with an init beside two without, and the inotify margin of the host</td></tr>
-  <tr><td><code>cloonix/cntwifi.py</code></td><td>mac80211_hwsim, hostapd, wpa_supplicant &mdash; and no wire at all</td></tr>
-  <tr><td><code>cloonix/cntkvmwifi.py</code></td><td>a container radio and a kvm radio on one air, suid-power the medium of both</td></tr>
-  <tr><td><code>cloonix/kvmwifi.py</code></td><td>mac80211_hwsim of the guest kernels, the cloonix agent carrying the frames to suid-power, the medium of every air</td></tr>
-  <tr><td><code>cloonix/phy.py</code></td><td>a real interface taken into a net, absorbed on one kvm, macvlanned on the other, each running its own cloonix; the kvm without its eth0 still carries a container's pings</td></tr>
-  <tr><td><code>cloonix/realnet.py</code></td><td>a cloonix inside a kvm: a guest of the inner net becomes a station of the outer lan through a tap and a bridge</td></tr>
-  <tr><td><code>switching/vlan.py</code></td><td>one trunk, two networks, and a tag that hides every filter above the link layer</td></tr>
-  <tr><td><code>switching/stp.py</code></td><td>a loop, the storm it makes, and the protocol that blocks one port</td></tr>
-  <tr><td><code>routing/frrspider.py frrspider_bgp.py frrmix.py</code></td><td>sixty OSPF routers, the same sixty in BGP, then four AS with OSPF inside and BGP between</td></tr>
-  <tr><td><code>address/dhcp.py</code></td><td>kea, two lans, one server, and giaddr deciding the subnet</td></tr>
-  <tr><td><code>address/ipv6.py</code></td><td>zebra: a router advertisement, and hosts that make their own address</td></tr>
-  <tr><td><code>address/dns.py</code></td><td>bind9 and frr: a name that only resolves if OSPF is up</td></tr>
-  <tr><td><code>availability/vrrp.py</code></td><td>keepalived: two routers, one address, and a gratuitous ARP</td></tr>
-  <tr><td><code>security/nftables.py</code></td><td>a stateful filter, masquerade, dnat, and the counter that says which rule matched</td></tr>
-  <tr><td><code>security/tls.py</code></td><td>openssl: one page over http and over https, and the bytes of both on the lan</td></tr>
-  <tr><td><code>security/wg.py</code></td><td>wireguard: the same taps as every other demo, and a wire that goes blank</td></tr>
-  <tr><td><code>services/proxy.py</code></td><td>haproxy: one request, two connections, and a health check</td></tr>
-  <tr><td><code>services/smtp.py</code></td><td>postfix: an MX lookup, then a conversation in plain text</td></tr>
-  <tr><td><code>services/mqtt.py</code></td><td>mosquitto: one message in, several out</td></tr>
-  <tr><td><code>services/asterisk.py</code></td><td>a PBX, two SIP phones, and calls that carry audio</td></tr>
-  <tr><td><code>address/knot.py</code></td><td>an authoritative server and the zone transfer that feeds a second</td></tr>
-  <tr><td><code>address/ntp.py</code></td><td>a client disciplining its clock to a server with chrony</td></tr>
-  <tr><td><code>address/unbound.py</code></td><td>a resolver that answers, caches, and can be caught doing it</td></tr>
-  <tr><td><code>availability/cluster.py</code></td><td>two nodes, one service, and a failover when one dies</td></tr>
-  <tr><td><code>routing/isis.py</code></td><td>the link-state protocol of the carriers, in frames with no IP header</td></tr>
-  <tr><td><code>routing/babel.py</code></td><td>distance-vector routing that reroutes when a link comes and goes</td></tr>
-  <tr><td><code>routing/batman.py</code></td><td>a mesh that routes at layer 2, below IP entirely</td></tr>
-  <tr><td><code>routing/bird.py</code></td><td>the other routing daemon: OSPF the same, in a different program</td></tr>
-  <tr><td><code>security/arp.py</code></td><td>dsniff: arp poisoning, a machine put in the middle, and the static entry that stops it</td></tr>
-  <tr><td><code>security/ebpf.py</code></td><td>a program loaded into the kernel to drop packets at the wire</td></tr>
-  <tr><td><code>security/ipsec.py</code></td><td>an encrypted tunnel between two different implementations</td></tr>
-  <tr><td><code>security/openvpn.py</code></td><td>a point-to-point tunnel with one shared key</td></tr>
-  <tr><td><code>security/radius.py</code></td><td>a server that says yes to the right password and no to the wrong</td></tr>
-  <tr><td><code>security/suricata.py</code></td><td>an intrusion sensor that alerts on traffic it is told to watch</td></tr>
-  <tr><td><code>security/tinc.py</code></td><td>a small mesh vpn where each node knows the others</td></tr>
-  <tr><td><code>services/squid.py</code></td><td>a caching proxy that speeds up hits and enforces a policy</td></tr>
-  <tr><td><code>switching/vxlan.py</code></td><td>iproute2: a layer 2 network carried over a routed core in udp 4789</td></tr>
-  <tr><td><code>switching/ovn.py</code></td><td>one logical switch spread across two hosts by an overlay</td></tr>
-  <tr><td><code>watching/perf.py</code></td><td>iperf3 and mtr over a cable that is degraded step by step</td></tr>
-  <tr><td><code>wifi/cnt_*.py kvm_*.py cntkvm_*.py</code></td><td>hostapd and wpa_supplicant: open, WPA2, WPA3, a bridge, roaming, a mesh, a home box, WPA2-Enterprise, a listener in monitor mode</td></tr>
-  <tr><td><code>windows.py</code></td><td>a windows server guest, its firewall, and the ping it answers only when told to</td></tr>
-  <tr><td><code>freebsd.py</code></td><td>a freebsd guest with the agent on a disc of its own</td></tr>
-  <tr><td><code>cisco.py</code></td><td>three ios-xe routers driven over their serial console</td></tr>
-</table>
-
-<p>The <code>cloonix</code> area is the platform under itself rather than a third
-party: the two first networks, an impairment cable, a server-to-server link, the
-way out of an isolated network, a cloonix inside a kvm, the capture path, and the
-emulated radios.</p>
-
-
+topology as ascii art, then the packet to catch; its first line is what the
+<b>Demo</b> panel of the canvas shows beside the name. The chapters of the
+<a href="build_user/user.html">user book</a> give every demo its history,
+its network and its commands, area by area.</p>
 
 <h2>A course through it</h2>
 <p>Twelve packages, each a few demos on one subject, ordered so that a package
 uses only what the ones before it showed. On every step: run the demo, read the
-canvas and its History popup, catch the packet, break one thing and repair it.
+canvas and its Comments panel, catch the packet, break one thing and repair it.
 The chapter <a href="build_user/doc/learn.html">Learning with cloonix</a> of the user
 book gives each package its steps, its packet and its break.</p>
 <svg viewBox="0 0 900 330" class="fig cmap" role="img" aria-label="the twelve packages of the course, as steps">
 <style>
-svg.cmap text{fill:#1a1a2e;font-size:11px}
-svg.cmap .n{font-size:15px;font-weight:bold;fill:#0f3460}
-svg.cmap .s{font-size:10px;fill:#5a6472}
-svg.cmap .box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
-svg.cmap .acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+svg.cmap text{fill:#16202a;font-size:11px}
+svg.cmap .n{font-size:15px;font-weight:bold;fill:#0f3f86}
+svg.cmap .s{font-size:10px;fill:#51606e}
+svg.cmap .box{fill:#f6f8fa;stroke:#0f3f86;stroke-width:1.5}
+svg.cmap .acc{fill:#fdeef0;stroke:#d62d45;stroke-width:1.5}
 svg.cmap .gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5}
 svg.cmap .grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
 svg.cmap .yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
 svg.cmap .zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5}
-svg.cmap .loop{fill:none;stroke:#e94560;stroke-width:1.5;stroke-dasharray:4 3}
+svg.cmap .loop{fill:none;stroke:#d62d45;stroke-width:1.5;stroke-dasharray:4 3}
 </style>
 <rect class="grn" x="20" y="275" width="69" height="40" rx="3"/>
 <text class="n" x="54" y="293" text-anchor="middle">0</text>
@@ -242,7 +184,7 @@ svg.cmap .loop{fill:none;stroke:#e94560;stroke-width:1.5;stroke-dasharray:4 3}
 <rect class="loop" x="20" y="12" width="330" height="84" rx="6"/>
 <text x="30" y="30" font-weight="bold">on every step</text>
 <text class="s" x="30" y="46" style="font-size:11px">1  run the demo</text>
-<text class="s" x="30" y="59" style="font-size:11px">2  read the canvas and the History popup</text>
+<text class="s" x="30" y="59" style="font-size:11px">2  read the canvas and the Comments panel</text>
 <text class="s" x="30" y="72" style="font-size:11px">3  catch the packet with sniff</text>
 <text class="s" x="30" y="85" style="font-size:11px">4  break one thing, watch, repair</text>
 </svg>

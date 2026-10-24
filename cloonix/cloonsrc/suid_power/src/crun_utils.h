@@ -12,6 +12,7 @@ int crun_utils_user_nspacecrun_init(char *name, char *nspacecrun,
                                     int crun_pid);
 void suid_trace(int kind, char *name, char *txt);
 void crun_utils_nspace_created(char *name, char *nspacecrun, int crun_pid);
+void crun_utils_nspace_deleted(char *name, char *nspacecrun);
 void crun_utils_prepare_with_delete(char *name, char *nspacecrun,
                                     int vm_id, int nb_eth, int uid_image,
                                     int is_privileged);
@@ -24,9 +25,9 @@ void crun_utils_startup_env(char *mountbear, char *startup_env,
 void crun_beat(int llid);
 void crun_utils_delete_crun_stop(char *name, int pid, int uid_image,
                                  int is_privileged, char *mountbear);
-void crun_utils_delete_crun_delete(char *name, char *nspacecrun,
-                                   int vm_id, int nb_eth,
-                                   int uid_image, int is_privileged);
+int crun_utils_delete_crun_delete(char *name, char *nspacecrun,
+                                  int vm_id, int nb_eth,
+                                  int uid_image, int is_privileged);
 int crun_utils_mount_exists(char *path, char *found, int found_len);
 int crun_utils_umount_tree(char *path);
 int crun_utils_delete_overlay1(char *name, char *cnt_dir);

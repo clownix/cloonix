@@ -311,9 +311,7 @@ static void new_second_arrival(void)
   g_new_second_arrival_count = 0;
 }
 
-/* A beat is two heartbeat periods of the monotonic clock, whatever woke the
-   loop: counted per wakeup it halved under traffic, and every timeout with
-   it. */
+/* A beat is two heartbeat periods of monotonic time, not of wakeups. */
 int heartbeat_mngt(int type)
 {
   static int heart_count=0;
@@ -347,7 +345,7 @@ int heartbeat_mngt(int type)
       {
       if (heart_count > 60000)
         {
-        KERR("%d LONG SELECT", type);
+        KERR("WARNING long epoll wait, type %d", type);
         result = 1;
         }
       }
@@ -378,10 +376,10 @@ static void fd_check(int fd, int line, char *little_name)
   int flags;
   flags = fcntl(fd, F_GETFD);
   if (flags == -1)
-    KERR(" %d %s ", line, little_name);
+    KERR("ERROR fd %d of %s is not valid (line %d)", fd, little_name, line);
   flags = fcntl(fd, F_GETFL, 0);
   if (flags == -1)
-    KERR(" %d %s ", line, little_name);
+    KERR("ERROR fd %d of %s is not valid (line %d)", fd, little_name, line);
 }
 
 unsigned long channel_get_tx_queue_len(int llid)
@@ -404,20 +402,20 @@ static void apply_epoll_ctl(int llid, int cidx, uint32_t evt)
     if (errno == ENOENT)
       {
       if (epoll_ctl(g_epfd, EPOLL_CTL_ADD, fd, &(g_channel[cidx].epev)))
-        KERR(" %s %d ", g_channel[cidx].little_name, errno);
+        KERR("ERROR epoll_ctl on %s: %s", g_channel[cidx].little_name, strerror(errno));
       }
     else
       {
       if (errno == EBADF)
         {
-        KERR(" %s %d (bad fd) ", g_channel[cidx].little_name, errno);
+        KERR("ERROR epoll_ctl on %s: bad fd", g_channel[cidx].little_name);
         if (g_channel[cidx].err_cb)
           g_channel[cidx].err_cb(llid, errno, 1111);
         if (msg_exist_channel(llid))
           channel_delete(llid);
         }
       else
-        KERR(" %s %d ", g_channel[cidx].little_name, errno);
+        KERR("ERROR epoll_ctl on %s: %s", g_channel[cidx].little_name, strerror(errno));
       }
     }
 }
@@ -559,6 +557,43 @@ void channel_beat_set (t_heartbeat_cb beat)
   channel_beat = beat;
 }
 
+/* The slowest callback of the current turn, named by its channel. */
+static int g_cb_worst_ms;
+static char g_cb_worst_name[MAX_NAME_LEN];
+
+static void cb_worst(long long t0, char *name)
+{
+  int ms = (int) (stall_now_ms() - t0);
+  if (ms > g_cb_worst_ms)
+    {
+    g_cb_worst_ms = ms;
+    snprintf(g_cb_worst_name, MAX_NAME_LEN, "%s", name);
+    }
+}
+
+static int cb_timed(int cidx, int is_rx, int llid)
+{
+  long long t0 = stall_now_ms();
+  char name[MAX_NAME_LEN];
+  int len, fd = g_channel[cidx].fd;
+  /* copied first: the callback may delete its channel */
+  memcpy(name, g_channel[cidx].little_name, MAX_NAME_LEN);
+  if (is_rx)
+    len = g_channel[cidx].rx_cb(llid, fd);
+  else
+    len = g_channel[cidx].tx_cb(llid, fd);
+  cb_worst(t0, name);
+  return len;
+}
+
+static int hb_timed(int type)
+{
+  long long t0 = stall_now_ms();
+  int result = heartbeat_mngt(type);
+  cb_worst(t0, "the timers");
+  return result;
+}
+
 static int handle_io_on_fd(int nb, struct epoll_event *events)
 {
   int llid, cidx, len, k, result = -1;
@@ -610,12 +645,17 @@ static int handle_io_on_fd(int nb, struct epoll_event *events)
       }
     if (evt & EPOLLHUP)
       {
+      /* Hung up: closed at once when nothing is left to read, the owner's
+         err_cb tells; reading stopped by flow control is lifted first. */
       g_channel[cidx].epollhup_count += 1;
-      if (g_channel[cidx].epollhup_count > 200)
+      if ((g_channel[cidx].red_to_stop_reading) && (g_channel[cidx].rx_cb))
+        g_channel[cidx].red_to_stop_reading = 0;
+      else if ((!(evt & EPOLLIN)) || (g_channel[cidx].epollhup_count > 200))
         {
-        KERR("WARNING llid %d fd %d kind %d: EPOLLHUP %d times, closed",
-             llid, g_channel[cidx].fd, g_channel[cidx].kind,
-             g_channel[cidx].epollhup_count);
+        if (g_channel[cidx].epollhup_count > 200)
+          KERR("WARNING llid %d fd %d kind %d: hung up and still readable "
+               "after %d turns, closed", llid, g_channel[cidx].fd,
+               g_channel[cidx].kind, g_channel[cidx].epollhup_count);
         if (g_channel[cidx].err_cb)
           g_channel[cidx].err_cb(llid, errno, 5112);
         channel_delete(llid);
@@ -644,7 +684,7 @@ static int handle_io_on_fd(int nb, struct epoll_event *events)
       {
       if (evt & EPOLLOUT)
         {
-        len = g_channel[cidx].tx_cb(llid, g_channel[cidx].fd);
+        len = cb_timed(cidx, 0, llid);
         if (len < 0)
           {
           if (g_channel[cidx].fd != -1)
@@ -707,7 +747,7 @@ static int handle_io_on_fd(int nb, struct epoll_event *events)
       {
       if (evt & EPOLLIN)
         {
-        len = g_channel[cidx].rx_cb(llid, g_channel[cidx].fd);
+        len = cb_timed(cidx, 1, llid);
         if (len < 0)
           {
           if (g_channel[cidx].fd != -1)
@@ -757,15 +797,16 @@ static int handle_io_on_fd(int nb, struct epoll_event *events)
   return result;
 }
 
-/* Where a late loop lost its time, said once per window: waiting for the
-   cpu after epoll_wait was due back, or inside one turn of callbacks, and
-   then with the cpu of that turn: little cpu is a callback that blocked. */
+/* Where a late loop lost its time, once per window: cpu wait after
+   epoll_wait, or one callback turn (little cpu: a callback blocked). */
 #define TURN_SLOW_MS   2000
 #define TURN_WINDOW_MS 10000
 static long long g_turn_window_ms;
 static int g_turn_nb, g_wait_sum, g_wait_worst;
 static int g_work_sum, g_work_worst, g_work_worst_cpu;
 static long g_work_worst_vol, g_work_worst_forced;
+static int g_work_worst_cb_ms;
+static char g_work_worst_cb[MAX_NAME_LEN];
 
 static long long turn_cpu_ms(void)
 {
@@ -790,7 +831,11 @@ static void turn_account(int wait_ms, int work_ms, int work_cpu_ms,
     g_work_worst_cpu = work_cpu_ms;
     g_work_worst_vol = vol;
     g_work_worst_forced = forced;
+    g_work_worst_cb_ms = g_cb_worst_ms;
+    memcpy(g_work_worst_cb, g_cb_worst_name, MAX_NAME_LEN);
     }
+  g_cb_worst_ms = 0;
+  g_cb_worst_name[0] = 0;
   if (g_turn_window_ms == 0)
     g_turn_window_ms = now;
   if (now - g_turn_window_ms < TURN_WINDOW_MS)
@@ -800,10 +845,13 @@ static void turn_account(int wait_ms, int work_ms, int work_cpu_ms,
          "late by %d ms in all, %d ms at worst (the cpu was not given); "
          "the callbacks took %d ms in all, one turn %d ms at worst with "
          "%d ms of cpu, %ld voluntary and %ld forced switches (voluntary: "
-         "it blocked in a call; forced only: preempted and not run again)",
+         "it blocked in a call; forced only: preempted and not run again), "
+         "its slowest callback %s with %d ms",
          g_turn_nb, now - g_turn_window_ms, g_wait_sum, g_wait_worst,
          g_work_sum, g_work_worst, g_work_worst_cpu, g_work_worst_vol,
-         g_work_worst_forced);
+         g_work_worst_forced,
+         g_work_worst_cb[0] ? g_work_worst_cb : "unnamed",
+         g_work_worst_cb_ms);
   g_turn_window_ms = now;
   g_turn_nb = 0;
   g_wait_sum = 0;
@@ -854,21 +902,21 @@ KERR("ERROR");
         {
         g_count_eintr += 1;
         if (g_count_eintr > 1000)
-          KOUT(" errno: %d\n ", errno);
+          KOUT("errno: %d", errno);
         continue;
         }
-      KOUT(" errno: %d\n ", errno);
+      KOUT("errno: %d", errno);
       }
     g_count_eintr = 0;
     if (result == 0)
       {
 if (g_new_second_arrival_count > PERSEC_COUNTER_INSANE)
 KERR("ERROR");
-      heartbeat_mngt(0);
+      hb_timed(0);
       continue;
       }
     else
-      pb = heartbeat_mngt(1);
+      pb = hb_timed(1);
 if (g_new_second_arrival_count > PERSEC_COUNTER_INSANE)
 KERR("ERROR %d %d", slipery_select, counter_select_speed);
     slipery_select++;
@@ -886,7 +934,7 @@ KERR("ERROR %d %d", slipery_select, counter_select_speed);
         {
         cidx = events[k].data.fd + 1;
         evt = events[k].events;
-        KERR( "pb: %d slip:%d %d %d %d %d %08X %d", pb, slipery_select,
+        KERR("ERROR event loop: pb %d slip %d kind %d cidx %d out %d in %d evt %08X llid %d", pb, slipery_select,
                                g_channel[cidx].kind, cidx, (evt & EPOLLOUT),
                                (evt & EPOLLIN), evt, get_llid(cidx));
         }

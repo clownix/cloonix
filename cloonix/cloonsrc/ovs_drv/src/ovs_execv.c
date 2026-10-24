@@ -62,7 +62,7 @@ static int wait_read_pid_file(char *ovs_dir, char *name)
     count += 1;
     if (count > 100)
       {
-      KERR("NO PID %s", name);
+      KERR("ERROR %s gave no pid after 100 tries", name);
       result = -1;
       }
     usleep(10000);
@@ -178,7 +178,7 @@ static int launch_ovs_vswitchd(char *ovs_bin, char *ovs_dir)
   char *argv[NB_ARG];
   if (file_exists(pidfile, R_OK))
     {
-    KERR("PIDFILE: %s EXISTS! ERROR", pidfile);
+    KERR("WARNING %s was left by an earlier ovs, erased", pidfile);
     unlink(get_pidfile_ovs(ovs_dir));
     }
 
@@ -243,7 +243,7 @@ int create_ovsdb_server_conf(char *ovs_bin, char *ovs_dir)
   return result;
 }
 
-/* Settings pushed into the fresh vswitchd, in order, stopping at a fault.  */
+/* Settings pushed into the fresh vswitchd, in order, stopping at a fault. */
 static int send_config_ovs(char *ovs_bin, char *ovs_dir)
 {
   int i, result = 0;
@@ -257,7 +257,7 @@ static int send_config_ovs(char *ovs_bin, char *ovs_dir)
     {
     if (ovs_vsctl(ovs_bin, ovs_dir, cfg[i]))
       {
-      KERR("Fail launch ovsdb server ");
+      KERR("ERROR ovs-vsctl failed on the database configuration");
       result = -1;
       }
     }

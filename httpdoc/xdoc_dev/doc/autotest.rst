@@ -1,11 +1,16 @@
 ======================================
-The autotest: both suites in two kvm
+The autotest: the suites in two kvm
 ======================================
 
-*debug/autotest/autotest.sh* runs the two non-regression suites of
+Two scripts, one mechanism (*autotest_common.sh*), the same two kvm::
+
+    slow_autotest.sh     the whole non-regression and the endurance, about 3 hours
+    fast_autotest.sh     a big breakage of a function, aimed at 10 minutes
+
+*debug/autotest/slow_autotest.sh* runs the two non-regression suites of
 *debug/* inside two kvm of the net nemo, so that a delivery is tested on a
-machine that has nothing of the development host: *testitall.sh* on the
-bundle in *kvm1*, *testitalltoy.sh* on the toy in *kvm2*, each as the user
+machine that has nothing of the development host: *top_testitall.sh* on the
+bundle in *kvm1*, *top_testitalltoy.sh* on the toy in *kvm2*, each as the user
 *user*, each writing its logs in its */home/user*; then the endurance on
 each, *tst_max.sh* in kvm1, *tst_maxtoy.sh* in kvm2. No nat: the one
 interface of each kvm is on the lan *autolan* with the tap *autotap* of the
@@ -19,8 +24,9 @@ host, for the browser of the host only (The web of the nets under test).
 
     cd debug/autotest
     ./kvm_autotest_trixie.sh                        once: bulk/kvm_autotest_trixie.qcow2
-    ./autotest.sh                                   kvm_autotest_trixie.qcow2
-    ./autotest.sh rocky                             kvm_autotest_rocky.qcow2
+    ./slow_autotest.sh                              kvm_autotest_trixie.qcow2
+    ./slow_autotest.sh rocky                        kvm_autotest_rocky.qcow2
+    ./fast_autotest.sh                              the same machines
     cloonix cli nemo ssh kvm1 "tail -f /home/user/results_outputs.log"
     cloonix cli nemo ssh kvm2 "tail -f /home/user/results_outputs.log"
     cloonix cli nemo ssh kvm1 "tail -f /home/user/tst_max_output.log"
@@ -32,8 +38,8 @@ The machines, made once
 
 The autotest must run on every distro cloonix supports, so there is one
 machine per distro, *kvm_autotest_<distro>.qcow2*, for trixie, alpine,
-arch, fedora44, resolute, rocky and tumbleweed. *autotest.sh* takes the
-distro as its argument, trixie by default, and refuses any other name.
+arch, fedora44, resolute, rocky and tumbleweed. Both scripts take the
+distro as their argument, trixie by default, and refuse any other name.
 
 *debug/autotest/kvm_autotest_<distro>.sh* boots the base *<distro>.qcow2* on nemo
 with a nat to the mirror, as *kvm_python_trixie.sh* does, and writes into
@@ -63,7 +69,7 @@ package command and the mechanisms its init and syslog need::
 
 A machine is kept only if every tool the suites and the runner call
 answers (*TOOLS* in *kvm_autotest_common.sh*: tar, python3, gcc with a libc
-to link, newuidmap, setsid, pgrep, ip ...) and *autotest.sh* asks the same
+to link, newuidmap, setsid, pgrep, ip ...) and the autotest asks the same
 of each kvm before pushing anything to it; *iperf3* is optional, the tap
 flow is measured only with it.
 
@@ -75,7 +81,7 @@ The toy asks for no cgroup of its own (the toy chapter of the user book
 says why), so a user bus is no longer needed by it on any machine; the
 runner still says when there is none, as alpine has no user@. The systemd
 image sub test, in a toy, sees the starter fall back and prints its reason
-instead of failing; *CLOONIX_TOY_CGROUPM=systemd ./autotest.sh <distro>*
+instead of failing; *CLOONIX_TOY_CGROUPM=systemd ./slow_autotest.sh <distro>*
 runs the toys the old way. The nat, the mirror and the package manager are not used
 again once the machine is made.
 
@@ -85,8 +91,8 @@ What the host needs at a run
 
 ::
 
-    ${HOME}/cloonix-bundle-<num>.tar.gz    the newest is taken
-    ${HOME}/cloonix-toy-<num>.tar.gz       the newest is taken
+    ${HOME}/cloonix-bundle.tar.gz    the newest is taken
+    ${HOME}/cloonix-toy.tar.xz       the newest is taken
     /var/lib/cloonix/bulk/kvm_autotest_<distro>.qcow2   the machine of the distro asked
     trixie.qcow2 trixie perf_trixie        the images the suites name, copied
     flow_trixie trixie_systemd             into the bulk of each kvm
@@ -111,7 +117,7 @@ freebsd, windows and cisco disks.
 Each kvm gets the source tree in */home/user/sources*, .git and the targz
 stores left out, and those images in its bulk. Then kvm1 gets the
 bundle installed with *install_cloonfs* and kvm2 the toy tarball in
-*/home/user*, where *testitalltoy.sh* looks for it.
+*/home/user*, where *top_testitalltoy.sh* looks for it.
 
 
 The run
@@ -129,7 +135,7 @@ than *&*, since a job a non-interactive shell puts in the background gets
 SIGINT ignored.
 
 The runner empties */var/log/syslog*, runs the suite with
-*TESTITALL_NO_ENDURANCE=1*, which stops *testitall.sh* after phase 8 with
+*TESTITALL_NO_ENDURANCE=1*, which stops *top_testitall.sh* after phase 8 with
 *TESTITALL OK*, and writes, in */home/user*::
 
     results_outputs.log   SigIgn and SigBlk the suite runs with, the suite's output,
@@ -147,7 +153,7 @@ The runner empties */var/log/syslog*, runs the suite with
     kerr2_outputs.log     the KERR lines during the endurance, syslog emptied
                           again between the two
 
-*tst_maxtoy.sh* starts the toys with *testitalltoy.sh start* and points
+*tst_maxtoy.sh* starts the toys with *top_testitalltoy.sh start* and points
 *soak.py* at them with its *env*: the toy's client, and the work zones and
 syslogs inside the rootfs of each net, where the soak reads what a dead
 container left. When a suite fails, the logs the toy names (crun.log, the
@@ -156,7 +162,7 @@ summary: a toy's proxymous logs to the machine's syslog, so only the merged
 file shows it beside the two nets. The sizes of *tst_max.sh*
 are those of the development host, 45 objects alive and 25 kvm of 1 GB;
 the two exports size it for kvm1. *RAM* and *CPU* of the two machines are
-at the top of *autotest.sh*.
+at the top of *autotest_common.sh*.
 
 
 The web of the nets under test
@@ -175,5 +181,27 @@ machine built before the builder took the firewall out gets the same
 *FIREWALL_OFF* there, and one that does not answer the ping of the host
 has its eth0 and its rules printed. A failure in *web_lan* warns and the suites start all the same.
 
-The machines are left running, pass or fail. To start again, run
-*autotest.sh* again: it kills nemo and rebuilds the pair.
+The machines are left running, pass or fail. To start again, run the
+script again: it kills nemo and rebuilds the pair.
+
+
+The fast autotest
+=================
+
+*fast_autotest.sh* prepares the same two kvm with only *trixie.qcow2*,
+*trixie* and *perf_trixie* in their bulk, no demo image, and runs in each
+*debug/top_testfast.sh*, no endurance: in kvm1 on the bundle, where it starts
+nemo and mito itself, in kvm2 on the toy after *top_testitalltoy.sh start*::
+
+    1. the nets          top_testitall.sh start, on the bundle only
+    2. testitall.py      every item of cloonix once, with its sniffs and flows
+    3. SUBS              the short sub tests, those that boot no kvm of their own
+    4. two demos         cloonix/cnt.py and cloonix/cntwifi.py
+
+The same logs as the slow one, *results_outputs.log* and
+*kerr1_outputs.log*. Before its summary the log has the table of the
+duration of every step, the longest first; the summary adds the
+preparation on the host side and the total. The budget is held by taking
+the longest steps out of *SUBS* in *top_testfast.sh*. Left to the slow
+autotest: the doc checks, the kvm variants, *testfailures.py*, the flows
+above their limit, the storms, most demos and the endurance.

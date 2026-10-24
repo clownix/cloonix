@@ -43,9 +43,7 @@ static int say_now(uint64_t *last)
   return 1;
 }
 
-/* Both ends send to each other on unix datagram sockets. Blocking sends
-   deadlocked the two (each stuck in sendto while the other's queue was
-   full, for 73 s until the net was destroyed): non blocking, a full queue
+/* Non blocking unix datagrams (blocking deadlocked both ends): a full queue
    drops the frame, as udp does. */
 static void dgram_buffers(int fd)
 {
@@ -55,9 +53,8 @@ static void dgram_buffers(int fd)
   setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sz, sizeof(sz));
 }
 
-/* sig: a probe or its reply must get through; the queue of proxymous is
-   drained continuously, so a bounded wait is enough and the data frames
-   keep being dropped meanwhile. */
+/* sig: a probe or reply must pass, so a bounded wait; data frames keep
+   being dropped. */
 static int transmit_unix_dgram_tx(char *dgram_tx, int len, char *data, int sig)
 {
   int tries = 0;
@@ -65,15 +62,14 @@ static int transmit_unix_dgram_tx(char *dgram_tx, int len, char *data, int sig)
   struct sockaddr *pname = (struct sockaddr *)&name;
   int len_tx, len_un = sizeof(struct sockaddr_un);
   int result=0;
-  char *net = get_net_name();
   char *c2c = get_c2c_name();
   if (len >= MAX_DGRAM_LEN)
-    KOUT("ERROR SOCK_DGRAM LEN %s %s %d %s", net, c2c, len, dgram_tx);
+    KOUT("ERROR SOCK_DGRAM LEN %s %d %s", c2c, len, dgram_tx);
   if (g_fd_dgram_tx == -1)
     {
     g_fd_dgram_tx = socket(AF_UNIX, SOCK_DGRAM, 0);
     if (g_fd_dgram_tx < 0)
-      KOUT("ERROR SOCK_DGRAM %s %s %s", net, c2c, dgram_tx);
+      KOUT("ERROR SOCK_DGRAM %s %s", c2c, dgram_tx);
     dgram_buffers(g_fd_dgram_tx);
     }
   memset(&name, 0, sizeof(struct sockaddr_un));
@@ -91,13 +87,13 @@ static int transmit_unix_dgram_tx(char *dgram_tx, int len, char *data, int sig)
     static uint64_t last;
     g_nb_tx_full += 1;
     if (say_now(&last))
-      KERR("WARNING %s %s: proxymous is not taking frames, %lu dropped so "
-           "far at its socket", net, c2c, g_nb_tx_full);
+      KERR("WARNING %s: proxymous is not taking frames, %lu dropped so "
+           "far at its socket", c2c, g_nb_tx_full);
     return -1;
     }
   if (len_tx != len)
     {
-    KERR("ERROR  %s %s %d %d %d %s", net, c2c, len_tx, len, errno, dgram_tx);
+    KERR("ERROR  %s %d %d %d %s", c2c, len_tx, len, errno, dgram_tx);
     result = -1;
     }
   return result;
@@ -106,24 +102,23 @@ static int transmit_unix_dgram_tx(char *dgram_tx, int len, char *data, int sig)
 int udp_tx_sig_send(int len, uint8_t *tx)
 {
   int result = 0;
-  char *net = get_net_name();
   char *c2c = get_c2c_name();
   if ((len <= 0) || (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
-    KOUT("ERROR SEND %s %s  %d", net, c2c, len);
+    KOUT("ERROR SEND %s  %d", c2c, len);
   fct_seqtap_tx(kind_seqtap_sig_hello, g_tx, 0, len, tx);
   if (g_llid_proxymous)
     {
     if (transmit_unix_dgram_tx(g_proxy_unix_dgram_tx, 
                                len+HEADER_TAP_MSG, (char *)g_tx, 1))
       {
-      KERR("ERROR %s %s: a signalling frame of %d bytes could not be "
-           "given to proxymous in 500 ms", net, c2c, len);
+      KERR("ERROR %s: a signalling frame of %d bytes could not be "
+           "given to proxymous in 500 ms", c2c, len);
       result = -1;
       } 
     }
   else
     {
-    KERR("ERROR %s %s  %d", net, c2c, len);
+    KERR("ERROR %s  %d", c2c, len);
     result = -1;
     }
   return result;
@@ -133,11 +128,10 @@ int udp_tx_traf_send(int len, uint8_t *buf)
 {
   static uint16_t seqtap=0;
   int result = 0;
-  char *net = get_net_name();
   char *c2c = get_c2c_name();
   seqtap += 1;
   if ((len <= 0) || (len > TRAF_TAP_BUF_LEN + END_FRAME_ADDED_CHECK_LEN))
-    KOUT("ERROR SEND %s %s  %d", net, c2c, len);
+    KOUT("ERROR SEND %s  %d", c2c, len);
   fct_seqtap_tx(kind_seqtap_data, g_tx, seqtap, len, buf);
   if (g_llid_proxymous)
     {
@@ -147,7 +141,7 @@ int udp_tx_traf_send(int len, uint8_t *buf)
     }
   else
     {
-    KERR("ERROR %s %s %d", net, c2c, len);
+    KERR("ERROR %s %d", c2c, len);
     result = -1;
     }
   return result;
@@ -155,9 +149,8 @@ int udp_tx_traf_send(int len, uint8_t *buf)
 
 static void err_cb(int llid, int err, int from)
 {
-  char *net = get_net_name();
   char *c2c = get_c2c_name();
-  KERR("ERROR UDP  %s %s %d %d", net, c2c,  err, from);
+  KERR("ERROR UDP  %s %d %d", c2c,  err, from);
   udp_close();
 }
 
@@ -204,7 +197,6 @@ static int rx_dgram_one(int fd)
   uint16_t seq;
   int len, buf_len, result;
   uint8_t *buf;
-  char *net = get_net_name();
   char *c2c = get_c2c_name();
   uint8_t probe_idx;
   char probe[32];
@@ -214,7 +206,7 @@ static int rx_dgram_one(int fd)
   if ((len < 0) && ((errno == EAGAIN) || (errno == EINTR)))
     return 0;
   if (len <= 0)
-    KOUT("ERROR READ %s %s %d %d", net, c2c, len, errno);
+    KOUT("ERROR READ %s %d %d", c2c, len, errno);
   result = fct_seqtap_rx_udp(len, fd, g_rx, &seq, &buf_len, &buf);
   if (result == kind_seqtap_sig_hello)
     {
@@ -233,9 +225,8 @@ static int rx_dgram_one(int fd)
       static unsigned long nb_no_mngt;
       nb_no_mngt += 1;
       if ((nb_no_mngt % 1000) == 1)
-        KERR("WARNING %s %s: data arrived before the enter-traffic message "
-             "did, forwarding it anyway (%lu frames so far)",
-             net, c2c, nb_no_mngt);
+        KERR("WARNING %s: data arrived before the enter-traffic message "
+             "did, forwarding it anyway (%lu frames so far)", c2c, nb_no_mngt);
       }
     if (seq != ((seqtap+1)&0xFFFF))
       {
@@ -244,8 +235,8 @@ static int rx_dgram_one(int fd)
       if (!first_frame_seen)
         {
         /* The first data frame of the tunnel, and it is not number 1. */
-        KTRC("%s %s: the tunnel opens at sequence %d, %d frame(s) dropped by "
-             "the far end before it knew this end's address", net, c2c, seq, gap);
+        KTRC("%s: the tunnel opens at sequence %d, %d frame(s) dropped by "
+             "the far end before it knew this end's address", c2c, seq, gap);
         }
       else
         {
@@ -255,9 +246,9 @@ static int rx_dgram_one(int fd)
           {
           int queued, rcvbuf;
           socket_fill(fd, &queued, &rcvbuf);
-          KERR("WARNING %s %s udp sequence gap: got %d after %d, %d "
+          KERR("WARNING %s udp sequence gap: got %d after %d, %d "
                "frame(s) lost or reordered (%lu gaps so far); %d of %d "
-               "bytes queued on this socket%s", net, c2c, seq, seqtap, gap,
+               "bytes queued on this socket%s", c2c, seq, seqtap, gap,
                nb_gap, queued, rcvbuf, (2 * queued > rcvbuf) ?
                ": this process fell behind" : "");
           }
@@ -273,12 +264,17 @@ static int rx_dgram_one(int fd)
     static uint64_t last_bad;
     static unsigned long nb_bad;
     nb_bad += 1;
-    if (len < 4)
-      memset(g_rx + len, 0, 4 - len);
     if (say_now(&last_bad))
-      KERR("WARNING %s %s: %lu udp datagram(s) that are not from the peer "
-           "dropped so far, the last of %d bytes starting %02X %02X %02X %02X",
-           net, c2c, nb_bad, len, g_rx[0], g_rx[1], g_rx[2], g_rx[3]);
+      {
+      char hex[16];
+      int i, n = 0;
+      memset(hex, 0, sizeof(hex));
+      for (i=0; (i<len) && (i<4); i++)
+        n += snprintf(hex+n, sizeof(hex)-n, " %02X", g_rx[i] & 0xFF);
+      KERR("WARNING %s: %lu udp datagram(s) that are not from the peer "
+           "dropped so far, the last of %d bytes starting%s",
+           c2c, nb_bad, len, n ? hex : " with nothing");
+      }
     result = 1;
     }
   return result;
@@ -323,14 +319,14 @@ int udp_init(uint16_t udp_port)
     unlink(g_proxy_unix_dgram_rx);
   fd = util_socket_unix_dgram(g_proxy_unix_dgram_rx);
   if (fd < 0)
-    KERR("ERROR %s %s %s", net, c2c, g_proxy_unix_dgram_rx);
+    KERR("ERROR %s %s", c2c, g_proxy_unix_dgram_rx);
   else
     {
     dgram_buffers(fd);
     g_llid_proxymous = msg_watch_fd(fd, rx_dgram_cb, err_cb, "udpd2d");
     if (g_llid_proxymous == 0)
       {
-      KERR("ERROR %s %s %s", net, c2c, g_proxy_unix_dgram_rx);
+      KERR("ERROR %s %s", c2c, g_proxy_unix_dgram_rx);
       close(fd);
       }
     else
@@ -341,4 +337,4 @@ int udp_init(uint16_t udp_port)
     }
   return result;
 }
-                                                                                                              
+

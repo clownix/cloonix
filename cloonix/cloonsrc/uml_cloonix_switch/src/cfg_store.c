@@ -32,6 +32,7 @@
 #include "ovs_phy.h"
 #include "ovs_snf.h"
 #include "qga_dialog.h"
+#include "wifi_air.h"
 
 static t_cfg cfg;
 static int32_t vm_id_tab[MAX_VM];
@@ -94,7 +95,7 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
     {
     snprintf(use, MAX_PATH_LEN-1, "bad name %s: letters, digits, _ - . "
              "only, not starting with - or ., under %d chars",
-             (name && name[0]) ? name : "(empty)", MAX_NAME_LEN);
+             (name && name[0]) ? name : "(empty or too long)", MAX_NAME_LEN);
     result = 1;
     }
   else if (is_lan && cfg_name_is_iface(name))
@@ -123,42 +124,42 @@ int cfg_name_is_in_use(int is_lan, char *name, char *use)
     }
   else if (cfg_is_a_zombie(name))
     {
-    snprintf(use, MAX_PATH_LEN-1, "%s is used by vm zombie", name);
+    snprintf(use, MAX_PATH_LEN-1, "%s is a kvm still being deleted", name);
     result = 1;
     }
   else if (cfg_is_a_newborn(name))
     {
-    snprintf(use, MAX_PATH_LEN-1, "%s is used by vm newborn", name);
+    snprintf(use, MAX_PATH_LEN-1, "%s is a kvm still being created", name);
     result = 1;
     }
   else if (find_vm(name))
     {
-    snprintf(use, MAX_PATH_LEN-1, "%s is used by running vm", name);
+    snprintf(use, MAX_PATH_LEN-1, "%s is a kvm", name);
     result = 1;
     }
   else if (cnt_name_exists(name, &nb_eth))
     {
-    snprintf(use, MAX_PATH_LEN-1, "%s is used by container", name);
+    snprintf(use, MAX_PATH_LEN-1, "%s is a container", name);
     result = 1;
     }
   else if (ovs_nat_main_exists(name))
     {
-    snprintf(use, MAX_PATH_LEN-1, "%s is used by nat", name);
+    snprintf(use, MAX_PATH_LEN-1, "%s is a nat", name);
     result = 1;
     }
   else if (ovs_a2b_exists(name))
     {
-    snprintf(use, MAX_PATH_LEN-1, "%s is used by a2b", name);
+    snprintf(use, MAX_PATH_LEN-1, "%s is an a2b", name);
     result = 1;
     }
   else if (ovs_c2c_exists(name))
     {
-    snprintf(use, MAX_PATH_LEN-1, "%s is used by c2c", name);
+    snprintf(use, MAX_PATH_LEN-1, "%s is a c2c", name);
     result = 2;
     }
   else if (ovs_tap_exists(name))
     {
-    snprintf(use, MAX_PATH_LEN-1, "%s is used by tap", name);
+    snprintf(use, MAX_PATH_LEN-1, "%s is a tap", name);
     result = 1;
     }
   else if ((!is_lan) && (lan_get_with_name(name)))
@@ -351,7 +352,7 @@ int cfg_unset_vm(t_vm *vm)
   int id = vm->kvm.vm_id;
   if (vm->wake_up_eths != NULL)
     {
-    KERR("BUG %s", vm->kvm.name);
+    KERR("ERROR %s still had eths waiting to wake", vm->kvm.name);
     free_wake_up_eths(vm);
     }
   extract_vm(&cfg, vm);
@@ -591,14 +592,30 @@ char *cfg_get_version(void)
   return (cfg.clc.version);
 }
 
+/* a radio is captured with its air, told as the endp_type of an eth */
+static void fill_vwif_endp(int nb, char air[MAX_VWIF][MAX_NAME_LEN], int *endp)
+{
+  int j;
+  for (j = 0; j < MAX_VWIF; j++)
+    {
+    if ((j < nb) && (air[j][0]))
+      endp[j] = wifi_air_snf_on(air[j]) ? endp_type_eths : endp_type_ethv;
+    else
+      endp[j] = 0;
+    }
+}
+
 static void fill_topo_cnt(t_topo_cnt *topo_cnt, t_cnt *cnt)
 {
   memcpy(topo_cnt, &(cnt->cnt), sizeof(t_topo_cnt));
+  fill_vwif_endp(topo_cnt->nb_tot_nb_vwif, topo_cnt->vwif_air,
+                 topo_cnt->vwif_endp_type);
 }
 
 static void fill_topo_kvm(t_topo_kvm *kvm, t_vm *vm)
 {
   memcpy(kvm, &(vm->kvm), sizeof(t_topo_kvm));
+  fill_vwif_endp(kvm->nb_tot_nb_vwif, kvm->vwif_air, kvm->vwif_endp_type);
 }
 
 static void fill_topo_nat(t_topo_nat *topo_nat, t_ovs_nat_main *nat)
@@ -711,8 +728,8 @@ static t_topo_info *alloc_all_fields(int nb_vm, int nb_cnt, int nb_nat,
   return topo;
 }
 
-/* Endpoint collector: each object module pushes its cabled endpoints here   */
-/* through cfg_topo_endp_push, cfg_produce_topo_info then takes the array.   */
+/* Endpoint collector: each object module pushes its cabled endpoints here */
+/* through cfg_topo_endp_push, cfg_produce_topo_info then takes the array. */
 static t_topo_endp *g_endp;
 static int g_nb_endp;
 static int g_max_endp;
@@ -748,7 +765,7 @@ void cfg_topo_endp_push(char *name, int num, int type, char *lan)
   g_nb_endp += 1;
 }
 
-/* The lan.lan of each entry moves with the entry, only the array is freed.  */
+/* The lan.lan of each entry moves with the entry, only the array is freed. */
 static int collect_topo_endp(t_topo_endp **endp)
 {
   int nb;

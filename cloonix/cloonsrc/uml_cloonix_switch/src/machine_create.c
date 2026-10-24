@@ -94,7 +94,7 @@ static int rmdir_clone(void *data)
       sleep(1);
       if (rm_machine_dirs(act->vm_id, info))
         {
-        KERR(" %s ", info);
+        KERR("ERROR the directories of a deleted kvm stay: %s", info);
         result = -1;
         }
       }

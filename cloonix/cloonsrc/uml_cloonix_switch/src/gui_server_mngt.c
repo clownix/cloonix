@@ -222,8 +222,7 @@ void gui_server_init(char *net, char *root_work, int web_port,
 
   if (web_port <= 0)
     {
-    KTRC("gui_server_init: no cloonix_web port for net=%s"
-         " — gui-server not started", net);
+    KTRC("gui_server_init: no cloonix_web port, gui-server not started");
     return;
     }
 
@@ -238,8 +237,8 @@ void gui_server_init(char *net, char *root_work, int web_port,
     strncpy(g_doors_path, doors_addr, MAX_PATH_LEN-1);
   strncpy(g_passwd,      passwd, MSG_DIGEST_LEN-1);
 
-  KTRC("gui_server_init: net=%s bin=%s snf=%s port=%s ctrl=%s doors=%s",
-       net, g_bin_gui, g_snf_dir, g_web_port, g_ctrl_sock, g_doors_path);
+  KTRC("gui_server_init: bin=%s snf=%s port=%s ctrl=%s doors=%s",
+       g_bin_gui, g_snf_dir, g_web_port, g_ctrl_sock, g_doors_path);
 
   g_initialised = 1;
   gui_server_start();

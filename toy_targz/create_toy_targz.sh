@@ -7,10 +7,7 @@ if [ ! -e ${CLOONIX_CFG} ]; then
   echo ${CLOONIX_CFG}
   exit 1
 fi
-VERSION_NUM=$(cat ${CLOONIX_CFG} | grep CLOONIX_VERSION)
-VERSION_NUM=${VERSION_NUM#*=}
-VERSION_NUM=${VERSION_NUM%-*}
-NAME="cloonix-toy-${VERSION_NUM}"
+NAME="cloonix-toy"
 EXTRACT="/tmp/${NAME}"
 PATCHELF="/usr/libexec/cloonix/cloonfs/bin/cloonix-patchelf"
 CRUN="/usr/libexec/cloonix/cloonfs/bin/cloonix-crun"
@@ -31,10 +28,8 @@ for i in ${CRUN} ${LD} ${PROXY} ${PASST} ${PATCHELF} \
     exit 1
   fi
 done
-# The libraries the four host-side binaries load, resolved by the loader of
-# cloonfs itself, plus the three setup.sh adds to proxymous and the libm it
-# adds to patchelf. passt is here because the nat runs on the host side,
-# spawned by proxymous, which looks for it beside itself.
+# Libraries of the four host-side binaries, by the cloonfs loader, plus what
+# setup.sh adds to proxymous and patchelf; passt: the nat runs host-side.
 LISTSO="${COMMON_LIBS}/libzstd.so.1 ${COMMON_LIBS}/libz.so.1 \
         ${COMMON_LIBS}/libcrypto.so.3 ${COMMON_LIBS}/libm.so.6"
 for b in ${CRUN} ${PROXY} ${PASST} ${PATCHELF}; do
@@ -74,6 +69,28 @@ for i in ${CLOONIX}/cloonfs/share/cloonix/demos/*; do
     chmod 644 "${i}"
   fi
 done
+# The demos of toy_drop are left out: their files, packages and voice lines,
+# their clips; a package left without demo goes.
+DROP=$(grep -v "^#" ${HERE}/toy_drop | awk '{print $1}' | tr '\n' ' ')
+cd ${CLOONIX}/cloonfs/share/cloonix/demos
+for f in ${DROP}; do
+  rm -f "${f}" "${CLOONIX}/cloonfs/bin/jscloonix/audio/${f%.py}.ogg"
+done
+awk -v drop="${DROP}" '
+  BEGIN { n = split(drop, d, " "); for (i = 1; i <= n; i++) gone[d[i]] = 1 }
+  /^#/ { print; next }
+  /^$/ { next }
+  /^[0-9]+[ \t]/ { pending = $0; next }
+  ($1 in gone) { next }
+  { if (pending != "") { print ""; print pending; pending = "" } print }' \
+  packages > packages.tmp
+mv -f packages.tmp packages
+awk -v drop="${DROP}" '
+  BEGIN { n = split(drop, d, " "); for (i = 1; i <= n; i++) gone[d[i]] = 1 }
+  !($1 in gone)' voice > voice.tmp
+mv -f voice.tmp voice
+chmod 644 packages voice
+cd ${HERE}
 NB_DEMO=$(find ${CLOONIX}/cloonfs/share/cloonix/demos -maxdepth 3 -type f \
                -not -path "*/demos/lib/*" \
                \( -name "*.py" -o -name "*.sh" \) 2>/dev/null | wc -l)
@@ -86,6 +103,8 @@ mkdir -p ${BIN}
 cp -f ${CLOONIX}/cloonfs/bin/cloonix ${BIN}/cloonix
 cp -f ${CLOONIX}/cloonfs/bin/cloonix_*.py ${BIN}
 chmod 755 ${BIN}/cloonix ${BIN}/cloonix_*.py
+# One configuration: the client's cloonix_config.py is the server's cloonix.cfg.
+ln -sf ../rootfs/cloonix/cloonfs/etc/cloonix.cfg ${BIN}/cloonix_config.py
 cp -f ${CLOONIX}/cloonfs/bin/make_cloonix_cert ${BIN}/make_cloonix_cert
 chmod 755 ${BIN}/make_cloonix_cert
 mkdir -p ${CONFIG}
@@ -155,8 +174,8 @@ case "${verb}" in
     exec ${CLOONFS}/bin/cloonix-main-server ${CFG} $1
     ;;
   list|stop|cli|add|del|plug|unplug|cnf|dump|sniff|save|rpc|demo|scp|files|trace)
-    echo "cloonix ${verb} is run from the host, not from inside:" >&2
-    echo "  ./<net>cmd cloonix ${verb} <net> ..." >&2
+    echo "cloonix ${verb} is not run from inside: the toy is driven from" >&2
+    echo "its web gui, given by ./<net>cmd on the host." >&2
     exit 1
     ;;
   *)
@@ -206,9 +225,10 @@ for j in "bin" \
   fi
 done
 echo ${EXTRACT}
-cd /tmp
-tar zcvf ${NAME}.tar.gz ${NAME}
-mv ${NAME}.tar.gz ${HOME}
+set -e
+. ${HERE}/lib/pack_toy.sh
+pack_toy /tmp ${NAME}
+mv -f /tmp/${NAME}.tar.xz ${HOME}
 rm -rf ${EXTRACT}
-echo END SCRIPT ${HOME}/${NAME}.tar.gz DONE 
+echo END SCRIPT ${HOME}/${NAME}.tar.xz DONE
 

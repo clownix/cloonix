@@ -1,5 +1,5 @@
 ==============================================================================
-                               v100-00
+                               v101-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -15,15 +15,21 @@ Everything cloonix needs is embedded in the delivery: no library of the host
 is used and nothing else has to be installed.  The binaries are compiled
 inside a debian trixie virtual machine.
 
-Two packagings are provided, both are plain tar.gz files:
+Two packagings are provided, a tar.gz and a tar.xz (tar xf needs xz):
 
-  cloonix-bundle-100.tar.gz   system-wide install, root needed at install time
-  cloonix-toy-100.tar.gz      user-land only, root never needed
+  cloonix-bundle.tar.gz   system-wide install, root needed at install time
+  cloonix-toy.tar.xz      user-land only, root never needed
+
+and the toy specialised for one open source project, containers only:
+
+  cloonix-frr-toy.tar.xz  cloonix-bird-toy.tar.xz
+  cloonix-suricata-toy.tar.xz  cloonix-bind-toy.tar.xz
 
 2 brandtypes of guests run in cloonix:
 
   kvm    real virtualisation run by qemu-kvm, root file-system is a .qcow2
-  cnt    container run by crun, root file-system is a directory
+  cnt    container run by crun, root file-system is a directory or a
+         .tar.gz that cloonix extracts once
 
 The graphical interface is a web page served by cloonix itself.  There is no
 gtk client any more, no X11 forwarding, and no wireshark or spice binary to
@@ -42,7 +48,8 @@ shipped in the configuration, and they can be changed there:
   the file, toy         <toy directory>/rootfs/cloonix/cloonfs/etc/cloonix.cfg
 
 The user is the name of the net, the password its cloonix_passwd in that
-file: the name of the net followed by clown.  For the net nemo: user nemo,
+file, which the client's cloonix_config.py links to: the name of the net
+followed by clown.  For the net nemo: user nemo,
 password nemoclown.
 
 See clownix.net for the documentation:
@@ -52,7 +59,7 @@ https://clownix.net/build_user/user.html
 ==============================================================================
                           BUNDLE INSTALLATION
 ==============================================================================
-The bundle installation is based on cloonix-bundle-100.tar.gz, it copies the
+The bundle installation is based on cloonix-bundle.tar.gz, it copies the
 binaries to /usr/libexec/cloonix/cloonfs, puts the cloonix command and the
 cloonix_*.py files it imports in /usr/bin, and uses /var/lib/cloonix as work
 zone.
@@ -64,9 +71,9 @@ cloonix-suid-power, gets the suid root permission.
 1) Download and install:
 ------------------------
 
-wget https://clownix.net/downloads/cloonix-bundle-100.tar.gz
-tar xvf cloonix-bundle-100.tar.gz
-cd cloonix-bundle-100
+wget https://clownix.net/downloads/cloonix-bundle.tar.gz
+tar xvf cloonix-bundle.tar.gz
+cd cloonix-bundle
 sudo ./install_cloonfs
 
 To uninstall:
@@ -93,9 +100,13 @@ qcow2 (virtual machine for qemu-kvm):
 wget https://clownix.net/downloads/kvm_bulk/trixie.qcow2.gz
 gunzip trixie.qcow2.gz
 
-cnt (container directory for crun):
+cnt (container image for crun, used as it is: the first add cnt on it
+extracts it once into trixie_targz, read only, for every net and user):
 wget https://clownix.net/downloads/cnt_bulk/trixie.tar.gz
-tar xvf trixie.tar.gz
+
+A container that keeps its changes (--persistent) needs the directory form,
+extracted under another name:
+mkdir mytrixie && tar xpf trixie.tar.gz -C mytrixie
 
 
 3) Start a network and open the canvas:
@@ -133,15 +144,15 @@ the directory you extracted.
 
 1) Download:
 ------------
-wget https://clownix.net/downloads/cloonix-toy-100.tar.gz
+wget https://clownix.net/downloads/cloonix-toy.tar.xz
 
 2) Extract the directory:
 -------------------------
-tar zxvf cloonix-toy-100.tar.gz
+tar xvf cloonix-toy.tar.xz
 
 3) Call the setup.sh script to adapt the tool to its env:
 ---------------------------------------------------------
-cd cloonix-toy-100
+cd cloonix-toy
 ./setup.sh
 
 The setup.sh takes an optional cloonix net name, "nemo" is the default:
@@ -159,24 +170,17 @@ prints a small report on the host devices it will need.
 --------------------------------
 https://127.0.0.1:4444
 
-6) Dump the demos available:
-----------------------------
-./nemocmd demo
-
-7) Call a demo:
+6) Play a demo:
 ---------------
-./nemocmd demo security/wg.py
+In the canvas, the Demo button of the header lists the demos and plays
+them; Delete all erases every object without stopping the server.
 
-8) Enter the container that hosts cloonix:
+7) Enter the container that hosts cloonix:
 ------------------------------------------
 ./nemocmd shell
 
-9) Erase all the objects without stopping the server:
------------------------------------------------------
-./nemocmd cloonix cli nemo del all
-
-10) Kill all:
--------------
+8) Kill all:
+------------
 ./nemocmd stop
 
 

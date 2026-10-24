@@ -11,6 +11,8 @@
 #include "sched.h"
 #include "circle.h"
 
+char *get_a2b_name(void);
+
 #define MAX_ETH_LEN 1518
 #define TOTAL_LOSS_VALUE 10000
 
@@ -106,7 +108,7 @@ void sched_dec_queue_stored(int id, uint64_t len)
 void sched_cnf(int dir, char *type, int val)
 {   
   if ((dir != 0) && (dir != 1))
-    KERR("%d %s %d", dir, type, val);
+    KERR("ERROR a2b direction %d for %s=%d, 0 or 1 expected", dir, type, val);
   if (!strcmp(type, "loss"))
     g_cnf_loss[dir] = (uint64_t ) val;
   else if (!strcmp(type, "delay"))
@@ -188,8 +190,9 @@ int sched_can_enqueue(int id, uint64_t len, uint8_t *buf)
     else
       {
       if (g_pkt_silent_drop[id] == 0)
-        KERR("WARNING a2b dir %d: %lu packets held in a silent period, "
-             "the next ones are dropped", id, g_pkt_stored[id]);
+        KERR("WARNING a2b %s dir %d: %lu packets held in a silent period, "
+             "the next ones are dropped", get_a2b_name(), id,
+             g_pkt_stored[id]);
       g_pkt_silent_drop[id] += 1;
       }
     }

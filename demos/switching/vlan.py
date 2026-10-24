@@ -3,7 +3,7 @@ r"""vlan - one wire, two networks, and a filter that stops working.
 
     ./vlan.py [net]                 the net defaults to nemo
 
-Five machines on ONE lan::
+Five machines on one lan::
 
     a10                                                    b10
   10.0.10.1 --+                                    +-- 10.0.10.2
@@ -14,65 +14,43 @@ Five machines on ONE lan::
   10.0.20.1 --+          10.0.10.254               +-- 10.0.20.2
                          10.0.20.254
 
-eth0 carries no address on any of them. The addresses are on eth0.10 and
-eth0.20, which are vlan interfaces, and the cloonix lan carries the tagged
-frames untouched because nothing was done to it. That is a trunk.
+eth0 carries no address on any of them: the addresses are on the vlan
+interfaces eth0.10 and eth0.20, and the cloonix lan carries the tagged
+frames untouched. That is a trunk.
 
   ACT 1  a10 reaches b10, a20 reaches b20, over the same wire.
-  ACT 2  a20 is given 10.0.10.9 as well -- same wire, same subnet as a10,
-         and still unreachable. The tag is the network, not the subnet.
+  ACT 2  a20 is given 10.0.10.9 as well, same wire, same subnet as a10,
+         and still unreachable: the tag is the network, not the subnet.
   ACT 3  the tag read out of the raw frame: 0x8100, priority, vlan id.
   ACT 4  a router on a stick: rtr forwards vlan 10 to vlan 20 through one
-         interface, and the same ping is caught arriving tagged 10 and
-         leaving tagged 20.
+         interface, the same ping caught arriving tagged 10 and leaving
+         tagged 20.
 
-The second point of the demo is about the sniffer. A filter that says icmp
-matches nothing here, because the ethertype at offset 12 is 0x8100 and the
-grammar has no word to step over a tag with. The demo measures that rather
-than claiming it.
-
-Runs on the plain trixie image: iproute2 and ping and nothing else.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
-
-Image: trixie            (the plain one -- no demo image to build)
+Image: trixie            (the plain one: iproute2 and ping)
 Size:  5 containers, 1 lan
 
 THE PACKET TO CATCH
 -------------------
-  This demo has a second point, and it is about the sniffer rather than
-  about vlans. Ping a10 to b10 and subscribe to the trunk:
+  The trunk, a10 pinging b10:
 
     cloonix cli nemo cnf a10 eth0 sniff=on
     cloonix cli nemo sniff a10 eth0 --dump icmp
 
-  Nothing arrives. Not one packet, while the ping runs and succeeds.
-
-  The filter reads the ethertype at offset 12 of the frame, and on a
-  trunk that field holds 0x8100, not 0x0800. There is no vlan keyword in
-  the grammar to step over it with, so every primitive above the link
-  layer -- ip, icmp, tcp, udp, host, port -- misses every tagged frame.
-  tcpdump behaves the same way, for the same reason.
-
-  So the capture that shows this protocol is the unfiltered one:
+  Nothing arrives while the ping succeeds: the filter reads the ethertype
+  at offset 12, 0x8100 on a trunk, and the grammar has no vlan word to step
+  over it, so ip, icmp, tcp, udp, host and port miss every tagged frame, as
+  in tcpdump. The capture of this protocol is the unfiltered one, the tag
+  in bytes 12 and 13:
 
     cloonix cli nemo sniff a10 eth0 --dump
 
-  and the tag is in bytes 12 and 13 of what it prints.
-
-  ACT 4 is the packet worth waiting for: one ping from a10 to b20,
-  caught twice on the same wire, arriving tagged 10 and leaving tagged
-  20 with the mac addresses rewritten and the IP addresses untouched.
-  That is routing, at the smallest scale it can be shown.
+  ACT 4 is the packet to wait for: one ping from a10 to b20 caught twice on
+  the same wire, tagged 10 then 20, the macs rewritten and the IP addresses
+  untouched, routing at its smallest scale.
 
 Important
-  It runs on the plain trixie container image. There is no vlan image to
-  build and nothing in it but iproute2 and ping, which makes this the
-  demo to run first on a fresh install.
-  A cloonix lan is a trunk because nothing was done to it. To make it an
-  access port instead, tag the ovs port -- but then the guests need no
-  vlan interfaces and there is nothing left to see.
+  A cloonix lan is a trunk because nothing was done to it. Tagging the ovs
+  port makes it an access port, the guests then needing no vlan interface.
 """
 import os
 import shlex
@@ -88,9 +66,9 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    NET, CLOONIX, answers, capturable, check_net, erase_net, in_lst,
-    in_parallel, parse_bytes_line, place, run, show, ssh, step, story,
-    wait_exists)
+    NET, CLOONIX, answers, capturable, check_net, erase_net, in_parallel,
+    parse_bytes_line, place, run, show, ssh, step, story, wait_exists,
+    unavailable, guarded)
 
 ROOTFS_CHOICES = ("trixie", "trixie_systemd")
 
@@ -128,7 +106,7 @@ def choose_rootfs():
         if ok:
             return cand
         said = (r.stdout + r.stderr).strip() or "nothing"
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -421,7 +399,7 @@ def main():
     elif filtered.count:
         story("      This server's filter DID match tagged frames (%d of"
               % filtered.count)
-        story("      them), so it steps over the tag. Worth knowing: that is")
+        story("      them), so it steps over the tag. That is")
         story("      not what tcpdump does with the same expression.")
     story()
 
@@ -483,7 +461,7 @@ def main():
         sys.exit("\n" + "\n".join("  " + b for b in bad))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the wire, unfiltered, while a ping runs -- every frame tagged:
     cloonix cli %s sniff a10 eth0 --dump
@@ -500,16 +478,4 @@ the network is left up. Things worth trying:
 """ % (NET, NET, NET, NET))
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit as stop:
-        if stop.code:
-            sys.stderr.write("%s\n" % stop.code)
-            up = [n for n in ALL if in_lst(n)]
-            if up:
-                sys.stderr.write("Still running: %s\n" % ", ".join(up))
-            raise SystemExit(1)
-        raise
-    except RuntimeError as err:
-        sys.stderr.write("%s\n" % err)
-        raise SystemExit(1)
+    guarded(main, ALL)

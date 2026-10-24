@@ -26,7 +26,7 @@ static int get_rss_shift(void)
   if ((size = sysconf(_SC_PAGESIZE)) == -1)
     {
     printf("ERROR SYSCONF\n");
-    KERR(" ");
+    KERR("ERROR sysconf: %s", strerror(errno));
     exit(-1);
     }
   size >>= 10;
@@ -45,7 +45,7 @@ static unsigned long get_totalram_kb(void)
   if (sysinfo(&sys_info))
     {
     printf("ERROR %s\n", __FUNCTION__);
-    KERR(" ");
+    KERR("ERROR sysinfo: %s", strerror(errno));
     exit(-1);
     }
   result = (unsigned long) sys_info.totalram;
@@ -159,8 +159,11 @@ static void refresh_ram_cpu_vm(int nb, t_vm *head_vm)
     /* poweroff_done: its death is reported by qemu_automaton */
     if ((!cur->vm_to_be_killed) && (!cur->vm_poweroff_done))
       {
-      if (update_pid_infos(cur))
-        KERR("WARNING eventfull: cannot read the pid of %s", cur->kvm.name);
+      /* --no_reboot: qemu exits on a reboot, its pid gone is the nominal end */
+      if ((update_pid_infos(cur)) &&
+          (!(cur->kvm.vm_config_flags & VM_CONFIG_FLAG_NO_REBOOT)))
+        KERR("WARNING eventfull: the qemu of %s is gone, its kvm is deleted",
+             cur->kvm.name);
       }
     cur = cur->next;
     }

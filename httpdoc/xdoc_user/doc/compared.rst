@@ -121,8 +121,8 @@ The capture is in the switch
 ============================
 
 A sniff is a subscription on one interface with a capture filter, and the
-filter is applied by *cloonix-ovs-snf* in the switch: only the packets that
-match leave the namespace. The same packets open in **webshark**, the
+filter is applied by the main server to the capture of that interface: only
+the packets that match cross the network to the client. The same packets open in **webshark**, the
 dissection engine of wireshark in the browser, with no wireshark on the
 client. Two sniffs with one filter on the two sides of a tunnel show what
 was encrypted or dropped.
@@ -180,10 +180,10 @@ the tar.gz of one, extracted at its first use:
 nothing of cloonix is inside, the agent arrives on a cd-rom built by
 cloonix. A cloud image of a distribution is used as downloaded; a windows,
 a freebsd and a cisco ios-xe disk have a verb each, *add win*, *add
-freebsd*, *add cisco*, which adds what that disk always needs. A cnt runs
-in a user namespace on the user's subuid window, its image mounted
-idmapped, so one image in bulk serves several users and several nets at
-once and is never written by cloonix.
+freebsd*, *add cisco*, which adds what that disk always needs. In the
+bundle a cnt runs in a user namespace on the user's subuid window, its image
+mounted idmapped, so one image in bulk serves several users and several nets
+at once and is never written by cloonix.
 
 gns3 and eve-ng ship a catalogue of appliance definitions, one per vendor
 image, and run cisco ios of the old routers under dynamips, which cloonix

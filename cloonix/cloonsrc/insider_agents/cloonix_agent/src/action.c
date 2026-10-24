@@ -105,13 +105,17 @@ static int receive_from_pipe(int fd, char **msgrx)
 
 static void call_poweroff(void)
 {
-  system("echo \"SHUTDOWN IN 1 SEC by cloonix-agent\" | wall");
+  if (system("command -v wall >/dev/null 2>&1 || exit 0; "
+             "echo \"SHUTDOWN IN 1 SEC by cloonix-agent\" | wall"))
+    KERR("WARNING wall failed, the users were not told of the poweroff");
   g_halt_countdown = 2;
 }
 
 static void call_reboot(void)
 {
-  system("echo \"REBOOT IN 1 SEC by cloonix-agent\" | wall");
+  if (system("command -v wall >/dev/null 2>&1 || exit 0; "
+             "echo \"REBOOT IN 1 SEC by cloonix-agent\" | wall"))
+    KERR("WARNING wall failed, the users were not told of the reboot");
   g_reboot_countdown = 2;
 }
 

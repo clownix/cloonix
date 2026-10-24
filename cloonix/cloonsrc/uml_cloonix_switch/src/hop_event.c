@@ -40,5 +40,5 @@ void rpct_recv_pid_resp(int llid, int tid, char *name, int num,
   else if ((tid == type_hop_ovs) || (tid == type_hop_ovsdb)) 
     ovs_pid_resp(llid, name, toppid, pid);
   else
-    KERR("%d %s %d", tid, name, pid);
+    KERR("ERROR pid answer of unknown type %d for %s, pid %d", tid, name, pid);
 }

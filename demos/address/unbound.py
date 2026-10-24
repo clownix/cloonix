@@ -15,9 +15,9 @@ Three machines on one lan::
 
   ACT 1  cl asks ns for www.shop.test. Unbound answers 10.0.0.80, and cl
          then reaches web at exactly that address -- name to address to
-         connection, the whole point of a resolver.
+         connection, the job of a resolver.
   ACT 2  cl asks a second time. Unbound serves it from cache, and the query
-         on the wire is caught to show the client really did ask the server.
+         on the wire is caught to show the client did ask the server.
   ACT 3  cl asks for a name the server does not hold. Unbound, with no
          recursion configured here, refuses rather than inventing an answer.
 
@@ -50,17 +50,15 @@ from demolib import (
     put, reached, ssh, step, story, tools_present)
 
 HISTORY = """\
-Unbound was written by NLnet Labs in the Netherlands, first released in 2008,
-with Wouter Wijngaards as its main author. It is a validating, recursive,
-caching resolver: the piece that turns a name into an address for a client,
-checks DNSSEC signatures as it goes, and remembers what it learnt. It was
-built as a clean, security-minded alternative to using BIND for the resolver
-job, and it is widely run for exactly that. Here it is pinned to one small
-local zone so the exchange is easy to watch.
+Unbound was written by NLnet Labs, first released in 2008, with Wouter
+Wijngaards as its main author: a validating, recursive, caching resolver,
+the piece that turns a name into an address for a client, checks DNSSEC as
+it goes, and remembers what it learnt. It was built as a clean,
+security-minded alternative to BIND for the resolver job.
 
 Today: Unbound is the default resolver of FreeBSD and OpenBSD, sits in
-pfSense, OPNsense and Pi-hole setups, and answers for large public resolvers;
-validating DNSSEC at the resolver is its usual role.
+pfSense, OPNsense and Pi-hole setups, and answers for large public
+resolvers; validating DNSSEC at the resolver is its usual role.
 """
 
 ROOTFS_CHOICES = ("unbound_trixie",)
@@ -179,7 +177,7 @@ def main():
         sys.exit("a check failed: ip=%s ping=%s" % (ok_ip, ok_ping))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   ask the resolver by hand, and see the cache at work:
     cloonix cli %s ssh cl "dig @10.0.0.53 www.shop.test"

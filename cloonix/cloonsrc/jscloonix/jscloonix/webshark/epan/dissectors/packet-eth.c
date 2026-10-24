@@ -27,9 +27,7 @@
 #include "packet-gre.h"
 #include "packet-ieee8023.h"
 #include "packet-ipx.h"
-#include "packet-isl.h"
 #include "packet-llc.h"
-#include "packet-sll.h"
 #include "packet-juniper.h"
 #include "packet-sflow.h"
 #include "packet-l2tp.h"
@@ -98,7 +96,6 @@ static expert_field ei_eth_padding_bad;
 
 static dissector_handle_t fw1_handle;
 static dissector_handle_t ethertype_handle;
-static capture_dissector_handle_t isl_cap_handle;
 static capture_dissector_handle_t ipx_cap_handle;
 static capture_dissector_handle_t llc_cap_handle;
 static heur_dissector_list_t heur_subdissector_list;
@@ -231,18 +228,6 @@ capture_eth(const unsigned char *pd, int offset, int len, capture_packet_info_t 
     return false;
 
   etype = pntoh16(&pd[offset+12]);
-
-  if (etype <= IEEE_802_3_MAX_LEN) {
-    /* Oh, yuck.  Cisco ISL frames require special interpretation of the
-       destination address field; fortunately, they can be recognized by
-       checking the first 5 octets of the destination address, which are
-       01-00-0C-00-00 or 0C-00-0C-00-00 for ISL frames. */
-    if ((pd[offset] == 0x01 || pd[offset] == 0x0C) && pd[offset+1] == 0x00
-        && pd[offset+2] == 0x0C && pd[offset+3] == 0x00
-        && pd[offset+4] == 0x00) {
-      return call_capture_dissector(isl_cap_handle, pd, offset, len, cpinfo, pseudo_header);
-    }
-  }
 
   /*
    * If the type/length field is <= the maximum 802.3 length,
@@ -452,22 +437,6 @@ dissect_eth_common(tvbuff_t *tvb, packet_info *pinfo, proto_tree *parent_tree,
   phdr.fcs_len = fcs_len;
   if (dissector_try_heuristic(heur_subdissector_list, tvb, pinfo, parent_tree, &hdtbl_entry, &phdr))
     return fh_tree;
-
-  if (ehdr->type <= IEEE_802_3_MAX_LEN) {
-    /* Oh, yuck.  Cisco ISL frames require special interpretation of the
-       destination address field; fortunately, they can be recognized by
-       checking the first 5 octets of the destination address, which are
-       01-00-0C-00-00 for ISL frames. */
-    if ((tvb_get_uint8(tvb, 0) == 0x01 ||
-      tvb_get_uint8(tvb, 0) == 0x0C) &&
-      tvb_get_uint8(tvb, 1) == 0x00 &&
-      tvb_get_uint8(tvb, 2) == 0x0C &&
-      tvb_get_uint8(tvb, 3) == 0x00 &&
-      tvb_get_uint8(tvb, 4) == 0x00) {
-      dissect_isl(tvb, pinfo, parent_tree, fcs_len);
-      return fh_tree;
-    }
-  }
 
   /*
    * If the type/length field is <= the maximum 802.3 length,
@@ -1276,7 +1245,6 @@ proto_reg_handoff_eth(void)
   dissector_add_uint("sflow_245.header_protocol", SFLOW_245_HEADER_ETHERNET, eth_withoutfcs_handle);
   dissector_add_uint("l2tp.pw_type", L2TPv3_PW_ETH, eth_withoutfcs_handle);
   dissector_add_uint("vxlan.next_proto", VXLAN_ETHERNET, eth_withoutfcs_handle);
-  dissector_add_uint("sll.ltype", LINUX_SLL_P_ETHERNET, eth_withoutfcs_handle);
   dissector_add_uint("nsh.next_proto", NSH_ETHERNET, eth_withoutfcs_handle);
 
   dissector_add_uint("acdr.media_type", ACDR_Control, eth_withoutfcs_handle);
@@ -1297,9 +1265,7 @@ proto_reg_handoff_eth(void)
   capture_dissector_add_uint("atm_lane", TRAF_ST_LANE_802_3, eth_cap_handle);
   capture_dissector_add_uint("atm_lane", TRAF_ST_LANE_802_3_MC, eth_cap_handle);
   capture_dissector_add_uint("ppi", 1 /* DLT_EN10MB */, eth_cap_handle);
-  capture_dissector_add_uint("sll.ltype", LINUX_SLL_P_ETHERNET, eth_cap_handle);
 
-  isl_cap_handle = find_capture_dissector("isl");
   ipx_cap_handle = find_capture_dissector("ipx");
   llc_cap_handle = find_capture_dissector("llc");
 }

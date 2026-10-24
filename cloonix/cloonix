@@ -95,8 +95,8 @@ MSG_DIGEST_LEN = 32
 HDR = 16 + MSG_DIGEST_LEN                  # doorways_header_size() == 48
 MAX_BUF = 50000                            # MAX_DOORWAYS_BUF_LEN
 
-# Must match CLOONIX_WIRE_VERSION in cloonsrc/glob_include/glob_wire.h, and
-# the constants below must match the enums there; debug/check_wire.sh...
+# Must match glob_wire.h (CLOONIX_WIRE_VERSION and the enums below);
+# debug/check_wire.sh checks it.
 CLOONIX_WIRE_VERSION = 79
 
 DOORS_TYPE_SWITCH = 104                    # doors_type_switch
@@ -148,13 +148,11 @@ def unframe(buf, passwd, check=True):
 def tls_connect(ip, port, timeout):
     """The doors tcp socket, wrapped in tls.
 
-    The certificate is the self-signed one made at install time on the
-    server, so it is not verified: the hmac on every frame is what
-    authenticates the two ends, tls is there for the confidentiality. A
-    server that does not answer the client hello -- a cloonix before this
-    one, or one without a certificate -- closes the socket during the
-    handshake; the connection is then made again in clear, and said so,
-    unless CLOONIX_REQUIRE_TLS=1 is set, which refuses it.
+    The certificate is the server's self-signed one, not verified: the hmac on
+    every frame authenticates, tls gives the confidentiality. A server that
+    closes during the handshake, an older cloonix or one without a certificate,
+    is spoken to again in clear, said on stderr, unless CLOONIX_REQUIRE_TLS=1,
+    which refuses.
     """
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
@@ -197,16 +195,11 @@ class Doorways:
 
     def _open_link(self):
         """doorways_sig_bufraw(.., doors_type_switch, doors_val_init_link,
-        "OK"), then the answer. dispach.c replies doors_val_link_ok.
+        "OK"), then the answer, doors_val_link_ok of dispach.c.
 
-        A CLOSE instead is ambiguous, and this used to claim it meant a
-        wrong password. It does not. The server also closes without a word
-        when it is shutting down or refusing new clients -- that is
-        recv_from_client.c returning early on get_inhib_new_clients() --
-        and under load a soak saw exactly that with the password
-        untouched and nothing installed. The message said WRONG PASSWORD
-        and sent two people looking for a config problem that did not
-        exist.
+        A close instead is ambiguous: a wrong password, or a server shutting
+        down or refusing new clients, get_inhib_new_clients() of
+        recv_from_client.c.
         """
         self.send_raw("OK", val=DOORS_VAL_INIT_LINK)
         self.sock.settimeout(min(5, self.sock.gettimeout() or 5))
@@ -240,12 +233,9 @@ class Doorways:
     def recv(self):
         """Next (type, val, payload_bytes), or None.
 
-        None is two different things and the caller usually does not care:
-        the peer closed, or the timeout expired with nothing on the wire.
-        quiet says which -- True for silence, False for a close. Nothing
-        but probe reads it, and probe exists because the difference is the
-        whole answer there: a far end that says nothing is healthy, a far
-        end that hangs up is not.
+        None is a close or a silent timeout; quiet says which, True for
+        silence. probe reads it: a far end that says nothing is healthy, one
+        that hangs up is not.
         """
         self.quiet = False
         while True:
@@ -286,13 +276,10 @@ class Doorways:
     def no_timeout(self):
         """Block indefinitely on reads.
 
-        The timeout above is there to bound connecting and the short
-        request/answer exchanges of cli. A session -- a shell, a command, a
-        file transfer -- must not be bounded: a command that prints nothing
-        for a while is working, not stuck, and a compilation can be quiet for
-        many minutes. With a timeout still set, recv() returns None on
-        silence, pump() reads that as a dead pipe and gives up with 255 while
-        the guest is still busy."""
+        The timeout bounds the connect and the short exchanges of cli; a
+        session, a shell, a command or a transfer, is not bounded: a quiet
+        command is at work, not stuck.
+        """
         self.sock.settimeout(None)
 
     def close(self):
@@ -314,32 +301,18 @@ FLAG_FREEBSD       = 0x01000
 
 WINDOWS_DRIVER_ISO = "virtio-win.iso"
 
-def eth_letters(desc):
-    """eth=<n>: n interfaces, born not capturable; cnf <name> eth<i>
-    sniff=on makes one so. The letters s and v of older scripts are still
-    taken."""
-    return "v" * int(desc) if desc.isdigit() else desc
-
-def eth_table(desc, macs=None):
-    """'ssv' -> the eth_table list add_vm and cnt_add expect.
+def eth_table(nb_eth, macs=None):
+    """eth=<n> -> the eth_table list add_vm and cnt_add expect: n interfaces
+    born not capturable, cnf <n> eth<i> sniff=on makes one so.
 
     macs is {index: [6 bytes]} from mac_addr=. An interface named there
     gets randmac 0 and that address; every other one keeps a random mac,
     which is what the daemon does with randmac 1.
     """
-    table = []
     macs = macs or {}
-    for i, ch in enumerate(desc):
-        if ch == "s":
-            t = ENDP_ETHS
-        elif ch == "v":
-            t = ENDP_ETHV
-        else:
-            raise SystemExit("eth= takes only s and v, got '%s'" % ch)
-        mac = macs.get(i)
-        table.append({"endp_type": t, "randmac": 0 if mac else 1,
-                      "ifname": "noname", "mac": mac or [0, 0, 0, 0, 0, 0]})
-    return table
+    return [{"endp_type": ENDP_ETHV, "randmac": 0 if macs.get(i) else 1,
+             "ifname": "noname", "mac": macs.get(i) or [0, 0, 0, 0, 0, 0]}
+            for i in range(nb_eth)]
 
 def parse_mac_addr(spec, nb_eth):
     """'eth0:aa:bb:cc:dd:ee:ff' -> (0, [0xaa, ...]), the way lst prints it."""
@@ -421,13 +394,10 @@ def one(kv, key, default=""):
     return got[-1] if got else default
 
 def refuse_unknown(kind, kv, flags, known_kv, known_flags):
-    """Stop on a word this client would otherwise drop in silence.
+    """Refuse a word this client would otherwise drop.
 
-    Every option here has to be READ as well as parsed. install_cdrom=,
-    added_disk=, --no_reboot and mac_addr= were accepted, ignored and never
-    mentioned, so a "dump commands" line replayed into a machine that was
-    not the one listed. An option nobody reads must say so rather than
-    build a different guest without a word.
+    Every option is read as well as parsed: one accepted and ignored builds a
+    guest other than the one its dump commands line describes.
     """
     bad = ([k + "=" for k in kv if k not in known_kv]
            + [f for f in flags if f not in known_flags])
@@ -452,7 +422,7 @@ KVM_FLAG_BIT = {"--persistent": FLAG_PERSISTENT,
 
 def wlan_count(kv):
     """wlan=N, the radios."""
-    return int(one(kv, "wlan", 0) or 0)
+    return whole(one(kv, "wlan", 0) or 0, "wlan")
 
 def megabytes(text, what):
     """ram=2000, ram=512M, ram=2G: megabytes."""
@@ -461,6 +431,12 @@ def megabytes(text, what):
         sys.exit("%s=%s: megabytes, or a number followed by M or G"
                  % (what, text))
     return int(m.group(1)) * (1024 if m.group(2).lower() == "g" else 1)
+
+def whole(text, what):
+    """cpu=2, eth=3, wlan=1: a whole number."""
+    if not str(text).isdigit():
+        sys.exit("%s=%s: a whole number" % (what, text))
+    return int(text)
 
 def build_add_vm(name, kv, flags, rootfs, kind=()):
     """kind: the flags add win and add freebsd stand for."""
@@ -479,14 +455,13 @@ def build_add_vm(name, kv, flags, rootfs, kind=()):
     for opt, bit in KVM_KV.items():
         if disc[opt]:
             cfg_flags |= bit
-    eth_desc = eth_letters(one(kv, "eth"))
-    macs = dict(parse_mac_addr(m, len(eth_desc))
-                for m in kv.get("mac_addr", []))
-    eth = eth_table(eth_desc, macs)
+    nb_eth = whole(one(kv, "eth", 0) or 0, "eth")
+    macs = dict(parse_mac_addr(m, nb_eth) for m in kv.get("mac_addr", []))
+    eth = eth_table(nb_eth, macs)
     return {"fctident": "add_vm", "tid": 0, "name": name, "vm_id": 0,
             "color": 0, "vm_config_flags": cfg_flags,
             "mem": megabytes(one(kv, "ram", 1000), "ram"),
-            "cpu": int(one(kv, "cpu", 1)),
+            "cpu": whole(one(kv, "cpu", 1), "cpu"),
             "nb_tot_nb_vwif": wlan_count(kv),
             "nb_tot_eth": len(eth), "eth_table": eth,
             "rootfs_input": rootfs,
@@ -499,10 +474,9 @@ def build_cnt_add(name, kv, flags, image):
     refuse_unknown("cnt", kv, flags,
                    ["startup_env", "vmount", "wlan", "mac_addr", "eth"],
                    ["--persistent"])
-    eth_desc = eth_letters(one(kv, "eth"))
-    macs = dict(parse_mac_addr(m, len(eth_desc))
-                for m in kv.get("mac_addr", []))
-    eth = eth_table(eth_desc, macs)
+    nb_eth = whole(one(kv, "eth", 0) or 0, "eth")
+    macs = dict(parse_mac_addr(m, nb_eth) for m in kv.get("mac_addr", []))
+    eth = eth_table(nb_eth, macs)
     return {"fctident": "cnt_add", "tid": 0, "brandtype": "brandcnt",
             "name": name,
             "is_persistent": 1 if "--persistent" in flags else 0,
@@ -516,21 +490,11 @@ def build_cnt_add(name, kv, flags, image):
 CFG_ORIGIN = "none"
 
 def connect_error(ip, port, err, net=None):
-    """Say what went wrong, and tell a refusal apart from an outage.
+    """Say what went wrong, a refusal apart from an outage.
 
-    Every failure to open a connection printed "cannot reach cloonix at
-    <ip>:<port>", including the one case where the server is perfectly
-    healthy and simply will not talk to us: a password mismatch. That
-    reads as "the server is down" and sends people looking at the server.
-
-    It cost real time. A soak run reported the net as gone, with every
-    process alive and idle, and the switch was investigated for a wedge
-    that did not exist -- the password had stopped matching mid-run.
-
-    The usual cause is the config being replaced while a net is running:
-    the server keeps the password it started with, and the client reads
-    the new one from disk. Reinstalling on top of a live net does exactly
-    that, so the message says so.
+    A close right after the hmac is a password mismatch, not a dead server:
+    usually the config replaced while the net runs, the server keeping the
+    password it started with.
     """
     text = str(err)
     if "hmac" in text:
@@ -744,8 +708,13 @@ CNF_KEYS = {
     "mac_mangle": "c2c",
 }
 
+# a note is text: the switch counts it in bytes, utf-8
+MAX_NOTE = 100
+
 CNF_SYNTAX = ("cnf <name> [eth<i>|A|B] sniff=on|off\n"
               "cnf <name> x=<x> y=<y>, on the canvas and pinned there\n"
+              "cnf <name> note=\"<text>\", shown on the canvas, note= removes "
+              "it\n"
               "cnf <name> [eth<i>|wlan<i>|A|B] angle=<degrees>, 0 top, 90 "
               "right\n"
               "cnf <a2b> A2B|B2A delay|loss|rate|silentms|qsize|bsize=<n>\n"
@@ -755,8 +724,24 @@ CNF_SYNTAX = ("cnf <name> [eth<i>|A|B] sniff=on|off\n"
               "cnf <lan> rstp=on|off\n"
               "cnf <c2c> mac_mangle=xx:xx:xx:xx:xx:xx")
 
+def build_note(a):
+    """cnf <name> note=<text>: the rest of the line is the text, quoted or
+    not, so it is read before the line is split on its spaces."""
+    text = " ".join(a[1:])[len("note="):]
+    if len(text.encode()) > MAX_NOTE:
+        sys.exit("cnf %s: a note holds %d bytes at most, this one has %d"
+                 % (a[0], MAX_NOTE, len(text.encode())))
+    if any(ord(c) < 0x20 or ord(c) == 0x7f for c in text):
+        sys.exit("cnf %s: a note is one line of printable text" % a[0])
+    return {"fctident": "item_note", "tid": 0, "name": a[0], "txt": text}
+
 def build_cnf(a):
     """cnf <name> [<interface>|A2B|B2A] key=value ... -> its message."""
+    if len(a) >= 2 and a[1].startswith("note="):
+        return build_note(a)
+    if any(w.startswith("note=") for w in a[2:]):
+        sys.exit("cnf %s: note= comes alone, right after the name"
+                 % spoken(a))
     # "A2B delay=100" given as one word is the same line
     a = a[:1] + " ".join(a[1:]).split()
     if len(a) < 2:
@@ -801,10 +786,7 @@ def build_cnf(a):
         # a cap not named keeps its value
         cmd = []
         if "cpu" in kv:
-            try:
-                cmd.append("cpu=%d" % int(one(kv, "cpu")))
-            except ValueError:
-                sys.exit("cnf %s: cpu= wants a whole number" % spoken(a))
+            cmd.append("cpu=%d" % whole(one(kv, "cpu"), "cpu"))
         if "ram" in kv:
             cmd.append("ram=%d" % megabytes(one(kv, "ram"), "ram"))
         return {"fctident": "cnt_cnf", "tid": 0, "name": name,
@@ -826,18 +808,10 @@ ENDP_TYPE = {
 }
 
 def render_topo_short(topo):
-    """The topology as names, types and the lans that join them.
+    """The topology as names, kinds and the lans that join them.
 
-    "dmp" prints the whole event_topo, which is complete and unreadable:
-    several hundred lines of json for a dozen objects. This prints the
-    three things you actually want when something looks wrong -- what
-    exists, what kind it is, and what is wired to what.
-
-    The lans are the point. Each endpoint entry carries the lans its
-    interface sits on, so the same lan name appearing under two interfaces
-    IS the cable, and a lan appearing under only one is a cable with an end
-    missing -- which is worth seeing at a glance rather than reconstructing
-    from a replay script.
+    A lan named under two interfaces is a cable; a lan under one only is a
+    cable with an end missing.
     """
     out = []
     net = topo.get("network", "?")
@@ -902,15 +876,11 @@ def render_ovs(reply):
     return "\n".join(lines)
 
 def render_pid(reply):
-    """dump pid: every process of the net, and what it has cost.
+    """dump pid: every process of the net, and its cost.
 
-    cpu is the average over the whole life of the process, of ONE core, so
-    a guest using two processors flat reads 200.0 -- the same convention
-    ps uses in its %CPU column, and the same number it would print.
-
-    An older server sends no cpu and no rss, and those columns are then
-    zero everywhere rather than absent: said once at the foot instead of
-    being guessed at per line.
+    cpu is the average over the life of the process, of one core, as the %CPU
+    of ps: two processors flat read 200.0. An older server sends no cpu and no
+    rss: the columns are then zero, said once at the foot.
     """
     items = reply.get("items") or []
     if not items:
@@ -943,12 +913,11 @@ def render_pid(reply):
     return "\n".join(out)
 
 def render_images(reply):
-    """dump images: everything add can take, and who it belongs to.
+    """dump images: everything add can take, and its owner.
 
-    A persistent container writes into its image, so the image must be his
-    who runs the net; anybody's serves read-only. A qcow2 is only ever
-    copied on write, so its owner is shown for the same reason without the
-    persistent column applying to it.
+    A persistent container writes into its image, which must then belong to the
+    user who runs the net; any image serves read only. A qcow2 is copied on
+    write: its owner is shown, the persistent column does not apply.
     """
     items = reply.get("items") or []
     runner = reply.get("runner", "")
@@ -1022,40 +991,24 @@ def pcap_link_type(hdr):
     return int.from_bytes(hdr[20:24], "little" if little else "big")
 
 def spaced_bytes(data):
-    """The packet as one byte per field, for a scenario to slice up.
+    """The packet as one byte per field: two hex digits, one space between.
 
-    Two hex digits per byte, one space between, nothing else -- so the whole
-    line splits on whitespace and every field is at a fixed index. In python:
+    The line splits on whitespace, every field at a fixed index:
 
         f = line.split()
-        nb   = int(f[1])
-        when = float(f[2])
-        pkt  = bytes(int(x, 16) for x in f[4:])
-        if pkt[12:14] == b"\x08\x00":      # IPv4
-            ...
-
-    Padded to two digits so the offset of a field in the line is a fixed
-    multiple of three, and a scenario can index into the text without
-    converting anything when it just wants to look at one byte.
+        nb, when = int(f[1]), float(f[2])
+        pkt = bytes(int(x, 16) for x in f[4:])
     """
     return " ".join("%02x" % b for b in data)
 
 def hex_dump(pkt_nb, sec, usec, t_zero, caplen, wire_len, data):
-    """The packet as webshark shows it in its raw pane, byte for byte.
+    """The packet as the raw pane of webshark shows it, byte for byte.
 
-    Same layout as renderHex() in webshark.html: a four digit offset, sixteen
-    bytes as two hex digits separated by one space, then the printable
-    characters with a dot for the rest. It is copied rather than improved on
-    purpose -- the point is that a packet read here and the same packet in the
-    browser look alike enough to recognise at a glance, and any prettier
-    layout of mine would defeat that.
-
-    The heading carries what the packet list column of webshark carries and
-    this side actually knows: the number, the time both absolute and relative
-    to the first packet seen, and the two lengths. Source, destination and
-    protocol are not guessed: webshark has wireshark's dissectors behind it
-    and this has the bytes, so inventing those columns would produce
-    something that disagreed with the browser exactly when it mattered.
+    The layout of renderHex() in webshark.html, a four digit offset, sixteen
+    bytes in hex, the printable characters with a dot for the rest, so a packet
+    looks the same here and in the browser. The heading has what this side
+    knows: the number, the absolute and relative times, the two lengths;
+    source, destination and protocol are left to the dissectors of webshark.
     """
     rel = (sec + usec / 1000000.0) - t_zero
     out = ["No. %-6d Time %d.%06d (+%.6f)   Length %d captured of %d"
@@ -1075,21 +1028,15 @@ TRACE_KIND = {
     "nspace": (4, "the namespaces containers are given and give up"),
 }
 
-# probe is a trace too, and is not in the table above because the table maps a
-# word to a wire kind of trace_sub and probe subscribes to nothing: it...
+# probe: a trace subscribing to nothing, hence not in the table above.
 TRACE_WORDS = "|".join(TRACE_KIND) + "|probe"
 
 def do_trace(ip, port, passwd, argv, nets=None, local_net=None):
-    """cli <net> trace <kind> -- report a kind of trace as it happens.
+    """cli <net> trace <kind>: report a kind of event as it happens.
 
-    Like sniff and unlike everything else, this subscribes and then STAYS:
-    the server has nothing to answer until a creation happens, which may be
-    in an hour or never. It prints one block per event and exits on ctrl-c.
-
-    A trace is not a dump. dump asks what the server has NOW and is done;
-    trace asks to be told what the server DOES from now on, so a creation
-    that happened before the subscription is not reported. Start it, then
-    make the thing happen.
+    It subscribes and stays until ctrl-c, one block per event. dump says what
+    the server has now, trace what it does from now on: start it, then make the
+    thing happen.
     """
     if not argv:
         sys.stderr.write("trace wants a kind: %s\n" % TRACE_WORDS)
@@ -1214,28 +1161,18 @@ def sniff_arm(door, name, num):
         door.sock.settimeout(None)
 
 def do_sniff(ip, port, passwd, argv, nets=None, local_net=None):
-    """cli <net> sniff <name> [ethN|wlanN|A|B] -- the packets of an interface.
+    """cli <net> sniff <name> [ethN|wlanN|A|B]: the packets of an interface.
 
-    This is the receive, and it WAITS. Every other verb sends one message
-    and is done; this one subscribes and then stays, printing a line per
-    packet as each arrives, until ctrl-c. That is the whole point of it: a
-    test scenario runs it, does something on the network, and reads what
-    comes out.
-
-    The stream is the one the cloonix-dumpcap of that snf serves. It is
-    multiplexed on the doors connection with everything else, so there is no
-    second port and nothing new to reach.
-
-    One line per packet, in a shape meant to be parsed as much as read:
+    It subscribes and waits, one line per packet until ctrl-c, on the stream
+    the cloonix-dumpcap of that snf serves, multiplexed on the doors
+    connection. With --line:
 
         hdr <48 hex chars>                 the pcap file header, once
         pkt <n> <sec>.<usec> <caplen>/<len> <hex of the packet>
 
-    <n> counts from 1 for THIS subscription, not from the start of the
-    capture: it is what you were sent, not where the packet sits in the whole.
-    A gap in it is packets the server dropped for you because your connection
-    was behind (8 MB queued); --count decodes nothing and prints, every
-    second, what arrived and what was dropped, to see what the chain carries.
+    <n> counts from 1 for this subscription; a gap is packets the server
+    dropped because this connection was behind, 8 MB queued. --count decodes
+    nothing and prints every second what arrived and what was dropped.
     """
     modes = []
     args = list(argv)
@@ -1865,20 +1802,14 @@ class UnixLeg:
             pass
 
 def do_probe(ip, port, passwd, vm, timeout):
-    """cli <net> trace probe <guest> -- where the pipe into a guest breaks.
+    """cli <net> trace probe <guest>: where the pipe into a guest breaks.
 
-    ssh, scp and files cross five things at once: the tcp to proxymous, the
-    hmac on every frame, the leg the server routes by guest name, the agent
-    on the virtio channel, and the program the agent hands the bytes to.
-    When one of them breaks, the message names the verb and not the layer,
-    so the search starts at the wrong end. This crosses them one at a time
-    and prints how far it got.
-
-    It never speaks. cloonix-cxp-srv answers and says nothing of its own, so
-    SILENCE AT THE FAR END IS THE HEALTHY ANSWER -- which is the repair
-    here: Doorways.recv gives None for a timeout and for a close alike, this
-    read the None as a close, and so reported "the guest closed the pipe" on
-    every working guest. It now asks recv.quiet which of the two it was.
+    ssh, scp and files cross five layers: the tcp to proxymous, the hmac of
+    every frame, the leg routed by guest name, the agent on the virtio channel,
+    the program the agent hands the bytes to. This crosses them one at a time
+    and prints how far it got. cloonix-cxp-srv never speaks first, so silence
+    at the far end is the healthy answer; recv.quiet tells a silence from a
+    close.
     """
     wait = min(timeout, 5.0)
     print("probe '%s' through the cloonix at %s:%d" % (vm, ip, port))
@@ -1990,9 +1921,7 @@ class Cxp:
         self.buf = bytearray()
         self.greeted = None
         self.lock = threading.Lock()
-        # The guest reports in its EXIT payload where a transfer actually
-        # landed, which is not always where the caller thinks: there is no
-        # shell in the...
+        # Where a transfer really landed, from the EXIT payload of the guest.
         self.exit_info = {}
 
     def send(self, op, payload=b""):
@@ -2057,9 +1986,8 @@ def start_stdin_thread(cxp):
     def run():
         try:
             while True:
-                # os.read on the raw descriptor, not sys.stdin.buffer: a
-                # daemon thread parked inside a BufferedReader still holds its
-                # lock when the interpreter...
+                # os.read, not sys.stdin.buffer: a daemon thread parked in a
+                # BufferedReader holds its lock at interpreter exit.
                 data = os.read(0, 32768)
                 if not data:
                     break
@@ -2231,13 +2159,9 @@ def human(n):
         n /= 1024.0
 
 class Progress:
-    """One line, rewritten in place, while a transfer runs.
-
-    On stderr and only when stderr is a terminal: stdout stays exactly what
-    the command produced, so a redirect or a pipe carries no decoration at
-    all. It exists because a tunnel into a guest is not fast and a client
-    that prints nothing until it finishes leaves the person unable to tell
-    work from a hang."""
+    """One line, rewritten in place, while a transfer runs: on stderr, only
+    when stderr is a terminal, so stdout stays what the command produced.
+    """
 
     GAP = 0.15
 
@@ -2289,15 +2213,10 @@ class Progress:
             sys.stderr.flush()
 
 class NeedCxp(Exception):
-    """The far end of the leg greeted us with an ssh banner, so it is not
-    cloonix-cxp-srv.
-
-    This used to be a question asked before every command: wait two seconds,
-    and take silence as the answer. cloonix-cxp-srv is silent by design, so
-    that timeout expired in full on every ssh and every scp -- two seconds of
-    nothing before any work began. The banner, when there is one, arrives on
-    its own; Cxp.recv now notices it on the first bytes it reads and costs
-    nothing when there is none."""
+    """The far end greeted with an ssh banner: it is not cloonix-cxp-srv.
+    Cxp.recv sees the banner in the first bytes it reads, at no cost when
+    there is none.
+    """
 
 NEED_CXP = """the guest is still answering with the banner, so the far
 end of the pipe is not cloonix-cxp-srv.
@@ -2504,11 +2423,10 @@ def load_sibling(name):
 def do_files(mkleg_for, argv):
     """cloonix cli <net> files <guest> [<guest>]: two panes, copy between.
 
-    One name and the left pane is this machine. Two names and both panes
-    are guests, a copy then going down into a temporary directory here and
-    up into the other guest, no opcode carrying a file straight across.
-
-    The screen itself is cloonix_files.py beside this file."""
+    One name: this machine left, the guest right. Two names: two guests, a copy
+    going down into a temporary directory here, then up into the other. The
+    screen is cloonix_files.py, beside this file.
+    """
     if not argv:
         sys.stderr.write("files wants a guest name\n"
                          "cloonix cli <net> files <guest> [<guest>]\n")
@@ -2694,14 +2612,8 @@ def find_cloonfs():
 def server_version(entry, timeout):
     """The CLOONIX_VERSION a running server answers with, or None.
 
-    work_dir_req is the question to ask: recv_from_client.c answers it on
-    the spot, one round trip, nothing subscribed.
-
-    Not event_topo_sub, which an earlier version of this used. That one
-    subscribes and then calls cfg_hysteresis_send_topo_info, which arms a
-    100 beat timer -- a beat is 10 ms, so a full second at best, and longer
-    when a send is already pending, since the request is coalesced into it.
-    A client that gave up before then called a running net dead.
+    work_dir_req is answered on the spot by recv_from_client.c, one round trip,
+    nothing subscribed; event_topo_sub would wait on a 100 beat timer.
     """
     door = None
     try:
@@ -2944,14 +2856,12 @@ def menu_at(fixed):
     return ()
 
 def expand(words, net=True):
-    """The line with every short verb of it written out in full.
+    """The line with every short verb written out in full.
 
-    Read left to right: a place is known from the words before it, so the
-    menu of one word is what the word before it opened.
-
-    net is false for -s and --via-unix, which name the server themselves and
-    leave the place of the net empty. A filler stands there so that what
-    follows is counted where it always is.
+    Read left to right: the menu of a word is the one the word before it
+    opened. net is false for -s and --via-unix, which name the server
+    themselves; a filler then stands in the place of the net, so the words
+    after it keep their index.
     """
     words = list(words)
     hole = not net and words[:1] == ["cli"]
@@ -3008,9 +2918,7 @@ def main():
                                  usage="cloonix <verb> ...")
     ap.add_argument("--cfg", help=argparse.SUPPRESS)
     ap.add_argument("-s", "--server", help=argparse.SUPPRESS)
-    # No default here on purpose: None means "the client picks, verb by
-    # verb", and a value means the caller has chosen and knows what it is
-    # doing.
+    # No default: None lets the client pick per verb; a value is the caller's.
     ap.add_argument("--wait", type=float, default=None,
                     help=argparse.SUPPRESS)
     ap.add_argument("--via-unix", metavar="PATH", help=argparse.SUPPRESS)
@@ -3046,9 +2954,7 @@ def main():
     if (sys.stdin.isatty() and sys.stdout.isatty()
             and not opt.server and not opt.via_unix):
         comp = load_sibling("cloonix_completion")
-        # A wrong verb comes here too, and is not held back by a check on this
-        # side: the guide drops what no place takes and asks that place again,
-        # which is...
+        # A wrong verb too: the guide drops what no place takes and asks again.
         if comp and not comp.line_is_command(sys.modules[__name__], words):
             words = comp.guide(sys.modules[__name__], nets, words,
                                hinted=not words)

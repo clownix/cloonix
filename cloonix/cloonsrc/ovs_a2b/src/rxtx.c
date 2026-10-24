@@ -128,36 +128,36 @@ static void timeout_schedule(void *data)
 }
 
 
-static int rx_cb0(int llid, int fd)
+static int rx_side(int id, int fd)
 {
   uint16_t seq;
-  int len, buf_len, result;
+  int len, buf_len, result, nb = 0;
   uint8_t *buf;
-  len = read(fd, g_buf_rx, HEADER_TAP_MSG);
-  if (len != HEADER_TAP_MSG)
-    KOUT("ERROR READ %d %d", len, errno);
-  result = fct_seqtap_rx(fd, g_buf_rx, &seq, &buf_len, &buf);
-  if (result != kind_seqtap_data)
-    KOUT("ERROR %d", result);
-  /* a gap in seq is a frame the tap child dropped at its pipe: it says so */
-  packet_rx(0, buf_len, buf);
-  return 1;
+  do
+    {
+    len = read(fd, g_buf_rx, HEADER_TAP_MSG);
+    if (len != HEADER_TAP_MSG)
+      KOUT("ERROR READ %d %d", len, errno);
+    result = fct_seqtap_rx(fd, g_buf_rx, &seq, &buf_len, &buf);
+    if (result != kind_seqtap_data)
+      KOUT("ERROR %d", result);
+    /* a gap in seq is a frame the tap child dropped at its pipe: it says so */
+    packet_rx(id, buf_len, buf);
+    nb += 1;
+    } while ((nb < SEQTAP_PIPE_BATCH) && fct_seqtap_pipe_more(fd));
+  return nb;
+}
+
+static int rx_cb0(int llid, int fd)
+{
+  (void) llid;
+  return rx_side(0, fd);
 }
 
 static int rx_cb1(int llid, int fd)
 {
-  uint16_t seq;
-  int len, buf_len, result;
-  uint8_t *buf;
-  len = read(fd, g_buf_rx, HEADER_TAP_MSG);
-  if (len != HEADER_TAP_MSG)
-    KOUT("ERROR READ %d %d", len, errno);
-  result = fct_seqtap_rx(fd, g_buf_rx, &seq, &buf_len, &buf);
-  if (result != kind_seqtap_data)
-    KOUT("ERROR %d", result);
-  /* a gap in seq is a frame the tap child dropped at its pipe: it says so */
-  packet_rx(1, buf_len, buf);
-  return 1;
+  (void) llid;
+  return rx_side(1, fd);
 }
 
 static void rx_err0(int llid, int err, int from)

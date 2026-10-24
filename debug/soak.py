@@ -24,7 +24,7 @@ waits for it to go, and then checks the machine is as clean as it found it.
 
 WHAT IT CHECKS, WHICH IS THE POINT
 
-  after every create   the object appears in "lst" within a timeout
+  after every create   the object appears in "dump commands" within a timeout
   after every delete   it disappears within a timeout
   continuously         a reconciliation both ways: nothing the server has
                        that this script did not make, nothing this script
@@ -67,10 +67,8 @@ random.seed(SEED)
 
 PREFIX = "sk"
 
-# On the toys: testitalltoy.sh exports TESTITALL_TOY, the directory that
-# holds them, and CLOONIX_CLIENT, their client, as testitall.py takes it. A
-# net's work zone and syslog are then inside its rootfs, and the crun that
-# reads its state is the host-side one of the toy's bin.
+# Toys: TESTITALL_TOY and CLOONIX_CLIENT from top_testitalltoy.sh; work
+# zone and syslog in the rootfs, crun from the toy's bin.
 TOY = os.environ.get("TESTITALL_TOY", "")
 CLOONIX = ([sys.executable, os.environ["CLOONIX_CLIENT"]]
            if os.environ.get("CLOONIX_CLIENT") else ["cloonix"])
@@ -259,11 +257,11 @@ def why(kind, r, name=None):
     note("%s refused" % kind)
 
 def evidence(name, kind=""):
-    """What lst actually said, kept next to the complaint.
+    """What dump commands actually said, kept next to the complaint.
 
-    Every check here rests on finding a name in the output of lst, and that
+    Every check here rests on finding a name in the output of dump commands, and that
     assumption was never tested against the real thing for anything but a
-    container. A report saying "lst has never shown it" is worth very
+    container. A report saying "dump commands has never shown it" is worth very
     little without the output it is talking about -- it is as likely to
     mean the check is looking for the wrong shape as that the object is
     missing.
@@ -273,7 +271,7 @@ def evidence(name, kind=""):
     pat = name_pattern(name)
     hit = [l for l in lines if pat.search(l)]
     same = [l for l in lines if kind and (" %s " % kind) in l]
-    out = ["lst has %d line(s)" % len(lines)]
+    out = ["dump commands has %d line(s)" % len(lines)]
     if hit:
         out.append("lines naming it: %s" % " | ".join(hit[:3]))
     else:
@@ -281,7 +279,7 @@ def evidence(name, kind=""):
     if same:
         out.append("other %s lines look like: %s" % (kind, same[0].strip()))
     elif kind:
-        out.append("lst has no %s line at all, so the check may be looking "
+        out.append("dump commands has no %s line at all, so the check may be looking "
                    "for the wrong thing" % kind)
     try:
         path = "/tmp/soak_lst_%s.txt" % name
@@ -337,11 +335,24 @@ def cli(*args, **kw):
     # the client must outlive the answer it waits for
     limit = 90 if ((ack is None) or (ack < 60)) else ack + 30
     try:
-        return subprocess.run(cmd, capture_output=True, text=True,
-                              timeout=limit)
+        r = subprocess.run(cmd, capture_output=True, text=True,
+                           timeout=limit)
     except subprocess.TimeoutExpired:
         fault("the client never returned", " ".join(cmd))
         return subprocess.CompletedProcess(cmd, 1, "", "timeout")
+    # Every request is answered ok or ko: silence until the client's budget
+    # ran out is a server fault, whatever the command was racing with.
+    if "NO ANSWER from the cloonix server" in (r.stderr or ""):
+        fault("the server never answered a request",
+              "%s: the client waited its whole budget for an ok or a ko"
+              % " ".join(a))
+    # The net stopped under the soak: what the stop removes is not a fault.
+    said = (r.stdout or "") + (r.stderr or "")
+    if (("AUTODESTRUCT_ON" in said) or ("the net is stopping" in said)) \
+            and not g_stop.is_set():
+        print("\n  the net %s is stopping: the soak stops here" % NET)
+        g_stop.set()
+    return r
 
 g_lst_rc = 0     # exit code of the last dump commands: 0 is a server that answers
 
@@ -505,6 +516,8 @@ def make_cnt():
             if st == "running":
                 seen_running = True
             elif seen_running and (st in ("stopped", "unknown")):
+                if g_stop.is_set():
+                    return
                 if not still_ours(name):
                     note("cnt agent wait dropped, deleted while waiting")
                     return
@@ -930,8 +943,9 @@ def container_death_evidence(name):
     def add(title, argv, timeout=30):
         out.append("=== %s" % title)
         try:
+            # cwd /: the soak's own directory may be gone by now
             r = subprocess.run(argv, capture_output=True, text=True,
-                               timeout=timeout)
+                               timeout=timeout, cwd="/")
             txt = ((r.stdout or "") + (r.stderr or "")).strip()
             out.append(txt if txt else "(nothing)")
         except (OSError, subprocess.SubprocessError) as e:
@@ -1082,9 +1096,7 @@ def make_kvm():
                 return
             if agent_ping_ok(name):
                 note("kvm agent up")
-                # the boot time under this load, for the eye: a fault is
-                # one that crossed the wait, and this says how close the
-                # others came to it
+                # boot time under load: how close the others came to the fault wait
                 with g_lock:
                     n_live = len(g_model)
                 print("    %s agent up after %ds with %d objects live"
@@ -1239,6 +1251,9 @@ def make_lan():
         release_endpoint(b)
         return
     lan = new_name("l")
+    # In flight until both plugs are answered: the first end shows in lst
+    # while the second is pending, and that is not a lan nobody asked for.
+    adding(lan)
     done = []
     for item, eth in (a, b):
         r = cli("plug", item, *(itf(item, eth) + [lan]))
@@ -1246,12 +1261,17 @@ def make_lan():
             done.append((item, eth))
     if len(done) != 2:
         for item, eth in done:
-            cli("unplug", item, *(itf(item, eth) + [lan]))
+            r = cli("unplug", item, *(itf(item, eth) + [lan]))
+            if r.returncode:
+                why("unplug", r)
+        with g_lock:
+            g_adding.pop(lan, None)
         release_endpoint(a)
         release_endpoint(b)
         note("lan refused" if not done else "lan refused, half undone")
         return
     with g_lock:
+        g_adding.pop(lan, None)
         g_lans[lan] = [a, b]
         for item, eth in (a, b):
             if item in g_model:
@@ -2028,7 +2048,7 @@ def learn_lst_shape():
     """Make one of each kind, look at lst, and say what it saw.
 
     Written after a run reported forty-eight faults of which most were this
-    script not knowing what lst prints for a tap, a nat or a lan. Checking
+    script not knowing what dump commands prints for a tap, a nat or a lan. Checking
     the assumption once, out loud, at the start, costs five seconds and
     saves reading a page of confident nonsense.
 
@@ -2036,7 +2056,7 @@ def learn_lst_shape():
     real bug -- it says so, so the faults that follow can be read in the
     right light.
     """
-    print("checking what lst prints for each kind, before trusting it:")
+    print("checking what dump commands prints for each kind, before trusting it:")
     made = []
     # Only the kinds this run will actually make.
     for kind in [k for k in ("cnt", "tap", "nat", "a2b") if k in WEIGHTS]:

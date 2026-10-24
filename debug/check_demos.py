@@ -26,10 +26,12 @@ WHAT IT CHECKS
   the voice     demos/voice, the phrase the Demo panel says when a demo
                 starts, holds every demo once and a phrase for each, and
                 each phrase has its clip in jscloonix/audio
+  the history   the HISTORY of a demo is word for word the paragraph that
+                heads its section in the demo chapters of the user book
   the commands  the demo prints every cloonix command it runs, as a line
                 that can be pasted into a terminal -- the dev book, The demos,
                 says why -- and prints nothing else: the description of the steps is
-                story(), for the History popup of the canvas
+                story(), for the Comments panel of the canvas
   the script    compiles; has a shebang; has the summary line that
                 cloonix_demo.py reads to list it; takes the net as its
                 first argument and defaults to nemo; names the images it
@@ -56,6 +58,7 @@ happened. Both are one regexp.
 Standard library only.
 """
 import ast
+import glob
 import os
 import re
 import sys
@@ -240,6 +243,29 @@ def check_packages(scripts):
                         "of packages" % d)
     ok("the demo chapters have one section per demo, in the order of packages")
 
+def check_history(scripts):
+    # the HISTORY of a demo, told first by its story(), heads its section of
+    # the demo chapters: one text, in the two places
+    doc = os.path.dirname(LEARN)
+    book = ""
+    for f in sorted(os.listdir(doc)):
+        if re.match(r"^demos(_\w+)?\.rst$", f):
+            book += open(os.path.join(doc, f)).read() + "\n"
+    book = re.sub(r"``([^`]+)``", r"\1", book)
+    book = re.sub(r"\*([^*]+)\*", r"\1", book)
+    book = re.sub(r"\s+", " ", book)
+    told = 0
+    for where, path in scripts:
+        for node in ast.parse(open(path).read()).body:
+            if (isinstance(node, ast.Assign)
+                    and any(getattr(t, "id", "") == "HISTORY" for t in node.targets)):
+                text = re.sub(r"\s+", " ", ast.literal_eval(node.value)).strip()
+                told += 1
+                if text not in book:
+                    bad(where, "its HISTORY is not the paragraph that heads its "
+                               "section of the demo chapters")
+    ok("the %d HISTORY texts head their sections of the demo chapters" % told)
+
 # one script
 
 SUMMARY = re.compile(r'^\s*r?["\']{1,3}([a-z0-9_]+)\s+-\s+(.+)$')
@@ -282,7 +308,7 @@ def check_script(rel, path):
                  "itself as \"cloonix cli ...\", ready to paste")
     if "def story(*args):" not in text and "story" not in shared:
         bad(rel, "has no story(): the description of the steps goes to the "
-                 "History popup of the canvas, marked, and is not printed "
+                 "Comments panel of the canvas, marked, and is not printed "
                  "on a terminal")
     keep = [(f.lineno, f.end_lineno) for f in ast.walk(tree)
             if isinstance(f, ast.FunctionDef) and f.name in ("show", "pause")]
@@ -330,7 +356,10 @@ def check_script(rel, path):
                         images.append(ast.literal_eval(node.value))
                     except (ValueError, SyntaxError):
                         pass
-    if not images:
+    player = re.search(r"^PLAYS_THE_PACKAGES\s*=\s*True\b", text, re.M)
+    if player:
+        ok("%s plays the demos of packages, each names its image" % rel)
+    elif not images:
         bad(rel, "names no image: a ROOTFS_CHOICES tuple says what to build "
                  "when the demo will not start")
     else:
@@ -463,6 +492,43 @@ def built_images():
                 got[f[4:-3]] = os.path.join(os.path.basename(d), f)
     return got
 
+def lib_names(path):
+    """The names a library of the demos defines or imports at its top."""
+    names = set()
+    for n in ast.parse(open(path).read()).body:
+        if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+            names.add(n.name)
+        elif isinstance(n, (ast.Assign, ast.AnnAssign)):
+            for t in (n.targets if isinstance(n, ast.Assign) else [n.target]):
+                names.update(x.id for x in ast.walk(t)
+                             if isinstance(x, ast.Name))
+        elif isinstance(n, (ast.Import, ast.ImportFrom)):
+            names.update((a.asname or a.name).split(".")[0] for a in n.names)
+    return names
+
+def check_lib_imports():
+    """Every name taken from a library of the demos, the toys' included, is
+    there: a demo whose import fails stops at its first line."""
+    toys = os.path.join(HERE, "..", "toy_targz")
+    libs = {}
+    for path in (glob.glob(os.path.join(TREE, "lib", "*.py")) +
+                 glob.glob(os.path.join(toys, "lib", "*.py")) +
+                 glob.glob(os.path.join(toys, "*_demo", "lib", "*.py"))):
+        libs.setdefault(os.path.basename(path)[:-3], set()).update(
+            lib_names(path))
+    files = (glob.glob(os.path.join(TREE, "**", "*.py"), recursive=True) +
+             glob.glob(os.path.join(toys, "**", "*.py"), recursive=True))
+    for path in sorted(files):
+        for n in ast.walk(ast.parse(open(path).read())):
+            if isinstance(n, ast.ImportFrom) and n.module in libs:
+                for a in n.names:
+                    if a.name != "*" and a.name not in libs[n.module]:
+                        bad(os.path.relpath(path, os.path.join(HERE, "..")),
+                            "imports %s from %s, which has no such name"
+                            % (a.name, n.module))
+    ok("every name the demos and their libraries import from one another is "
+       "there")
+
 def main():
     if not os.path.isdir(TREE):
         sys.exit("no demos tree at %s" % TREE)
@@ -478,7 +544,11 @@ def main():
     written = 0
     scripts = demo_scripts()
     check_packages([where for where, _ in scripts])
-    check_voice([where for where, _ in scripts])
+    check_history(scripts)
+    # all.py says no phrase: each demo it plays says its own
+    check_voice([where for where, path in scripts
+                 if not re.search(r"^PLAYS_THE_PACKAGES\s*=\s*True\b",
+                                  open(path).read(), re.M)])
     for where, path in scripts:
         written += 1
         got, tree = check_script(where, path)
@@ -493,12 +563,16 @@ def main():
                            "the first, and every earlier caller gets the "
                            "wrong one" % name)
             text = open(path).read()
-            for need in ("erase_net(", "place("):
+            player = re.search(r"^PLAYS_THE_PACKAGES\s*=\s*True\b", text,
+                               re.M)
+            for need in ("erase_net(",) if player else ("erase_net(", "place("):
                 if need not in text:
                     bad(where, "has no %s: a demo erases the net and places "
                                "its items before creating anything" % need)
         for image in (got or []):
             wanted.setdefault(image, []).append(where)
+
+    check_lib_imports()
 
     if images_built:
         for image, users in sorted(wanted.items()):

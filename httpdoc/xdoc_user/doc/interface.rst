@@ -5,7 +5,7 @@ The command line, one page
 Everything cloonix does is asked with one command, *cloonix*. The canvas of
 the browser sends the same requests; the demos are python programs that
 call this command. This page is the whole command line, one figure and one
-example per idea. *clients.rst*, the next chapter, has every option.
+example per idea. The chapter *The cloonix client* has every option.
 
 .. image:: /svg/cli_grammar.svg
    :width: 100%
@@ -119,6 +119,7 @@ a key.
     cloonix cli nemo cnf sta1 wlan0 sniff=on                   the same, by a radio on it
     cloonix cli nemo cnf cnt1 x=300 y=200                      the place of cnt1 on the canvas
     cloonix cli nemo cnf cnt1 eth0 angle=90                    the place of eth0 around cnt1
+    cloonix cli nemo cnf cnt1 note="eth0 1.1.1.1/24"           a comment under cnt1 on the canvas
     cloonix cli nemo cnf cable A2B delay=100                   100 ms from side A to side B
     cloonix cli nemo cnf cable B2A loss=500                    5% lost from B to A
     cloonix cli nemo cnf nat1 publish=2222:22                  host port 2222 to guest port 22
@@ -132,6 +133,7 @@ key                     object
 sniff=on|off            any interface, any air
 x= y=                   any item of the canvas
 angle=                  an interface of any item
+note=                   any item of the canvas, the rest of the line
 A2B B2A + delay= ...    an a2b
 publish=                a nat
 cpu= ram=               a container

@@ -216,25 +216,26 @@ static void peer_rx_cb(int llid, int tid,
 {
   t_c2c_peer *cur = find_c2c_peer_with_llid(llid);
   if (!cur)
-    KERR("ERROR %d %s", len, buf);
-  else
+    KERR("ERROR %d bytes from a peer net on llid %d, no c2c peer owns it, "
+         "dropped", len, llid);
+  else if (llid != cur->pair_llid)
+    KERR("ERROR c2c %s: %d bytes on llid %d, not its link to the peer net "
+         "(llid %d), dropped", cur->name, len, llid, cur->pair_llid);
+  else if (!msg_exist_channel(llid))
+    KERR("ERROR c2c %s: %d bytes on its closed link to the peer net, "
+         "dropped", cur->name, len);
+  else if (type != doors_type_switch)
+    KERR("ERROR c2c %s: %d bytes of doors type %d from the peer net, not a "
+         "switch frame, dropped", cur->name, len, type);
+  else if (val == doors_val_link_ko)
+    KERR("ERROR c2c %s: the peer net refused the link", cur->name);
+  else if (val != doors_val_link_ok)
     {
-    if (llid != cur->pair_llid)
-      KERR("ERROR %d %s %d %d", len, buf, llid, cur->pair_llid);
-    else if (!msg_exist_channel(llid))
-      KERR("ERROR %d %s", len, buf);
-    else if (type != doors_type_switch)
-      KERR("ERROR %d %s", len, buf);
-    else if (val == doors_val_link_ko)
-      KERR("ERROR %d %s", len, buf);
-    else if (val != doors_val_link_ok)
-      {
-      if (len > 8 &&
-          (unsigned char)buf[0] == 0xCA && (unsigned char)buf[1] == 0xFE &&
-          (unsigned char)buf[2] == 0xDE && (unsigned char)buf[3] == 0xCA)
-        { buf += 8; len -= 8; }
-      sig_process_proxy_peer_data_to_crun(cur->name, len, buf);
-      }
+    if (len > 8 &&
+        (unsigned char)buf[0] == 0xCA && (unsigned char)buf[1] == 0xFE &&
+        (unsigned char)buf[2] == 0xDE && (unsigned char)buf[3] == 0xCA)
+      { buf += 8; len -= 8; }
+    sig_process_proxy_peer_data_to_crun(cur->name, len, buf);
     }
 }
 
@@ -275,7 +276,8 @@ static int callback_connect(int llid, int fd)
         cur->pair_llid = pair_llid;
         if (doorways_sig_bufraw(pair_llid, llid, doors_type_switch,
                                 doors_val_init_link, "OK"))
-          KERR("WARNING %s", cur->name);
+          KERR("WARNING c2c %s: the start of the link could not be sent to "
+               "the peer net", cur->name);
         sig_process_tx_proxy_callback_connect(cur->name, pair_llid);
         if (msg_exist_channel(cur->pair_listen_llid))
           msg_delete_channel(cur->pair_listen_llid);
@@ -290,6 +292,7 @@ int c2c_peer_dist_tcp_ip_port(char *name, uint32_t ip,
                               uint16_t tcp_port, char *dist_passwd)
 {
   int llid, result = -1;
+  char ip_string[MAX_NAME_LEN];
   t_c2c_peer *cur = find_c2c_peer_with_name(name);
   if (cur && ((msg_exist_channel(cur->pair_listen_llid)) ||
               (msg_exist_channel(cur->pair_llid))))
@@ -304,7 +307,11 @@ int c2c_peer_dist_tcp_ip_port(char *name, uint32_t ip,
     C2C_DBG("INFO c2c %s starting a connection to the peer, llid=%d "
             "(had_peer=%d)", name, llid, cur ? 1 : 0);
     if (llid == 0)
-      KERR("ERROR %s %X %hu", name, ip, tcp_port);
+      {
+      int_to_ip_string(ip, ip_string);
+      KERR("ERROR c2c %s: no tcp connection could be started to the peer "
+           "net at %s port %hu", name, ip_string, tcp_port);
+      }
     else
       {
       result = 0;
@@ -314,7 +321,7 @@ int c2c_peer_dist_tcp_ip_port(char *name, uint32_t ip,
   return result;
 }
 
-/* Sent by the switch of either end; only the master has a udp proxy.      */
+/* Sent by the switch of either end; only the master has a udp proxy. */
 int c2c_peer_delete(char *name)
 {
   int result = -1;
@@ -339,17 +346,17 @@ int c2c_peer_proxy_data_from_crun(char *name, int len, char *buf)
   int result = -1;
   t_c2c_peer *cur = find_c2c_peer_with_name(name);
   if (!cur)
-    KERR("ERROR PEERED NOT FOUND %s", name);
+    KERR("ERROR c2c %s: no such c2c peer here, its data for the peer net "
+         "dropped (the switch is told)", name);
   else if (!msg_exist_channel(cur->pair_llid))
-    KERR("ERROR PEERED NOT OK %s", name);
-  else 
-    {
-    if (doorways_tx_bufraw(cur->pair_llid, 0, doors_type_switch,
-                                       doors_val_c2c, len-1, buf))
-    KERR("ERROR PEERED TX OK %s", name);
+    KERR("ERROR c2c %s: no link to the peer net, its data dropped (the "
+         "switch is told)", name);
+  else if (doorways_tx_bufraw(cur->pair_llid, 0, doors_type_switch,
+                              doors_val_c2c, len-1, buf))
+    KERR("ERROR c2c %s: the link to the peer net refused its data (the "
+         "switch is told)", name);
   else
     result = 0;
-    }
   return result;
 }
 

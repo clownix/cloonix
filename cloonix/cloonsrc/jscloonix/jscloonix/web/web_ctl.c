@@ -82,6 +82,23 @@ static void spawn_child_watchdog(pid_t child_pid)
     }
 }
 
+/* A webshark stopped is gone and reaped before the answer, and before a new
+   one binds the socket path the dying one unlinks. */
+static void webshark_stop(pid_t pid)
+{
+    int i;
+    kill(pid, SIGTERM);
+    for (i = 0; i < 100; i++) {
+        if (waitpid(pid, NULL, WNOHANG) == pid ||
+            (kill(pid, 0) < 0 && errno == ESRCH))
+            return;
+        usleep(20 * 1000);
+    }
+    KERR("WARNING webshark %d still there 2 s after SIGTERM, killed", pid);
+    kill(pid, SIGKILL);
+    waitpid(pid, NULL, 0);
+}
+
 static void prune_dead_procs(void)
 {
     for (int i = 0; i < g_nprocs; ) {
@@ -122,19 +139,23 @@ static void ctl_start(int fd, const char *query)
         snprintf(snf_path, sizeof(snf_path), "%s", snf);
 
     /* One webshark per interface, and a start is a fresh one */
+    pid_t old[MAX_PROCS];
+    int nold = 0;
     pthread_mutex_lock(&g_procs_mutex);
     prune_dead_procs();
     for (int i = 0; i < g_nprocs; ) {
         if (strcmp(g_procs[i].sock, sock) == 0) {
             KTRC("ctl_start: %s had webshark pid %d, replaced", sock,
                  g_procs[i].pid);
-            kill(g_procs[i].pid, SIGTERM);
+            old[nold++] = g_procs[i].pid;
             g_procs[i] = g_procs[--g_nprocs];
         }
         else
             i++;
     }
     pthread_mutex_unlock(&g_procs_mutex);
+    for (int i = 0; i < nold; i++)
+        webshark_stop(old[i]);
 
     char sock_path[640];
     snprintf(sock_path, sizeof(sock_path), "%s/%s", g_snf_dir, sock);
@@ -254,9 +275,10 @@ static void ctl_stop(int fd, const char *query)
     pthread_mutex_lock(&g_procs_mutex);
     for (int i = 0; i < g_nprocs; i++) {
         if (strcmp(g_procs[i].sock, sock) == 0) {
-            kill(g_procs[i].pid, SIGTERM);
+            pid_t pid = g_procs[i].pid;
             g_procs[i] = g_procs[--g_nprocs];
             pthread_mutex_unlock(&g_procs_mutex);
+            webshark_stop(pid);
             http_ok(fd, "stopped"); return;
         }
     }
@@ -481,6 +503,7 @@ static void files_get(int fd, const char *query)
     snprintf(full, sizeof(full), "%s/%s", base, name);
     int f = open(full, O_RDONLY);
     if (f < 0) {
+        KERR("WARNING files/get: no such demo %s", full);
         http_fail(fd, 404, "files/get", "no such demo"); return;
     }
     struct stat st; fstat(f, &st);

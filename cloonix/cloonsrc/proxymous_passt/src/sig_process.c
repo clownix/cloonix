@@ -99,7 +99,8 @@ void sig_process_proxy_peer_data_to_crun(char *name, int len, char *buf)
   written += (int)strlen(PROXYMARKUP_END);
   sbuf[written] = 0;
   if (!msg_exist_channel(llid_sig))
-    KERR("ERROR llid %d", llid_sig);
+    KERR("ERROR c2c %s: the data of the peer net not passed to the switch, "
+         "no channel to it", name);
   else
     proxy_sig_tx(llid_sig, written + 1, sbuf);
   clownix_free(sbuf, __FUNCTION__);
@@ -108,45 +109,28 @@ void sig_process_proxy_peer_data_to_crun(char *name, int len, char *buf)
 void sig_process_tx_proxy_callback_connect(char *name, int pair_llid)
 {
   char buf[MAX_PATH_LEN];
-  int max = MAX_PATH_LEN-1;
-  int llid_sig = get_llid_sig();
   memset(buf, 0, MAX_PATH_LEN);
-  snprintf(buf, max,
+  snprintf(buf, MAX_PATH_LEN-1,
   "transcrun_proxy_callback_connect %s %d", name, pair_llid);
-  if (!msg_exist_channel(llid_sig))
-    KERR("ERROR llid %d", llid_sig);
-  else
-    proxy_sig_tx(llid_sig, strlen(buf)+1, buf);
+  sig_process_tx_to_switch(buf);
 }
 
 static void dist_udp_ip_port_ok(char *name, uint32_t ip, uint16_t udp_port)
 {   
   char buf[MAX_PATH_LEN];
-  int max = MAX_PATH_LEN-1;
-  int llid_sig = get_llid_sig();
   memset(buf, 0, MAX_PATH_LEN);
-  snprintf(buf, max,
+  snprintf(buf, MAX_PATH_LEN-1,
   "transcrun_dist_udp_ip_port_OK %s %x %hu", name, ip, udp_port);
-  if (!msg_exist_channel(llid_sig))
-    KERR("ERROR llid %d", llid_sig);
-  else
-    proxy_sig_tx(llid_sig, strlen(buf)+1, buf);
+  sig_process_tx_to_switch(buf);
 }
 
 static void transcrun_proxy_data_from_crun_status(char *name, int status)
 {
   char buf[MAX_PATH_LEN];
-  int max = MAX_PATH_LEN-1;
-  int llid_sig = get_llid_sig();
   memset(buf, 0, MAX_PATH_LEN);
-  if (status)
-    snprintf(buf, max, "transcrun_proxy_data_from_crun_ko %s", name);
-  else
-    snprintf(buf, max, "transcrun_proxy_data_from_crun_ok %s", name);
-  if (!msg_exist_channel(llid_sig))
-    KERR("ERROR llid %d", llid_sig);
-  else
-    proxy_sig_tx(llid_sig, strlen(buf)+1, buf);
+  snprintf(buf, MAX_PATH_LEN-1, "transcrun_proxy_data_from_crun_%s %s",
+           status ? "ko" : "ok", name);
+  sig_process_tx_to_switch(buf);
 }
 
 void sig_process_rx(char *proxyshare, char *buf)
@@ -161,7 +145,6 @@ void sig_process_rx(char *proxyshare, char *buf)
   char *ptrs, *ptre;
   char sbuf[MAX_PATH_LEN];
   int len, max = MAX_PATH_LEN-1;
-  int llid_sig = get_llid_sig();
   uint16_t c2c_udp_port_low;
 
   if (!strcmp(buf, "transcrun_write_start_status_file_ready"))
@@ -224,8 +207,7 @@ void sig_process_rx(char *proxyshare, char *buf)
   else if (sscanf(buf,
   "transcrun_dist_tcp_ip_port %63s %x %hu %31s",name,&ip,&tcp_port,passwd)==4)
     {
-    if (c2c_peer_dist_tcp_ip_port(name, ip, tcp_port, passwd))
-      KERR("ERROR dist_tcp_ip_port FAILED %s", name);
+    c2c_peer_dist_tcp_ip_port(name, ip, tcp_port, passwd);
     }
   else if (sscanf(buf,
   "transcrun_proxy_data_from_crun %63s %d", name, &len) == 2)
@@ -234,7 +216,8 @@ void sig_process_rx(char *proxyshare, char *buf)
     ptre = strstr(buf, PROXYMARKUP_END);
     if ((!ptrs) || (!ptre))
       {
-      KERR("ERROR %s", buf);
+      KERR("ERROR c2c %s: data from the switch without its markers, "
+           "dropped", name);
       transcrun_proxy_data_from_crun_status(name, -1);
       }
     else
@@ -243,21 +226,13 @@ void sig_process_rx(char *proxyshare, char *buf)
       ptre[0] = 0;
       if ((int) (strlen(ptrs) + 1) != len)
         {
-        KERR("ERROR %s %lu %d", buf, strlen(ptrs), len);
+        KERR("ERROR c2c %s: data from the switch of %d bytes, %d announced, "
+             "dropped", name, (int) strlen(ptrs) + 1, len);
         transcrun_proxy_data_from_crun_status(name, -1);
         }
       else
-        {
-        if (c2c_peer_proxy_data_from_crun(name, len, ptrs))
-          { 
-          KERR("ERROR c2c_peer_proxy_data_from_crun FAILED %s", name);
-          transcrun_proxy_data_from_crun_status(name, -1);
-          }
-        else 
-          {
-          transcrun_proxy_data_from_crun_status(name, 0);
-          }
-        }
+        transcrun_proxy_data_from_crun_status(name,
+                              c2c_peer_proxy_data_from_crun(name, len, ptrs));
       }
     }
   else if (sscanf(buf,
@@ -268,10 +243,7 @@ void sig_process_rx(char *proxyshare, char *buf)
       snprintf(sbuf,max,"transcrun_req_udp_KO %s", name);
     else
       snprintf(sbuf,max,"transcrun_req_udp_OK %s %hu", name, udp_port);
-    if (!msg_exist_channel(llid_sig))
-      KERR("ERROR llid %d", llid_sig);
-    else
-      proxy_sig_tx(llid_sig, strlen(sbuf)+1, sbuf);
+    sig_process_tx_to_switch(sbuf);
     }
   else if (sscanf(buf,
   "transcrun_dist_udp_ip_port %63s %x %hu", name, &ip, &udp_port) == 3)

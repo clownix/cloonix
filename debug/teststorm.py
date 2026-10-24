@@ -151,7 +151,7 @@ class Flow:
 def flows_start(secs):
     return [Flow("A->B tcp lan", A, "10.8.8.2", "-P 2").start(secs),
             Flow("C->D udp lan", C, "10.8.8.4", "-u -b 100M -l 1400").start(secs),
-            Flow("A->B tcp vhost lan", A, "10.7.7.2", "", port=PORT2).start(secs),
+            Flow("A->B tcp vhost lan", A, "10.27.7.2", "", port=PORT2).start(secs),
             Flow("A->P tcp c2c", A, "10.8.8.9", "").start(secs)]
 
 
@@ -455,7 +455,7 @@ def t_setup():
         wait_answer(name)
         address(name, 0, "10.8.8.%d/24" % (i + 1))
     for i, name in enumerate((A, B)):
-        address(name, 1, "10.7.7.%d/24" % (i + 1))
+        address(name, 1, "10.27.7.%d/24" % (i + 1))
         must(cli("cnf", name, "eth1", "sniff=on"), "cnf <n> eth1 sniff=on")
     wait_answer(P, PEER)
     address(P, 0, "10.8.8.9/24", net=PEER)
@@ -464,7 +464,7 @@ def t_setup():
     ssh(B, "iperf3 -s -p %d -D >/dev/null 2>&1" % PORT2)
     iperf_server(P, net=PEER)
     c2c_build()
-    ping(A, "10.7.7.2", 3)
+    ping(A, "10.27.7.2", 3)
     ping(C, "10.8.8.4", 3)
     # every sniffed port carries one cloonix-ovs-snf of its own from the day
     # it is up: the standing topology is the reference, not the empty net
@@ -475,7 +475,7 @@ def t_setup():
           % BASE["snf"])
     BASE["tcp"] = {}
     for label, node, target, port in (("A->B lan", A, "10.8.8.2", 5201),
-                                      ("A->B vhost lan", A, "10.7.7.2", PORT2),
+                                      ("A->B vhost lan", A, "10.27.7.2", PORT2),
                                       ("A->P c2c", A, "10.8.8.9", 5201)):
         snd, rcv, _ = iperf_run(node, target, secs=4, port=port)
         mbits("before the storm, %s" % label, snd, rcv)
@@ -544,7 +544,7 @@ def t_after():
     if not c2c_peered(C2C, NET):
         raise Fail("the c2c is not peered after the storm\n" + c2c_evidence(C2C))
     for node, target, net in ((A, "10.8.8.2", NET), (C, "10.8.8.4", NET),
-                              (A, "10.7.7.2", NET), (A, "10.8.8.9", NET),
+                              (A, "10.27.7.2", NET), (A, "10.8.8.9", NET),
                               (P, "10.8.8.1", PEER)):
         loss, rtt = ping_stats(node, target, 10, net=net)
         if loss:
@@ -553,7 +553,7 @@ def t_after():
         print("      after the storm: %s -> %s rtt %.1f ms" % (node, target,
                                                                 rtt))
     for label, node, target, port in (("A->B lan", A, "10.8.8.2", 5201),
-                                      ("A->B vhost lan", A, "10.7.7.2", PORT2),
+                                      ("A->B vhost lan", A, "10.27.7.2", PORT2),
                                       ("A->P c2c", A, "10.8.8.9", 5201)):
         snd, rcv, _ = iperf_run(node, target, secs=4, port=port)
         mbits("after the storm, %s" % label, snd, rcv)
@@ -565,7 +565,7 @@ def t_after():
     if s.stop() < 6:
         raise Fail("a fresh sniff after the storm counts nothing")
     s = Sniff(A, 1, "icmp").start()
-    ping(A, "10.7.7.2", 3)
+    ping(A, "10.27.7.2", 3)
     if s.stop() < 6:
         raise Fail("a fresh sniff on the not sniffed port after the storm counts "
                    "nothing")
@@ -600,6 +600,7 @@ def main():
     print("teststorm: flows on a moving target, %s with peer %s" % (NET, PEER))
     for name, fn in STEPS:
         t = time.time()
+        ti.phase("storm %s" % name)
         print("[%6.1fs] %s" % (t - T0, name))
         try:
             fn()

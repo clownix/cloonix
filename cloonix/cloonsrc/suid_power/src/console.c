@@ -116,7 +116,7 @@ static int session_is_alive(char *path)
   close(s);
   if ((!alive) && (!access(path, F_OK)))
     {
-    KERR("console socket %s is stale, starting a new session", path);
+    KERR("WARNING console socket %s is stale, a new session starts", path);
     unlink(path);
     }
   return alive;

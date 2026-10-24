@@ -146,7 +146,7 @@ static void check_for_another_instance(char *clownlock, int keep_fd)
     printf ("\ncloonix-main-server (pid=%d) already running, stop it:\n",
              lock.l_pid);
     printf("\n\ncloonix stop %s\n\n\n", cfg_get_cloonix_name());
-    KOUT("Another instance with same work directory found\n");
+    KOUT("Another instance with same work directory found");
     }
   if (!keep_fd)
    {
@@ -258,12 +258,14 @@ void uml_clownix_switch_rx_cb(int llid, int len, char *buf)
     {
     /* The ko must leave before the channel: a close here would drop it
        (msg_delete_channel purges the tx chain), so the client closes. */
-    KERR("ERROR unknown json message received \n%s\n", buf);
+    KERR("ERROR unknown json message received: %.*s",
+         (int) strcspn(buf, "\n"), buf);
     send_status_ko(llid, 0, "unknown message for this server");
     }
   if (result == -2)
     {
-    KERR("Bad digest in message received \n%s\n", buf);
+    KERR("ERROR bad digest in a message received: %.*s",
+         (int) strcspn(buf, "\n"), buf);
     llid_trace_free(llid, 0, __FUNCTION__);
     }
 }
@@ -280,6 +282,8 @@ static void timer_proxymous_init(void *data)
   proxymous_init(g_cloonix_conf_info->passwd);
 }
 
+static int passwd_is_shipped_default(char *passwd);
+
 static void timer_everything_is_ready(void *data)
 {
   printf("\n    UML_CLOONIX_SWITCH NOW RUNNING\n\n");
@@ -289,6 +293,10 @@ static void timer_everything_is_ready(void *data)
                   cfg_get_web_port(), g_cloonix_conf_info->passwd,
                   g_cloonix_conf_info->doors);
   g_uml_cloonix_started = 1;
+  KERR("INFO started, version %s, doors port %d, https port %d%s",
+       cfg_get_version(), cfg_get_server_port(), cfg_get_web_port(),
+       passwd_is_shipped_default(g_cloonix_conf_info->passwd) ?
+       ", with the shipped cloonix_passwd" : "");
   proxycrun_transmit_write_start_status_file_ready();
 }
 
@@ -366,7 +374,7 @@ static t_topo_clc *get_parsed_config(char *name)
   if (!cloonix_conf)
     {
     printf("name:%s not in config file\n", name);
-    KOUT("name:%s not in config file\n", name);
+    KOUT("name:%s not in config file", name);
     }
   else
     {
@@ -575,7 +583,7 @@ static void helper_check_main_binaries(char *bin)
   if (!file_exists(bin, X_OK))
     {
     printf("\n\nFile: \"%s\" not found or not executable\n\n", bin);
-    KOUT("\n\nFile: \"%s\" not found or not executable\n\n", bin);
+    KOUT("File: \"%s\" not found or not executable", bin);
     }
 }
 
@@ -661,9 +669,9 @@ int main (int argc, char *argv[])
     {
     printf("\nWARNING: %s uses the cloonix_passwd shipped in cloonix.cfg, "
            "known to anyone who has the tarball; the doors port and the web "
-           "port answer to it. Edit cloonix_config.py.\n\n",
+           "port answer to it. Edit cloonix.cfg, the cloonix_config.py of "
+           "the client.\n\n",
            cfg_get_cloonix_name());
-    KERR("WARNING runs with the shipped default cloonix_passwd");
     }
   doorways_init(cfg_get_cloonix_name(), cfg_get_root_work(),
                 g_cloonix_conf_info->passwd);

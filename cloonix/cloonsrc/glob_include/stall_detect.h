@@ -1,11 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/*  Tell "the peer is gone" from "nobody was running": a periodic callback  */
-/*  knows how long it asked to sleep; time past that on the monotonic clock */
-/*  is time this process was off the cpu, and is credited back to the peer  */
-/*  deadline, up to a cap. Header only: every daemon has -I../glob_include. */
-/*  A gap says what the process did during it: cpu near the gap is a loop   */
-/*  that turned too slowly, forced switches a starved one, voluntary        */
-/*  switches and major faults one blocked in the kernel.                    */
+/* Peer gone vs process starved: off-cpu time beyond the expected sleep is
+   credited to the peer deadline (capped), classed slow/starved/blocked. */
 #ifndef STALL_DETECT_H
 #define STALL_DETECT_H
 
@@ -35,15 +30,13 @@ typedef struct t_stall
 static inline long long stall_now_ms(void)
 {
   struct timespec ts;
-  /* MONOTONIC: a wall clock step -- ntp, a vm resuming -- must not look like
-     a stall, nor hide one. */
+  /* MONOTONIC: a wall clock step (ntp, vm resume) is no stall. */
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (((long long) ts.tv_sec) * 1000) + (ts.tv_nsec / 1000000);
 }
 
-/* The machine during the gap, from the cpu line of /proc/stat: steal is a
-   hypervisor that did not run this machine, softirq the network stack, idle
-   with iowait a machine that had the time and a process that waited. */
+/* /proc/stat cpu during the gap: steal = hypervisor, softirq = network,
+   idle+iowait = machine idle, process waiting. */
 static inline void stall_machine(t_stall *st, int gap, char *out, int max)
 {
   unsigned long long v[8], tot = 0;

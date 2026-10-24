@@ -1,0 +1,8 @@
+# needs - what the demos of bird_demo take from bird_trixie besides the
+# commands they run, read by lib/special_needs.py: packages taken whole
+# (dpkg names, globs), and "!word" for a word of a configuration that is
+# not a command.
+bird2
+# @python: only the modules the scripts written into the containers import;
+# @python:<module> for one they import at run time only.
+@python

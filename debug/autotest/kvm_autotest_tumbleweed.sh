@@ -1,16 +1,16 @@
 #!/bin/bash
-# kvm_autotest_tumbleweed.qcow2: tumbleweed.qcow2 made ready for autotest.sh.
-# Common part in kvm_autotest_common.sh; the base was made with dnf and has
-# it, pointed at the mirror. rsyslog gets /dev/log, so journald forwards; a
-# line seen twice in /var/log/syslog means it reads the journal too.
+# kvm_autotest_tumbleweed.qcow2 from tumbleweed.qcow2 (dnf base, common part
+# in kvm_autotest_common.sh); rsyslog gets /dev/log, journald forwards.
 DISTRO="tumbleweed"
-# No gzip: the base has busybox-gzip, which provides it and conflicts.
+# No gzip: the base has busybox-gzip, which provides it and conflicts; xz
+# alone after, for the same reason if a busybox-xz is there.
 PKGS="python3 gcc glibc-devel shadow rsyslog dbus-1 sudo tar procps util-linux iproute2 iperf"
 . "$(dirname "$0")/kvm_autotest_common.sh"
 
 pkg_install()
 {
   vm "dnf -y --nogpgcheck install ${PKGS}"
+  vm "command -v xz >/dev/null || dnf -y --nogpgcheck install xz"
 }
 
 distro_setup()

@@ -4,16 +4,12 @@ The web canvas
 
 The graphical interface is a web page served by cloonix itself: canvas 2d,
 websockets, xterm.js, noVNC, webshark. Nothing to install, nothing to
-forward::
+forward: *https://127.0.0.1:4444* for the net nemo on the machine running
+it, *https://<ip>:4444* from anywhere. The port is the *cloonix_web* keyword
+of the net in *cloonix.cfg*; a net without it runs headless.
 
-    https://127.0.0.1:4444             net nemo, from the machine running it
-    https://<ip>:4444                  from anywhere; user nemo, password nemoclown
-
-The port number is the *cloonix_web* keyword of the net in *cloonix.cfg*; a
-net without it runs headless.
-
-The web page asks for a user and a password. They are not secret, they are
-shipped in the configuration, and they can be changed there::
+The page asks for a user and a password, not secret: they are shipped in the
+configuration, where they can be changed::
 
     https://127.0.0.1:4444      user  nemo      password  nemoclown
 
@@ -21,9 +17,7 @@ shipped in the configuration, and they can be changed there::
     the file, toy         <toy directory>/rootfs/cloonix/cloonfs/etc/cloonix.cfg
 
 The user is the name of the net, the password its *cloonix_passwd* in that
-file: the name of the net followed by *clown*. For the net *nemo*: user
-*nemo*, password *nemoclown*.
-
+file, the net name followed by *clown*: user *nemo*, password *nemoclown*.
 
 
 The port
@@ -57,6 +51,21 @@ firefox: Settings, Privacy, Certificates, View Certificates, Servers, delete
 the entry, reload, accept once.
 
 
+From a phone or a tablet
+========================
+
+The browser of an Android phone or tablet on the network of the host opens
+the same page::
+
+    https://<ip>:4444      user nemo, password nemoclown
+    ip -4 addr             run on the host: its address
+
+The warning of the self-signed certificate is accepted once, as on a
+desktop. The canvas is driven by mouse events: with a USB or Bluetooth mouse
+on the phone or tablet it works as on a desktop; by touch alone a tap
+clicks, and items cannot be dragged.
+
+
 The canvas
 ==========
 
@@ -65,13 +74,16 @@ The canvas
    :width: 100%
 
 The topology is drawn live. A machine's colour follows its state: dark red
-down, bright red booting, blue up with its agent answering. The nodes are
-placed by a force-directed layout that keeps running; *Lock into place* in
-the menu of a node pins it, and *cnf <n> x= y=* / *cnf <n> eth<i> angle=*
-on the command line do the same. A pinned place is held by the server for as long as the net
-has objects, so a reload of the page, or a second browser, draws the items
-where they were put; an emptied net, *del all*, forgets them, and the next
-topology is framed to the window as the first one was.
+down, bright red booting, blue up with its agent answering. A force-directed
+layout keeps placing the nodes; *Lock into place* in the menu of a node pins
+it, as *cnf <n> x= y=* and *cnf <n> eth<i> angle=* do from the command line.
+The server holds a pinned place while the net has objects, so a reload or a
+second browser draws the items where they were put; *del all* forgets the
+places, and the next topology is framed to the window as the first was.
+
+A note, set by *Note...* in the menu of an item or lan or by *cnf <n>
+note="text"*, is written whole in amber under the item, in lines of 28
+characters, and kept by the server in the same way.
 
 
 The menus
@@ -87,6 +99,9 @@ On the empty canvas::
     lan  tap  nat  a2b  c2c        the other items
     phy ▶                          one line per physical interface of the server, absorbed or macvlan
 
+On every item and every lan, under *Lock into place*: *Note...*, a comment
+on it, empty to remove it.
+
 On a kvm::
 
     Desktop   Console   Save   Reboot   Delete   Info
@@ -100,12 +115,21 @@ On an interface dot::
     PlotTraffic <n> eth<i>
     Sniff on / Sniff off           live, without restarting the guest
 
-A tap, a phy or a c2c has the same dot and the same toggle; born without
-capture capability, its dot is cyan until *Sniff on*.
+A tap, a phy or a c2c has the same dot and toggle; born without capture
+capability, its dot is cyan until *Sniff on*, which also opens the webshark
+of the interface once the dot turns green; a double-click on the green dot
+opens it after that.
 
 On a lan: *Delete LAN*. On a cable: *Delete link*. On an a2b: *Tune a2b*.
-On an air: *Sniff on* / *Sniff off*, and *Select*, after which a click on a
-wlan plugs or unplugs it; a double-click on an air opens its webshark.
+On an air: *Select*, after which a click on a wlan plugs or unplugs it, and
+its capture. An air is born not captured, drawn dark brown; *Sniff on*
+captures it, turns it bright orange with a green ring, the colours of a
+sniffable interface, and opens its webshark. A captured air offers *Sniff
+off* and *Webshark*, and a double-click on it opens its webshark. A wlan
+dot is captured with its air: same three choices, its double-click opens
+the webshark of its air, and it has the green ring while the air is
+captured. A blue capture line of the Comments panel arms a capture not
+armed yet, as the *sniff* verb does, and opens the webshark once it is.
 
 
 Cabling
@@ -123,9 +147,13 @@ The panels
 ==========
 
 Consoles, desktops, webshark, plots and dialogs open as floating panels.
-The title bar closes a panel or moves it to its own browser tab, carrying
-the live connection: a console keeps its scrollback, a capture keeps
-running.
+The title bar closes a panel or moves it to its own browser tab with its
+live connection: a console keeps its scrollback, a capture keeps running.
+A panel is dragged by its title bar and resized from its borders and
+corners, a console fitting its rows and columns to the new size. Behind the
+drawing, a panel resizes the same way where its border shows with no item
+over it: the cursor turns to the resize arrow, and the first click brings
+it to the front.
 
 ::
 
@@ -138,16 +166,17 @@ running.
     Tune a2b     loss, delay, rate per direction, applied live
 
 
-The Demo panel and its History popup
-====================================
+The Demo panel and its Comments panel
+=====================================
 
 The *Demo* button of the header opens the Demo panel. *Play* opens a picker
-showing the packages of the chapter *Learning with cloonix*, 0 to 11, each
-with its demos in the order and with the line of that chapter; a click on a
-demo plays it. The list is the file */usr/share/cloonix/demos/packages*.
-While a demo plays, the canvas fits its drawing against the low edge of the
-view, under the two panels; a drawing taller than the free space continues
-behind them. Two panels then work side by side:
+with the packages of the chapter *Learning with cloonix*, 0 to 11, their
+demos in the order and with the line of that chapter, the file
+*/usr/share/cloonix/demos/packages*; a click plays a demo. With the panel
+open, *Demo* brings it to the front with the picker; during a demo the
+picker is only to read, *Close* ending it while the run goes on. During a
+demo the canvas fits its drawing to the low edge of the view, under the two
+panels, a taller drawing continuing behind them:
 
 .. image:: /svg/demo_history.svg
    :align: center
@@ -157,24 +186,30 @@ behind them. Two panels then work side by side:
 and nothing else, one after the other, each as it can be typed in a shell.
 It is what the same demo prints when it is played from a terminal.
 
-**The History popup** opens beside it, titled *History -- <demo>*, and
+**The Comments panel** opens beside it, titled *Comments -- <demo>*, and
 explains the demo. It has two views:
 
-*Steps* is written while the demo runs, one section per step.
+*Steps* is written while the demo runs. Its top part stays in view: the
+demo, *7/69 cloonix/snf.py* under all.py, and its one-line description, the
+first line of its docstring. Under it the steps scroll, one section per step,
+the scroll bar giving back the earlier ones.
 
-* The first section, *i*, is the introduction: the title of the demo, then
+* The first section, *i*, holds what the demo says before its first step:
   for a demo about a protocol its history, where it comes from and who wrote
   the software under study, and the drawing of the network.
 * Each following section is a step of the demo: its number, its title, the
   time into the run at which it started, and under it what the demo has to
   say, why the step is there, what was measured or captured, what it proves.
   A step that is an act of the demo has *ACT n* in front of its title.
-* Under the text of a step, a folded line, *n cloonix commands run for
-  this*, holds the commands the step gave the server, the same lines as the
-  log. Unfolded, a step reads as a worked example: the goal, the commands,
+* Under the text of a step, a folded line, *n cloonix commands, as typed in
+  a shell*, holds the commands the step gave the server, the same lines as
+  the log. Unfolded, a step reads as a worked example: the goal, the commands,
   the result.
-* A line in blue is a command the demo suggests to try; a click copies it,
-  ready to paste in a shell. The demos end with several.
+* A line in blue is a command the demo suggests to try. A *terminal of
+  <node>* line opens a terminal of that node and runs the command in it,
+  the command also put in the clipboard; a *capture of* line opens the
+  capture of that cable; any other cloonix line is copied, ready to paste
+  in a shell where the client is. The demos end with several.
 * A line in amber is something the demo asks for, the Enter it waits for at
   a published port for instance, which is typed in the log. A line in red is
   what the demo said on its error output.
@@ -192,13 +227,26 @@ It holds the network as ascii art, the acts, the image the demo needs, its
 size, and *the packet to catch*, the sniff commands that put the
 subject of the demo on the screen, packet by packet.
 
-The popup can be moved, resized and closed like any panel. The *History*
-button of the Demo panel opens it again with everything the current demo
-said; the next Play starts a new history.
+The mouse on the chip or the title of a step outlines on the canvas, with a
+pulsing ring, the items that step's commands named. A blue capture line
+opens webshark already filtered: its tcpdump filter is translated into the
+display filter webshark reads (*icmp and host 1.1.1.2* becomes *icmp &&
+ip.addr == 1.1.1.2*); a *portrange* is not translated and the capture then
+opens unfiltered. *Save*, beside the tabs, downloads the comments as a
+markdown file: About, every step with its text and its commands, and how
+the demo ended.
+
+The panel can be moved, resized and closed like any panel. The button of
+the Demo panel names what a click does: *Comments on* opens it again with
+everything the current demo said, *Comments off* closes it. Once closed,
+by that button or by its own close, the next Play leaves it closed and
+keeps the comments for a *Comments on*; the next Play starts new comments.
 
 At its start a demo says in one sentence what it shows, the line of
-*demos/voice*. *sound off* silences the voice, *sound on* says the sentence
-again. *stop and del* kills every demo going on and erases the net; the
+*demos/voice*. When a demo stops on a refusal or a failure, the voice
+says *The demo stopped. Here is why.* and the browser reads the first line
+of the reason, when it has an english voice. *sound off* silences the
+voice, *sound on* says the sentence again. *stop and del* kills every demo going on and erases the net; the
 Demo panel stays for the next Play.
 
 The history exists on the canvas only. Played from a shell, a demo prints

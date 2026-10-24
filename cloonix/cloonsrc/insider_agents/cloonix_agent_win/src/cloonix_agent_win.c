@@ -1,23 +1,23 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* cloonix_agent_win.c - the insider agent for a windows guest.              */
-/* What it does: opens the virtio-serial port and answers the ping doorways  */
-/* sends. That is the whole of it, and                                       */
+/* cloonix_agent_win.c - the insider agent for a windows guest. */
+/* What it does: opens the virtio-serial port and answers the ping doorways */
+/* sends. That is the whole of it, and */
 /* it is enough for the node to go green and for the machine to be reachable */
-/* the way a linux one is at the same stage.                                 */
-/* What it does NOT do, and what the linux agent does: byte pipes            */
-/* (header_type_traffic and the dido_llid contexts), which is what           */
-/* cloonix_cxp_srv is joined to and what "cloonix cli ssh" rides on. Those       */
-/* need a second server process inside the guest. Requests for a pipe are    */
+/* the way a linux one is at the same stage. */
+/* What it does NOT do, and what the linux agent does: byte pipes */
+/* (header_type_traffic and the dido_llid contexts), which is what */
+/* cloonix_cxp_srv is joined to and what "cloonix cli ssh" rides on. Those */
+/* need a second server process inside the guest. Requests for a pipe are */
 /* refused here, in one line, rather than ignored: an unanswered leg request */
-/* is a client hanging with nothing said.                                    */
+/* is a client hanging with nothing said. */
 /* Why one thread and blocking reads: there is one handle. select() does not */
-/* take a windows HANDLE, so the linux shape (select over the port and the   */
-/* pipe sockets) does not carry over -- but with no pipes there is nothing   */
+/* take a windows HANDLE, so the linux shape (select over the port and the */
+/* pipe sockets) does not carry over -- but with no pipes there is nothing */
 /* to select between. When the pipes arrive this becomes overlapped I/O or a */
-/* reader thread, and that is the moment to change it, not before.           */
-/* The port name is what qemu was told in QEMU_OPTS_CLOON:                   */
-/*   -device virtserialport,chardev=cloon0,name=net.cloon.0                  */
-/* which the vioserial driver publishes as \\.\Global\net.cloon.0            */
+/* reader thread, and that is the moment to change it, not before. */
+/* The port name is what qemu was told in QEMU_OPTS_CLOON: */
+/* -device virtserialport,chardev=cloon0,name=net.cloon.0 */
+/* which the vioserial driver publishes as \\.\Global\net.cloon.0 */
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>

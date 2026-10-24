@@ -250,13 +250,14 @@ static int tst_ip_input(int len, uint8_t *data)
       if (!in_cksum((u_short *) data, hdr))
         result = 0;
       else
-        KERR("BAD!!!! IP checksum\n");
+        KERR("WARNING mac_mangle: bad IP checksum");
       }
     else
-      KERR("BAD IP LENGTH !!!! IP len:%d real rx:%d\n", ip_len, len);
+      KERR("WARNING mac_mangle: IP length %d, %d bytes received", ip_len, len);
     }
   else
-    KERR("BAD!!!! IP version/header %d %02X\n", len, data[0]);
+    KERR("WARNING mac_mangle: bad IP version or header, %d bytes, first byte %02X",
+           len, data[0]);
   return result;
 }
 
@@ -270,7 +271,7 @@ void packet_arp_mangle(int udp2tap, int len, uint8_t *data)
   /* eth 14 + arp 28: the arp fields read below end at byte 42 */
   if (len < 42)
     { 
-    KERR("TOO SHORT PACKET %d", len);
+    KERR("WARNING mac_mangle: packet of %d bytes, too short", len);
     return;
     }
   proto = get_proto(len, data);

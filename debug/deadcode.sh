@@ -29,13 +29,24 @@ done
 
 # the daemons a Makefile builds
 for i in uml_cloonix_switch suid_power doorways proxymous_passt cxp_cli \
-         insider_agents/cloonix_agent insider_agents/cloonix_cxp_srv; do
+         insider_agents/cloonix_cxp_srv; do
   n=$(basename ${i})
   ( cd ${CLOONSRC}/${i}
     make clean >/dev/null 2>&1 || true
     make CC="${GCC}" LDFLAGS="${GCLD}" 2>&1 | collect > ${OUT}/${n}.txt
     make clean >/dev/null 2>&1 || true )
 done
+
+# the agent: dead only if dead in its kvm and in its cnt build
+( cd ${CLOONSRC}/insider_agents/cloonix_agent
+  for side in kvm cnt; do
+    [ ${side} = kvm ] && SIDE="main_kvm.c wifi.c" || SIDE="main_cnt.c wifi_none.c"
+    make clean >/dev/null 2>&1 || true
+    make CC="${GCC}" LDFLAGS="${GCLD}" SIDE="${SIDE}" 2>&1 | collect \
+      > ${OUT}/agent_${side}.lst
+  done
+  make clean >/dev/null 2>&1 || true
+  comm -12 ${OUT}/agent_kvm.lst ${OUT}/agent_cnt.lst > ${OUT}/cloonix_agent.txt )
 
 # the gui server: one translation unit, its Makefile links with -rdynamic
 ( cd ${CLOONSRC}/jscloonix/jscloonix
@@ -59,6 +70,14 @@ done
 for i in lib_io_clownix lib_rpc_clownix; do
   ( cd ${CLOONSRC}/${i}; make clean >/dev/null 2>&1 || true )
 done
+
+# cxp_wire.c is in the cxp client and the cxp server: dead only in both
+W="obj/cxp_wire.o"
+grep " ${W}$" ${OUT}/cloonix_cxp_srv.txt > ${OUT}/cxp_wire_srv.lst || true
+grep -v " ${W}$" ${OUT}/cxp_cli.txt > ${OUT}/cxp_cli.lst || true
+grep " ${W}$" ${OUT}/cxp_cli.txt | comm -12 - ${OUT}/cxp_wire_srv.lst \
+  >> ${OUT}/cxp_cli.lst || true
+sort -o ${OUT}/cxp_cli.txt ${OUT}/cxp_cli.lst
 
 echo
 echo "unreachable in the binary's own sources (recv_* stubs left out,"

@@ -33,7 +33,7 @@ THE PACKET TO CATCH
     cloonix cli nemo cnf r1 eth1 sniff=on
     cloonix cli nemo sniff r1 eth1 --dump udp port 6696
 
-  The packet worth catching is the update r1 sends after ACT 2, retracting
+  The packet to catch is the update r1 sends after ACT 2, retracting
   the route it lost and taking up the new one.
 
 Important
@@ -55,17 +55,16 @@ from demolib import (
     in_parallel, place, reached, run, ssh, step, story, tools_present)
 
 HISTORY = """\
-Babel was designed by Juliusz Chroboczek and first published around 2007,
-standardised as RFC 6126 in 2011 and RFC 8966 in 2021. It is a
-distance-vector protocol, like the old RIP, but built to be loop-free and to
-work over links that appear, vanish and vary in quality -- wireless meshes
-especially. Where OSPF floods a full map of the network, Babel keeps only
-distances to destinations and reasons about them carefully enough never to
-form a loop, which makes it small and quick to react.
+Babel was designed by Juliusz Chroboczek around 2007, standardised as RFC
+6126 and later RFC 8966. It is a distance-vector protocol, like the old RIP,
+but built to be loop-free and to work over links that appear, vanish and
+vary in quality, wireless meshes especially. Where OSPF floods a full map,
+Babel keeps only distances and reasons about them carefully enough never to
+loop.
 
-Today: Babel routes community mesh networks and is the routing protocol of the
-IETF Homenet architecture; it ships in OpenWrt as babeld and inside BIRD and
-FRR.
+Today: Babel routes community mesh networks and is the routing protocol of
+the IETF Homenet architecture; it ships in OpenWrt as babeld and inside BIRD
+and FRR.
 """
 
 ROOTFS_CHOICES = ("babel_trixie",)
@@ -224,7 +223,7 @@ def main():
                  % (ok_after, ok_reroute))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the routes babel holds:
     cloonix cli %s ssh r1 "ip route"

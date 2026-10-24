@@ -1,10 +1,10 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* TLS termination for the https web port and the doors port. OpenSSL      */
-/* never touches a descriptor: a pair of memory BIOs.                       */
-/*   peer -> [rbio] -> SSL_read  -> plaintext -> unix socket -> crun        */
-/*   peer <- [wbio] <- SSL_write <- plaintext <- unix socket <- crun        */
-/* After every operation wbio is emptied towards the peer. Plaintext from  */
-/* the crun before the handshake ends is held.                              */
+/* TLS termination for the https web port and the doors port. OpenSSL */
+/* never touches a descriptor: a pair of memory BIOs. */
+/* peer -> [rbio] -> SSL_read  -> plaintext -> unix socket -> crun */
+/* peer <- [wbio] <- SSL_write <- plaintext <- unix socket <- crun */
+/* After every operation wbio is emptied towards the peer. Plaintext from */
+/* the crun before the handshake ends is held. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,8 +43,8 @@ typedef struct t_tls_conn
 static SSL_CTX *g_ctx;
 static char g_cert_path[MAX_PATH_LEN];
 
-/* Looked for in CLOONIX_TLS_DIR, <exe dir>/../config, /usr/share/cloonix/  */
-/* cert. Both files must be there for a directory to count.                 */
+/* Looked for in CLOONIX_TLS_DIR, <exe dir>/../config, /usr/share/cloonix/ */
+/* cert. Both files must be there for a directory to count. */
 static int try_dir(const char *dir, char *cert, char *key)
 {
   if ((!dir) || (!dir[0]))
@@ -97,6 +97,7 @@ static int write_pem(const char *path, int mode,
   f = fdopen(fd, "w");
   if (!f)
     {
+    KERR("ERROR fdopen: %s", strerror(errno));
     close(fd);
     return -1;
     }
@@ -299,7 +300,10 @@ void *proxy_tls_alloc(void)
     return NULL;
   cur = (t_tls_conn *) malloc(sizeof(t_tls_conn));
   if (!cur)
+    {
+    KERR("ERROR no memory for a tls connection");
     return NULL;
+    }
   memset(cur, 0, sizeof(t_tls_conn));
   cur->ssl = SSL_new(g_ctx);
   if (!cur->ssl)
@@ -472,6 +476,7 @@ int proxy_tls_tx_plain(void *handle, int len, char *buf,
     bigger = (char *) realloc(cur->pending, cur->pending_len + len);
     if (!bigger)
       {
+      KERR("ERROR no memory for the pending bytes of a tls connection");
       cur->broken = 1;
       return -1;
       }

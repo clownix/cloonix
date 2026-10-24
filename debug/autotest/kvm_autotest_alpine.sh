@@ -1,11 +1,9 @@
 #!/bin/bash
-# kvm_autotest_alpine.qcow2: alpine.qcow2 made ready for autotest.sh.
-# Common part in kvm_autotest_common.sh. Openrc, no systemd: no user@, no
-# user bus, so the runner says "no user bus" and crun has no systemd
-# cgroup manager; mdev, so the device modes come from local.d; busybox,
-# so the GNU tools the suites' scripts use are added.
+# kvm_autotest_alpine.qcow2 from alpine.qcow2, common part in
+# kvm_autotest_common.sh: openrc (no user bus, no systemd cgroups), mdev
+# (device modes in local.d), busybox (GNU tools added).
 DISTRO="alpine"
-PKGS="bash coreutils grep sed findutils procps-ng util-linux-misc tar gzip \
+PKGS="bash coreutils grep sed findutils procps-ng util-linux-misc tar gzip xz \
       python3 gcc musl-dev linux-headers shadow shadow-uidmap \
       rsyslog dbus sudo iperf3"
 . "$(dirname "$0")/kvm_autotest_common.sh"

@@ -6,7 +6,7 @@ cible="${TARGET}/${DISTRO}"
 export GNUPGHOME="${TARGET}/mirrorkeyring"
 /usr/bin/debmirror -a amd64 \
                    --no-source \
-                   -s main,restricted,universe,multiverse \
+                   -s main,universe,multiverse \
                    -h fr.archive.ubuntu.com \
                    -d ${DISTRO},${DISTRO}-security,${DISTRO}-updates \
                    -r /ubuntu \

@@ -15,6 +15,9 @@
 
 static char g_netns_namespace[MAX_NAME_LEN];
 static char g_tap_name[MAX_NAME_LEN];
+/* the tap and its item, for the KERR of the child */
+static char g_tap_label[MAX_PATH_LEN];
+char *get_a2b_name(void);
 
 /* Parent pipe -> tap. A short write is fatal: every frame must go through. */
 static void tx_tap(int fd_tap, int fd_rx_from_parent)
@@ -48,7 +51,7 @@ static void forked_process_tap(int fd_rx_from_parent, int fd_tx_to_parent)
       KOUT("ERROR %s %s", g_netns_namespace, g_tap_name);
     if (FD_ISSET(fd, &infd))
       {
-      if (tap_child_to_parent(fd, fd_tx_to_parent, g_tap_name) == 0)
+      if (tap_child_to_parent(fd, fd_tx_to_parent, g_tap_label) == 0)
         exit(0);
       }
     if (FD_ISSET(fd_rx_from_parent, &infd))
@@ -62,6 +65,8 @@ int tun_tap_open(char *net_namespace, char *name, int *fd_rx, int *fd_tx)
   strncpy(g_netns_namespace, net_namespace, MAX_NAME_LEN-1);
   memset(g_tap_name, 0, MAX_NAME_LEN);
   strncpy(g_tap_name, name, MAX_NAME_LEN-1);
+  memset(g_tap_label, 0, MAX_PATH_LEN);
+  snprintf(g_tap_label, MAX_PATH_LEN-1, "a2b %s tap %s", get_a2b_name(), name);
   return tap_fork_open(g_netns_namespace, g_tap_name, 0,
                        forked_process_tap, fd_rx, fd_tx);
 }

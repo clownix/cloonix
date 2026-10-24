@@ -3,8 +3,8 @@
 
     ./c2c.py [centre] [left] [right]      defaults: nemo fido mito
 
-A c2c joins two cloonix servers. This demo puts one server in the middle
-with a c2c to each of the other two, and then routes between them::
+A c2c joins two cloonix servers. One server in the middle, a c2c to each of
+the other two, and a route between them::
 
       fido                    nemo                     mito
    .--------.             .-----------.             .--------.
@@ -20,49 +20,40 @@ with a c2c to each of the other two, and then routes between them::
    lanf   10.10.0.0/24    nemocnt eth0 .1    fidocnt eth0 .2
    lanm   10.20.0.0/24    nemocnt eth1 .1    mitocnt eth0 .2
 
-A c2c is a cable and not a router: the two ends of one c2c are the SAME
-broadcast domain, which is why 10.10.0.0/24 spans nemo and fido, and
-10.20.0.0/24 spans nemo and mito. Two lans, two subnets, three servers.
-
-Nothing routes between the two subnets by itself. nemocnt is the only
-machine on both, so it is the router, and the two leaves need a static
-route each to reach the far side through it. That is the whole point of
-the demo: the final ping leaves fido, crosses a c2c into nemo, is routed
-there, crosses the other c2c into mito, and comes back the same way.
+A c2c is a cable and not a router: its two ends are one broadcast domain,
+so 10.10.0.0/24 spans nemo and fido, 10.20.0.0/24 nemo and mito. nemocnt,
+the only machine on both, routes between them, and each leaf has a static
+route through it: the final ping leaves fido, crosses a c2c into nemo, is
+routed there, crosses the other c2c into mito, and comes back.
 
   ACT 1  the three containers, one per server
   ACT 2  the two c2c, both created from the centre
   ACT 3  the cabling, the addresses and the static routes
   ACT 4  fidocnt pings mitocnt, and the ttl says it was routed
 
-The three servers must be running before this starts::
+The three servers run before it starts::
 
     cloonix start nemo ; cloonix start fido ; cloonix start mito
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
 
 Image: trixie
 Size:  3 containers on 3 servers, 2 lans, 2 c2c
 
 THE PACKET TO CATCH
 -------------------
-  On a leaf, because it proves a claim about what a c2c is:
+  On a leaf:
 
     cloonix cli fido cnf fidocnt eth0 sniff=on
     cloonix cli fido sniff fidocnt eth0 --dump arp
 
-  fidocnt arps for 10.10.0.1, which lives on a different physical machine,
-  and gets an answer. An arp crossed a c2c -- only possible because the two
-  ends are one broadcast domain and not two routed networks.
-
-  The ping at the end says the same thing with ttl=63: exactly one router
-  on the path, nemocnt, with the two c2c crossed transparently.
+  fidocnt arps for 10.10.0.1, on another server, and gets an answer: an arp
+  crossed a c2c, the two ends being one broadcast domain. The final ping
+  has ttl=63: one router on the path, nemocnt, the two c2c crossed without
+  a decrement.
 
 Important
-  c2c is where cloonix stops being a single-host tool. Anything needing
-  more cpu or memory than one machine has -- a large frrspider, a 5G core
-  next to a radio simulator -- is a c2c topology.
+  With c2c a topology spreads over several machines: what needs more cpu
+  or memory than one host, a large frrspider, a 5G core beside a radio
+  simulator, is a c2c topology.
 """
 import os
 import subprocess
@@ -77,7 +68,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    ACK_FAST, CLOONIX, show, step, story)
+    ACK_FAST, CLOONIX, show, step, story, unavailable)
 
 CENTRE = sys.argv[1] if len(sys.argv) > 1 else "nemo"
 LEFT = sys.argv[2] if len(sys.argv) > 2 else "fido"
@@ -143,7 +134,7 @@ def in_parallel(fn, items, what):
     return results
 
 def in_lst(net, name):
-    """Ask the server what it really has.
+    """Ask the server what it has.
 
     "dump commands" prints the commands that would rebuild the topology, so anything
     that exists appears in it. This is the only check that catches a request
@@ -164,13 +155,14 @@ def check_nets():
     """
     missing = [n for n in NETS if cli(n, "dump", "commands").returncode]
     if missing:
-        sys.exit("no answer from: %s\n"
-                 "  this demo needs three servers running:\n"
-                 "    %s\n"
-                 "  or give it three other names:  ./c2c.py <centre> "
-                 "<left> <right>"
-                 % (", ".join(missing),
-                    " ; ".join("cloonix start " + n for n in NETS)))
+        sys.exit("WARNING no answer from %s: this demo needs three servers "
+                 "running, %s.\n"
+                 "Started before the demo, from a bundle or as toys of "
+                 "their own:\n%s\n"
+                 "or with three other names:\n"
+                 "./c2c.py <centre> <left> <right>"
+                 % (" and ".join(missing), ", ".join(NETS),
+                    "\n".join("cloonix start " + n for n in missing)))
     if len(set(NETS)) != 3:
         sys.exit("the three names must differ, got: %s" % ", ".join(NETS))
 
@@ -186,7 +178,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli(CENTRE, "del", "probe_c2c", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -391,7 +383,7 @@ def wait_ping(net, node, target, timeout=90):
     a colour, green when tcp and udp are both up -- so the honest test from
     a script is the traffic itself. The udp ports are negotiated over the
     tcp connection after the two ends have found each other, and that takes
-    a few seconds; before it, a ping is simply lost.
+    a few seconds; before it, a ping is lost.
     """
     end = time.time() + timeout
     last = None
@@ -495,7 +487,7 @@ def main():
     story("    the ip header. One decrement, one router -- %s." % CNT[CENTRE])
     story()
 
-    story("""the three nets are left up. Things worth trying:
+    story("""the three nets are left up. Things to try:
 
   the same ping the other way, which proves the return path on its own:
     cloonix cli %s ssh %s "ping -c 5 %s.2"

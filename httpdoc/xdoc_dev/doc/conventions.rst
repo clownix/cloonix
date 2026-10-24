@@ -69,9 +69,16 @@ the demos then wait for a machine that never existed. Two shapes exist:
     reason, or the limit is reached, which is a ko *TIMEOUT <verb>*; a
     client gone meanwhile is dropped. *cnf ... sniff=on* waits this way for the snf
     process to be up or gone (*ovs_snf_state*), *add c2c* for the c2c
-    process to have a pid (*ovs_c2c_up_test*).
+    process to have a pid (*ovs_c2c_up_test*); a webshark sync on a snf or
+    on an air capture that starts waits for it, 10 s at most
+    (*timer_sync_wait* and *timer_air_wait* of *ovs_snf.c*).
+  * a delete coming while a request on the item is in flight:
+    *del_when_free()* of *ack_pending.c* waits for that request, 10 s at
+    most, then deletes, or answers ok when the item went meanwhile; a
+    second delete waits the same way. The a2b, the tap, the nat and the
+    phy take it.
 
-The settings the switch holds itself, *x= y=*, *angle=*, *mac_mangle=*,
+The settings the switch holds itself, *x= y=*, *angle=*, *note=*, *mac_mangle=*,
 answer at once, the value being set.
 
 
@@ -146,12 +153,23 @@ happened between two lines.
 A block of lines that tells one thing, a history, goes through one gate:
 *KERR_HEAD(passed, ...)* is its first line and sets *passed*, and each
 *KERR_MORE(passed, ...)* after it is written or left with it, so a history
-is never cut in its middle. *snf_hist_dump()* of *ovs_snf.c* and
-*lan_history_dump()* of *lan_to_name.c* are written that way.
+is never cut in its middle. Each line of the block carries its level and
+its object, *WARNING snf s_k_1_2_0 history: ...*, so a line found by a grep
+says what it belongs to. *snf_hist_dump()* of *ovs_snf.c*,
+*lan_history_dump()* of *lan_to_name.c* and the tail of a failed demo in
+*demo_exec.c* of proxymous are written that way.
 
 **The net name is written once.** KERR, KOUT and KTRC stamp the net of the
-process ahead of the file name, so the text after them names the object and
-never the net again.
+process, the file and the function ahead of the line number,
+*KERR: nemo ovs_c2c.c:timer_heartbeat line:507 ...*, so the text after them names
+the object and never the net or the function again.
+
+**Two INFO lines a run.** *INFO started, version ..., doors port ..., https
+port ...* when the net is ready (*timer_everything_is_ready* of
+*uml_clownix_switch.c*), the shipped *cloonix_passwd* named there when it is
+the one in use, and *INFO stopped* at the clean end (*extremely_last_action*
+of *automates.c*). Every other KERR begins with ERROR or WARNING; a TRACE
+line comes from a build with its trace on.
 
 A message in a library and again in its caller, a message naming the
 functions on the way rather than the event, or a loss told by both ends of
@@ -221,7 +239,9 @@ Shared code, where it lives
   * **unix_sock(), timed_connect(), is_unix_sock()**, *util_sock.c*: the
     parts of the four unix client connects.
   * **seqtap_hdr()**, *msg_layer.c*: header of a seqtap message, for the
-    stream and the datagram reader.
+    stream and the datagram reader; **fct_seqtap_pipe_more()** tells that a
+    tap pipe holds another frame, for the batch read of the a2b and nat
+    parents.
   * **serve_push_ws()**, *web/web_http.c*: a websocket that pushes, topo and
     images; **ws_accept()** is the handshake, *ws_handshake()* the same with
     the *binary* subprotocol.
@@ -238,11 +258,12 @@ Shared code, where it lives
 Static checks of the demos and the books
 ========================================
 
-Run by *debug/testitall.sh*, no server needed::
+Run by *debug/top_testitall.sh*, no server needed::
 
     debug/check_demos.py      tree, summary line, commands printed, images,
                               guest sources, capture filter words, the
-                              angle= of an eth facing its lan
+                              angle= of an eth facing its lan, each
+                              HISTORY heading its section of the book
     debug/check_docs.sh       binaries named, versions, capture filter words
     debug/check_doc_words.sh  judgement and filler words
     debug/check_cli.py        verbs as the client reads them

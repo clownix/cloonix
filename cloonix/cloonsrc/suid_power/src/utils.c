@@ -57,7 +57,7 @@ int crun_utils_unlink_sub_dir_files(char *dir)
         result = crun_utils_unlink_sub_dir_files(pth);
       else if (unlink(pth))
         {
-        KERR("ERROR File: %s could not be deleted\n", pth);
+        KERR("ERROR File: %s could not be deleted", pth);
         result = -1;
         }
       else
@@ -71,7 +71,7 @@ int crun_utils_unlink_sub_dir_files(char *dir)
       KOUT("%d", errno);
     if (rmdir(dir))
       {
-      KERR("ERROR Dir: %s could not be deleted\n", dir);
+      KERR("ERROR Dir: %s could not be deleted", dir);
       result = -1;
       }
     else
@@ -196,7 +196,7 @@ static FILE *lio_popen(char *argv[], int *child_pid, int uid)
     else
       {
       status = -1;
-      KERR("WARNING EXITED TIMER\n");
+      KERR("WARNING EXITED TIMER");
       kill(worker_pid, SIGKILL);
       }
     wait(NULL);

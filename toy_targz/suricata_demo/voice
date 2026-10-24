@@ -1,0 +1,12 @@
+# voice - the narration of suricata_demo, one line per demo: a general summary
+# of its goal. Appended to demos/voice by create_suricata_toy_targz.sh; the
+# clips are suricata_demo/audio/<demo>.ogg, made by
+# suricata_demo/audio/make_voice.py.
+
+suricata_demo/quickstart_alerting.py    The quickstart test of Suricata. One signature and one web request, and the sensor raises its first alert.
+suricata_demo/rules_format.py           The format of a Suricata rule. The example rule fires, then each of its parts is changed and it stays silent.
+suricata_demo/adding_your_own_rules.py  Adding your own rule to Suricata. The rule is loaded, checked, and triggered by a page of gossip.
+suricata_demo/thresholding.py           Thresholds in Suricata. One rule alerts on the tenth match, another alerts only once.
+suricata_demo/datasets.py               Suricata datasets. A list of hashes catches a bad domain, and a list of user agents fills itself.
+suricata_demo/afpacket_ips.py           Suricata as an inline I P S. It carries the packets between two cables, and drops what a rule forbids.
+suricata_demo/xbits_ssh_blacklist.py    An S S H blacklist with Suricata. A bot client is dropped and listed, and the list blocks what follows.

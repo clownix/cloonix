@@ -1,11 +1,11 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The nat engine on the parent side of the tun_tap fork+pipe bridge:       */
-/*    pipe fd_rx --[seqtap]--> THIS --[u32 be length + frame]--> passt sock  */
-/*    pipe fd_tx <--[seqtap]-- THIS <--[u32 be length + frame]-- passt sock  */
-/* The passt socket is a byte stream: passt_to_tap keeps a reassembly       */
-/* buffer. Writes to passt are non-blocking with a bounded backlog, and     */
+/* The nat engine on the parent side of the tun_tap fork+pipe bridge: */
+/* pipe fd_rx --[seqtap]--> THIS --[u32 be length + frame]--> passt sock */
+/* pipe fd_tx <--[seqtap]-- THIS <--[u32 be length + frame]-- passt sock */
+/* The passt socket is a byte stream: passt_to_tap keeps a reassembly */
+/* buffer. Writes to passt are non-blocking with a bounded backlog, and */
 /* the tap is stopped past a high-water mark, so the control link is always */
-/* served and the watchdog never starves.                                   */
+/* served and the watchdog never starves. */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
@@ -58,6 +58,8 @@ static int g_llid_passt = 0;
 static int g_passt_generation = 0;
 static int  g_passt_lost = 0;
 static int  g_passt_warned = 0;
+/* Guest frames dropped since the last connection to a passt. */
+static unsigned long g_passt_dropped = 0;
 static int  g_passt_retry = 0;
 /* When passt was last seen to go, so that the retry has an end. */
 static time_t g_passt_lost_at = 0;
@@ -220,15 +222,16 @@ static void passt_write_nonblock(uint8_t *buf, int len)
   int off = 0, w;
   if ((g_passt_fd < 0) || (g_passt_lost))
     {
-    /* Guest frames while passt is away (a republish restarts it): counted,
-       said once then every 200; the length prefix is not a frame. */
-    static unsigned long dropped;
+    /* Guest frames while passt is away, counted: said only once the absence
+       lasts (passt_try_again), a delete or a republish stops it on purpose;
+       the length prefix is not a frame. */
     if (len != PASST_LEN_PREFIX)
-      dropped += 1;
-    if ((len != PASST_LEN_PREFIX) && (dropped == 1))
-      KERR("WARNING passt away, guest frames dropped from now on");
-    if ((len != PASST_LEN_PREFIX) && (g_passt_fd < 0) && ((dropped % 200) == 0))
-      KERR("WARNING passt away, %lu guest frame(s) dropped so far", dropped);
+      {
+      g_passt_dropped += 1;
+      if ((g_passt_warned) && ((g_passt_dropped % 200) == 0))
+        KERR("WARNING passt away, %lu guest frame(s) dropped so far",
+             g_passt_dropped);
+      }
     return;
     }
   if (g_bl_first)
@@ -252,7 +255,10 @@ static void passt_write_nonblock(uint8_t *buf, int len)
       continue;
     else
       {
-      KERR("WARNING passt write w=%d errno=%d, waiting for passt", w, errno);
+      /* passt gone: its socket error callback follows, and a lasting
+         absence is said there */
+      if ((errno != EPIPE) && (errno != ECONNRESET))
+        KERR("WARNING passt write w=%d errno=%d, waiting for passt", w, errno);
       g_passt_lost = 1;
       return;
       }
@@ -360,7 +366,6 @@ int passt_shuttle_connect(char *socket_path)
 
 void passt_shuttle_tap_to_passt(int tap_fd, int passt_fd)
 {
-  static uint16_t seqtap = 0;
   static uint8_t buf_rx[HEADER_TAP_MSG + MAX_FRAME];
   uint16_t seq;
   int len, buf_len, result;
@@ -375,25 +380,7 @@ void passt_shuttle_tap_to_passt(int tap_fd, int passt_fd)
   result = fct_seqtap_rx(tap_fd, buf_rx, &seq, &buf_len, &buf);
   if (result != kind_seqtap_data)
     KOUT("ERROR %d", result);
-  if (seq != ((seqtap+1)&0xFFFF))
-    {
-    /* The tap child dropped at its pipe (it says so): one line per 10 s. */
-    static unsigned long lost, last;
-    unsigned long now = (unsigned long) time(NULL);
-    lost += (uint16_t) (seq - seqtap) - 1;
-    if (now - last >= 10)
-      {
-      last = now;
-      /* With the state of this side: why the parent was not reading. */
-      KERR("WARNING %lu frame(s) from the tap child missing so far; passt_fd=%d "
-           "gen=%d tapstop=%d pasststop=%d backlog=%ld taptx_q=%ld "
-           "tap_in=%llu passt_in=%llu",
-           lost, g_passt_fd, g_passt_generation, g_tap_read_stopped,
-           g_passt_read_stopped, g_bl_bytes, g_tb_bytes,
-           g_stat_tap_frames, g_stat_passt_frames);
-      }
-    }
-  seqtap = seq;
+  /* a gap in seq is what the tap child dropped at its pipe: it says so */
   learn_from_frame(buf, buf_len);
 
   g_stat_tap_frames += 1;
@@ -499,11 +486,8 @@ static void tap_tx_backlog_drain(void)
   passt_read_flow_update();
 }
 
-/* passt keeps one guest mac, the last frame's, and addresses every frame
-   to it: a stray frame on the lan (a kernel's ipv6 solicitation) makes it
-   send to nobody, and two machines behind one nat would share that mac.
-   The destination mac is put back from the destination ip, learned from
-   the machines' own frames, for ipv4 and for the arp replies. */
+/* passt sends every frame to the last guest mac it saw: the destination mac
+   is restored from the destination ip, learned from the guests' frames. */
 static void fix_dst_mac(uint8_t *frame, int frame_len)
 {
   uint16_t type;
@@ -620,10 +604,16 @@ void passt_shuttle_passt_to_tap(int passt_fd, int tap_fd)
 static int tap_rx_cb(int llid, int fd)
 {
   unsigned long long before = g_stat_tap_frames;
+  int nb = 0;
   (void)llid;
   if (g_tb_first)
     tap_tx_backlog_drain();
-  passt_shuttle_tap_to_passt(fd, g_passt_fd);
+  do
+    {
+    passt_shuttle_tap_to_passt(fd, g_passt_fd);
+    nb += 1;
+    } while ((nb < SEQTAP_PIPE_BATCH) && (!g_tap_read_stopped) &&
+             fct_seqtap_pipe_more(fd));
   if (g_bl_first)
     backlog_drain();
   /* MUST return >0 when we actually consumed a frame. */
@@ -703,7 +693,8 @@ static void passt_try_again(void)
       {
       g_passt_warned = 1;
       KERR("WARNING passt socket %s closed and not back after 2 seconds, "
-           "%d tries", g_passt_path, g_passt_retry);
+           "%d tries, %lu guest frame(s) dropped so far", g_passt_path,
+           g_passt_retry, g_passt_dropped);
       }
     return;
     }
@@ -716,12 +707,13 @@ static void passt_try_again(void)
   g_passt_frames_at_connect = g_stat_passt_frames;
   g_passt_probe_sent = (announce_machines() > 0);
   if (g_passt_warned)
-    KERR("WARNING passt back on %s after %d tries", g_passt_path,
-         g_passt_retry);
+    KERR("WARNING passt back on %s after %d tries, %lu guest frame(s) "
+         "dropped while away", g_passt_path, g_passt_retry, g_passt_dropped);
   else
     KTRC("passt back on %s after %d tries", g_passt_path, g_passt_retry);
   g_passt_lost_at = 0;
   g_passt_warned = 0;
+  g_passt_dropped = 0;
 }
 
 void passt_shuttle_heartbeat(void)
@@ -735,7 +727,7 @@ void passt_shuttle_heartbeat(void)
   if (g_tb_first)
     tap_tx_backlog_drain();
   if (SHUTTLE_INFO && ((beat % 50) == 0))
-    KERR("STAT passt shuttle tap_in=%llu passt_in=%llu queued=%llu "
+    KERR("TRACE passt shuttle tap_in=%llu passt_in=%llu queued=%llu "
          "backlog=%ld peak=%ld drains=%llu flowstop=%d "
          "taptx_q=%ld taptx_peak=%ld pasststop=%d taptx_drop=%llu",
          g_stat_tap_frames, g_stat_passt_frames, g_stat_queued_frames,

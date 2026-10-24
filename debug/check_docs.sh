@@ -16,12 +16,14 @@ bad=0
 for d in ${DOCS}; do
   [ -d "${d}" ] || continue
   # A trailing dash, number or __LAST__ is a versioned tarball name, not a binary.
-  for n in $(grep -rhoE 'cloonix-[a-z0-9_-]+(-__LAST__)?' ${d} 2>/dev/null \
+  # The books are rst and svg: an editor swap or a patch leftover is not read.
+  for n in $(grep -rhoE 'cloonix-[a-z0-9_-]+(-__LAST__)?' ${d} \
+             --include='*.rst' --include='*.svg' 2>/dev/null \
              | grep -v -- '-$' | grep -vE -- '-([0-9]+|__LAST__)$' \
              | sort -u); do
     if ! echo "${known}" | grep -qx "${n}"; then
       echo "STALE DOC: ${n} is named in ${d} but is not in the delivery"
-      grep -rln "${n}" ${d} | sed 's/^/    /'
+      grep -rln "${n}" ${d} --include='*.rst' --include='*.svg' | sed 's/^/    /'
       bad=1
     fi
   done
@@ -57,8 +59,8 @@ fi
 hits=$(grep -rnE 'sniff +[^ ]+ +([^ -][^ ]* +)?--dump' ${DOCS} --include='*.rst' \
        --include='*.html' 2>/dev/null | python3 -c '
 import re, sys
-ok = set("ip ip6 arp tcp udp icmp icmp6 src dst host net port portrange "
-         "less greater and or not".split())
+ok = set("ip ip6 arp tcp udp icmp icmp6 igmp mpls proto src dst host net "
+         "port portrange less greater and or not".split())
 for line in sys.stdin:
     flt = re.split(r" {3,}|<", line.split("--dump", 1)[1].rstrip())[0]
     for w in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", flt):

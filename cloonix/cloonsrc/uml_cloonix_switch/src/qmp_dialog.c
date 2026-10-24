@@ -177,7 +177,8 @@ static void call_cb(t_qrec *q, char *resp, int is_timeout)
         }
       else
         {
-        KERR("TOLOOKINTO %s %d %s %s", q->name, q->resp_llid, q->req, resp);
+        KERR("WARNING qmp of %s: answer %s to %s not expected (llid %d)",
+           q->name, resp, q->req, q->resp_llid);
         cb = q->resp_cb;
         q->resp_cb = NULL;
         cb(q->name, q->resp_llid, q->resp_tid, q->req, resp);
@@ -216,34 +217,51 @@ static int qmp_rx_cb(int llid, int fd)
              qrec->name, len, qrec->resp);
       else
         {
-        ptr = qrec->resp;
-        while (ptr)
+        /* Every complete answer of this read (qemu writes several at once); the
+                   rest waits for the next read. */
+        char work[MAX_RPC_MSG_LEN+1];
+        char kname[MAX_NAME_LEN];
+        int used = qrec->resp_offset + len;
+        int kept;
+        memcpy(work, qrec->resp, used);
+        work[used] = 0;
+        memset(kname, 0, MAX_NAME_LEN);
+        strncpy(kname, qrec->name, MAX_NAME_LEN-1);
+        ptr = used ? work : NULL;
+        while ((ptr) && (qmp_braces_complete(ptr, &next_ptr)))
           {
-          if (qmp_braces_complete(ptr, &next_ptr))
-            {
-            if ((!strncmp(ptr, "{\"timestamp\":", 
-                          strlen("{\"timestamp\":"))) &&
-                (strstr(ptr, "JOB_STATUS_CHANGE")))
-              {
-              /* the job events of a save, already known by the answer */
-              KTRC("%s: qmp job event skipped: %s", qrec->name, ptr);
-              ptr = next_ptr;
-              }
-            else
-              {
-              memset(name, 0, MAX_NAME_LEN);
-              strncpy(name, qrec->name, MAX_NAME_LEN-1);
-              qmp_msg_recv(qrec->name, qrec->resp);
-              call_cb(qrec, ptr, 0);
-              ptr = NULL;
-              reset_diag(name);
-              }
-            }
+          if ((!strncmp(ptr, "{\"timestamp\":",
+                        strlen("{\"timestamp\":"))) &&
+              (strstr(ptr, "JOB_STATUS_CHANGE")))
+            /* the job events of a save, already known by the answer */
+            KTRC("%s: qmp job event skipped: %s", qrec->name, ptr);
           else
             {
-            ptr = NULL;
-            qrec->resp_offset += len;
+            memset(name, 0, MAX_NAME_LEN);
+            strncpy(name, qrec->name, MAX_NAME_LEN-1);
+            qmp_msg_recv(name, ptr);
+            call_cb(qrec, ptr, 0);
+            reset_diag(name);
             }
+          /* a callback may drop the record: nothing left to keep */
+          qrec = get_qrec_with_name(kname);
+          if (!qrec)
+            return len;
+          ptr = next_ptr;
+          }
+        memset(qrec->resp, 0, MAX_RPC_MSG_LEN);
+        qrec->resp_offset = 0;
+        if (ptr)
+          {
+          kept = used - (int) (ptr - work);
+          if ((kept > 0) && (kept < MAX_RPC_MSG_LEN))
+            {
+            memcpy(qrec->resp, ptr, kept);
+            qrec->resp_offset = kept;
+            }
+          else
+            KERR("ERROR %s: %d bytes of an unfinished qmp answer cannot be "
+                 "kept, resyncing", qrec->name, kept);
           }
         }
       }
@@ -448,7 +466,7 @@ void qmp_dialog_alloc(char *name, t_end_qmp_conn cb)
   if ((!name) || (!cb))
     KOUT("%p %p", name, cb);
   if (strlen(name) < 1)
-    KERR(" ");
+    KERR("ERROR qmp request with an empty name");
   else 
     {
     qrec = get_qrec_with_name(name);

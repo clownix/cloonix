@@ -264,6 +264,11 @@ void recv_item_pos(int llid, int tid, char *name, int x, int y);
 void send_item_poseth(int llid, int tid, char *name, int num, int deg);
 void recv_item_poseth(int llid, int tid, char *name, int num, int deg);
 
+/* A note on an item, shown on the canvas: kept by the switch like the
+   layout, replayed to every topology subscriber, "" removes it. */
+void send_item_note(int llid, int tid, char *name, char *txt);
+void recv_item_note(int llid, int tid, char *name, char *txt);
+
 #define MAX_PCAP_PKT_LEN  65536
 #define MAX_PCAP_FILTER_LEN 512
 #define PCAP_TYPE_HEADER  0

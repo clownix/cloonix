@@ -1,0 +1,32 @@
+# packages - the frr_demo part of the Demo picker of the frr toy, appended to
+# demos/packages by create_frr_toy_targz.sh. Same format: "<number> <title>",
+# then "<area>/<demo>.py  <one line>". The line is the section title of the
+# FRR User Guide the demo plays.
+
+11 FRR User Guide examples
+frr_demo/bgp_conditional_advertisement.py  bgp: BGP Conditional Advertisement
+frr_demo/bgp_communities_example.py        bgp: Example Configuration (communities)
+frr_demo/bgp_misc_examples.py              bgp: Miscellaneous Configuration Examples
+frr_demo/route_server.py                   routeserver: Example of Route Server Configuration
+frr_demo/bfd_configuration.py              bfd: Configuration
+frr_demo/ospf_sample.py                    ospfd: Sample Configuration
+frr_demo/ospf6_sample.py                   ospf6d: Sample configuration
+frr_demo/isis_examples.py                  isisd: ISIS Configuration Examples
+frr_demo/isis_vrf_examples.py              isisd: ISIS Vrf Configuration Examples (modprobe vrf)
+frr_demo/openfabric_sample.py              fabricd: Sample configuration
+frr_demo/rip_sample.py                     ripd: Sample configuration
+frr_demo/ripng_sample.py                   ripngd: Sample configuration
+frr_demo/babel_sample.py                   babeld: Babel sample configuration file
+frr_demo/eigrp_sample.py                   eigrpd: Sample configuration
+frr_demo/ra_example.py                     ipv6: Router Advertisement Configuration Example
+frr_demo/pbr_sample.py                     pbr: Sample configuration
+frr_demo/pim_sample.py                     pim: Sample configuration
+frr_demo/vrrp_configuring.py               vrrp: Configuring VRRP (modprobe macvlan)
+frr_demo/evpn_sample.py                    evpn: Sample Configuration (modprobe vxlan bridge)
+frr_demo/ldp_sample.py                     ldpd: Sample configuration (modprobe mpls_router mpls_iptunnel)
+frr_demo/isis_sr_examples.py               isisd: ISIS Configuration Examples, Segment Routing (modprobe mpls_router mpls_iptunnel)
+frr_demo/pathd_explicit.py                 pathd: Explicit Segment Lists (modprobe mpls_router mpls_iptunnel)
+frr_demo/pathd_pcep.py                     pathd: PCEP Support, with the Pola PCE (modprobe mpls_router mpls_iptunnel)
+frr_demo/l3vpn_vrfs.py                     bgp: L3VPN VRFs, over segment routing (modprobe vrf mpls_router mpls_iptunnel)
+frr_demo/l3vpn_srv6.py                     bgp: L3VPN SRv6 (modprobe vrf, kernel 5.11)
+frr_demo/nhrp_example.py                   nhrpd: Configuration Example (modprobe ip_gre)

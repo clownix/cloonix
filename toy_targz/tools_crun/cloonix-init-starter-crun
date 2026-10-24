@@ -61,12 +61,21 @@ for i in /usr/sbin/rsyslogd /sbin/rsyslogd ; do
     break
   fi
 done
-# cloonix-main-server is Type=forking: it daemonises and returns, exactly as
-# the unit file said, so pid 1 has to stay alive by itself afterwards.
+# The server daemonises: pid 1 lives as long as it, a zombie counts as gone.
+server_alive() {
+  local f line
+  for f in /proc/[0-9]*/stat; do
+    read -r line 2>/dev/null < ${f} || continue
+    case "${line}" in
+      *"(cloonix-main-se) "[!Z]*) return 0 ;;
+    esac
+  done
+  return 1
+}
 ${ECHO} "/cloonix/cloonfs/bin/cloonix-main-server /cloonix/cloonfs/etc/cloonix.cfg __IDENT__"
 /cloonix/cloonfs/bin/cloonix-main-server /cloonix/cloonfs/etc/cloonix.cfg __IDENT__
-${ECHO} "LAUNCHING the keep-alive loop"
-while true; do
-  ${SLEEP} 3600
+while server_alive; do
+  ${SLEEP} 2
 done
+${ECHO} "cloonix-main-server gone, the container ends"
 

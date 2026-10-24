@@ -29,8 +29,6 @@ only by being routed through gw.
          it is asked -- then cnf publishes it, the same knock is answered,
          and publish=none takes it away again.
 
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself.
 
 Image: nft_trixie
 Size:  3 containers, 2 lans, 1 nat
@@ -46,7 +44,7 @@ THE PACKET TO CATCH
   first surprise. The second is on the outward interface: every address
   the guest ever writes is 10.117.0.x, and nothing outside ever sees it.
 
-  ACT 5 is the other direction, and the pair is the point. With nothing
+  ACT 5 is the other direction. With nothing
   published, a connection from the host to the guest never appears on
   this wire at all -- there is nothing to drop, because nothing was ever
   translated. With publish=8080:80 the same connection arrives:
@@ -57,17 +55,12 @@ THE PACKET TO CATCH
   subscription proves which of the two is on the wire.
 
 Important
-  The image is nft_trixie and not the plain one, for three things the plain
-  image has not: python3, because the demo writes its own dhcp client into
-  the guest; curl, for the fetches; and nftables, for the masquerade of
-  ACT 4. No image here carries a dhcp client -- a cloonix container is
-  addressed by whoever made it -- so the demo carries one, which costs a
-  hundred lines and buys the printed offer that ACT 1 is about.
-  ACT 3 needs no internet: the demo starts a server on 127.0.0.1 of the
-  machine it runs on and fetches it from inside the guest, so the loopback
-  mapping is shown even where ACT 2 has nothing to reach.
-  One nat serves one guest. For several guests, create several nats, or
-  route them through one guest as this demo does.
+  nft_trixie, not the plain image: python3 for the dhcp client the demo
+  writes into the guest, no image carrying one; curl for the fetches;
+  nftables for the masquerade of ACT 4.
+  ACT 3 needs no internet: its server runs on 127.0.0.1 of this machine.
+  For several guests, several nats, or one guest routing the others, as
+  here.
 """
 import os
 import shlex
@@ -85,9 +78,9 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    NET, CLOONIX, answers, capturable, check_net, erase_net, in_lst,
-    parse_bytes_line, place, put, reached, run, show, ssh, step, story,
-    wait_exists)
+    NET, CLOONIX, answers, capturable, check_net, erase_net, parse_bytes_line,
+    place, put, reached, run, show, ssh, step, story, wait_exists, unavailable,
+    guarded)
 
 # nft_trixie: python3 (the demo's own dhcp client), curl and nftables.
 ROOTFS_CHOICES = ("nft_trixie",)
@@ -131,7 +124,7 @@ def choose_rootfs():
         if ok:
             return cand
         said = (r.stdout + r.stderr).strip() or "nothing"
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -601,7 +594,7 @@ def main():
     else:
         story("    That did not come back, so the mapping did not work on")
         story("    this run. It is what vm_create/*/doitall.sh depends on,")
-        story("    so it is worth finding out why before building images.")
+        story("    so find out why before building images.")
     srv.shutdown()
     story()
 
@@ -730,7 +723,7 @@ def main():
         sys.exit("\n" + "\n".join("  " + b for b in bad))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the dhcp exchange again, with nothing but a subscription:
     cloonix cli %s sniff gw eth1 --dump udp port 67
@@ -749,16 +742,4 @@ the network is left up. Things worth trying:
 """ % (NET, NET, NET, PASST_GW, NET, NET))
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit as stop:
-        if stop.code:
-            sys.stderr.write("%s\n" % stop.code)
-            up = [n for n in list(ALL) + [NAT] if in_lst(n)]
-            if up:
-                sys.stderr.write("Still running: %s\n" % ", ".join(up))
-            raise SystemExit(1)
-        raise
-    except RuntimeError as err:
-        sys.stderr.write("%s\n" % err)
-        raise SystemExit(1)
+    guarded(main, list(ALL) + [NAT])

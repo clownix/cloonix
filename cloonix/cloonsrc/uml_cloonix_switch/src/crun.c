@@ -143,6 +143,7 @@ void crun_sigdiag_resp(int llid, char *line)
       {
       snprintf(txt, MAX_PATH_LEN-1, "%s wlan%d: %s", name, idx,
                why ? why+7 : "ko");
+      KERR("ERROR %s", txt);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), txt);
       }
     }
@@ -172,6 +173,7 @@ void crun_sigdiag_resp(int llid, char *line)
       char txt[MAX_PATH_LEN];
       snprintf(txt, MAX_PATH_LEN-1, "CNT LIMIT %s: %s", name,
                why ? why+7 : "ko");
+      KERR("ERROR %s", txt);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), txt);
       }
     }
@@ -190,12 +192,12 @@ void crun_sigdiag_resp(int llid, char *line)
   else if (sscanf(line,
   "cloonsuid_crun_killed name=%63s crun_pid=%d", name, &crun_pid) == 2)
     {
-    KERR("ERROR %s: its process pid %d died, deleting it", name, crun_pid);
     cur = find_cnt(name);
     if (cur == NULL) 
       cnt_gone(name, line);
     else
       {
+      KERR("ERROR %s: its process pid %d died, deleting it", name, crun_pid);
       utils_send_status_ko(&(cur->cli_llid),&(cur->cli_tid),"CNT KILLED");
       cur->process_gone = 1;
       if (cur->poweroff_done == 0)
@@ -223,19 +225,17 @@ void crun_sigdiag_resp(int llid, char *line)
       KTRC("%s", line);
     else
       {
+      /* One refusal, one line: the reason of suid_power, or its whole answer
+         when it gave none, for the log and for the client. */
+      char txt[MAX_PATH_LEN];
+      snprintf(txt, MAX_PATH_LEN-1, "CNT ERROR %s: %s", name,
+               why ? why+7 : line);
       KERR("ERROR %s refused: %s", name, why ? why+7 : line);
       snprintf(req, MAX_PATH_LEN-1,
       "cloonsuid_crun_ERROR name=%s", name);
       if (send_sig_suid_power(llid, req))
         KERR("ERROR %d %s", llid, name);
-      if (why)
-        {
-        char txt[MAX_PATH_LEN];
-        snprintf(txt, MAX_PATH_LEN-1, "CNT ERROR %s: %s", name, why+7);
-        utils_send_status_ko(&(cur->cli_llid),&(cur->cli_tid), txt);
-        }
-      else
-        utils_send_status_ko(&(cur->cli_llid),&(cur->cli_tid),"CNT ERROR");
+      utils_send_status_ko(&(cur->cli_llid),&(cur->cli_tid), txt);
       cnt_free_cnt(name);
       }
     }
@@ -247,6 +247,7 @@ void crun_sigdiag_resp(int llid, char *line)
     cur = find_cnt(name);
     if (cur != NULL)
       {
+      KERR("ERROR %s: %s", name, line);
       utils_send_status_ko(&(cur->cli_llid),&(cur->cli_tid),"ERROR CNT");
       cnt_free_cnt(name);
       }

@@ -1,27 +1,27 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The exec pipe wire, read by the linux and windows cxp servers alike.     */
-/* Wire format, both directions:                                             */
-/*     4 bytes big endian length (opcode + payload), 1 opcode byte, payload  */
-/*   client -> guest                      guest -> client                    */
-/*     0x01 EXEC   json {cmd}               0x81 STDOUT raw                  */
-/*     0x02 PTY    json {cmd,cols,rows}     0x82 STDERR raw                  */
-/*     0x03 STDIN  raw                      0x83 EXIT   json {code}          */
-/*     0x04 EOF                             0x84 ERROR  json {txt}           */
-/*     0x05 WINCH  json {cols,rows}         0x85 META   json {size,mode}     */
-/*     0x06 PUT    json {path,name,mode}    0x86 DATA   raw                  */
-/*     0x07 DATA   raw                      0x87 END                         */
-/*     0x08 END                                                              */
-/*     0x09 GET    json {path}                                               */
-/*     0x0A PUTTREE json {path}             0x8B ENTRY  json {name,type,     */
-/*     0x0B ENTRY  json {name,type,mode,            mode,size,link}          */
-/*                      size,link}                                           */
-/*     0x0C GETTREE json {path}                                              */
-/*     0x0D LIST    json {path}                                              */
+/* The exec pipe wire, read by the linux and windows cxp servers alike. */
+/* Wire format, both directions: */
+/* 4 bytes big endian length (opcode + payload), 1 opcode byte, payload */
+/* client -> guest                      guest -> client */
+/* 0x01 EXEC   json {cmd}               0x81 STDOUT raw */
+/* 0x02 PTY    json {cmd,cols,rows}     0x82 STDERR raw */
+/* 0x03 STDIN  raw                      0x83 EXIT   json {code} */
+/* 0x04 EOF                             0x84 ERROR  json {txt} */
+/* 0x05 WINCH  json {cols,rows}         0x85 META   json {size,mode} */
+/* 0x06 PUT    json {path,name,mode}    0x86 DATA   raw */
+/* 0x07 DATA   raw                      0x87 END */
+/* 0x08 END */
+/* 0x09 GET    json {path} */
+/* 0x0A PUTTREE json {path}             0x8B ENTRY  json {name,type, */
+/* 0x0B ENTRY  json {name,type,mode,            mode,size,link} */
+/* size,link} */
+/* 0x0C GETTREE json {path} */
+/* 0x0D LIST    json {path} */
 /* A tree: PUTTREE, then per member ENTRY followed by its DATA frames, then */
-/* END. type is "d", "f" or "l", link holds a symlink target. Names are     */
+/* END. type is "d", "f" or "l", link holds a symlink target. Names are */
 /* relative, "/" separated, refused if absolute or holding "..". GETTREE is */
-/* the reverse. LIST: one directory, an ENTRY per bare member name, END,    */
-/* then EXIT carrying the path the guest settled on.                        */
+/* the reverse. LIST: one directory, an ENTRY per bare member name, END, */
+/* then EXIT carrying the path the guest settled on. */
 #ifndef CXP_WIRE_H
 #define CXP_WIRE_H
 

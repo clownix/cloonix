@@ -851,24 +851,10 @@ typedef struct frame_data_s
 
 } frame_data_t;
 
-/* Structure passed to the file dissector */
-typedef struct file_data_s
-{
-    wtap_block_t pkt_block;         /**< NULL if not available */
-    struct epan_dissect *color_edt; /** Used strictly for "coloring rules" */
-
-} file_data_t;
-
 /*
  * Dissectors should never modify the record data.
  */
 extern void dissect_record(struct epan_dissect *edt, int file_type_subtype,
-    wtap_rec *rec, tvbuff_t *tvb, frame_data *fd, column_info *cinfo);
-
-/*
- * Dissectors should never modify the packet data.
- */
-extern void dissect_file(struct epan_dissect *edt,
     wtap_rec *rec, tvbuff_t *tvb, frame_data *fd, column_info *cinfo);
 
 /* Structure passed to the ethertype dissector */

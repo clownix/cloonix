@@ -11,9 +11,7 @@ typedef struct t_ovs_c2c
   char vhost[MAX_NAME_LEN];
   char mac[MAX_NAME_LEN];
   char dist_passwd[MSG_DIGEST_LEN];
-  int  destroy_c2c_req;
   int  del_snf_ethv_sent;
-  int  free_c2c_req;
   int count;
   int ovs_llid;
   int pid;
@@ -51,11 +49,6 @@ typedef struct t_ovs_c2c
   int count_state_master_c2c_start_done;
   int count_state_master_up_initialised;
   int count_state_master_try_connect_to_peer;
-  /* Master reborn from a restart: bounded wait for its peer, a fresh one waits for ever. */
-  int born_from_restart;
-  /* Set when this side has given up for good: carefull_destroy_c2c must then
-     let it die without re-arming the restart a master normally gets. */
-  int give_up_no_restart;
   int count_state_master_connection_peered;
   int count_state_master_udp_peer_conf_sent;
   int count_state_master_udp_peer_conf_received;
@@ -109,8 +102,6 @@ int ovs_c2c_mac_mangle(char *name, uint8_t *mac);
 void ovs_c2c_proxy_dist_udp_ip_port_OK(char *name,
                                        uint32_t ip, uint16_t udp_port);
 
-void ovs_c2c_proxy_dist_tcp_ip_port_OK(char *name,
-                                       uint32_t ip, uint16_t tcp_port);
 
 void ovs_c2c_transmit_get_free_udp_port(char *name, uint16_t udp_port);
 void carefull_destroy_c2c(t_ovs_c2c *cur);

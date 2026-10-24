@@ -3,11 +3,11 @@
 
     ./realnet.py [net]              the net defaults to nemo
 
-The user book gives the recipe for a machine that runs cloonix and is a
-station of 192.168.100.0/24: a guest of its net becomes another station of
-that segment through a tap put into the kernel bridge that holds the cable.
-Here the "real network" is a lan of the outer net, so the recipe can be
-played on any machine without touching its cables::
+The user book gives the recipe for a machine running cloonix, a station of
+192.168.100.0/24: a guest of its net becomes another station of the segment
+through a tap put into the kernel bridge holding the cable. Here the real
+network is a lan of the outer net, so the recipe plays on any machine
+without touching its cables::
 
   outer net (nemo)
   .-----------------------------------------------------------------.
@@ -31,20 +31,19 @@ played on any machine without touching its cables::
          192.168.100.153 on cnt1, and a ping to station
   ACT 5  the icmp seen on the outer lan, at the eth0 of station
 
-The inner net is driven through the outer one: every inner command is a
-"cloonix cli nemo ssh endu" carrying a "cloonix cli endu ..." -- the host
-has no address on the lan of the two kvm, so the inner server is reachable
-from the outside only that way. The kvm endu carries the net endu of
-cloonix_config.py, whose cloonix_ip is 192.168.100.175: the config is the
-same file on both sides, so the inner server binds the address the recipe
-gives the bridge.
+Every inner command is a "cloonix cli nemo ssh endu" carrying a "cloonix
+cli endu ...": the host has no address on the lan of the two kvm. The net
+endu of cloonix_config.py has cloonix_ip 192.168.100.175, the config being
+the same file on both sides, so the inner server binds the address the
+recipe gives the bridge. Nothing of the host network is touched.
 
-Needs cloonix INSTALLED on this host (/usr/libexec/cloonix), not only on
-the PATH, python_trixie.qcow2 (vm_create/cnt_kvm_demo/kvm_python_trixie.sh),
-trixie.qcow2 and the container image trixie in /var/lib/cloonix/bulk. Standard library only.
+cloonix is installed on this host, /usr/libexec/cloonix: that installation
+is what is copied. endu needs python3 for the client: python_trixie.qcow2,
+trixie.qcow2 plus that package, built by
+vm_create/cnt_kvm_demo/kvm_python_trixie.sh.
 
 Image: python_trixie.qcow2, trixie.qcow2, trixie
-Size:  2 kvm, 1 lan, and inside one kvm a second cloonix with
+Size:  2 kvm, 1 lan, and inside one kvm a second cloonix with 1 cnt, 1 tap, 1 lan
 
 THE PACKET TO CATCH
 -------------------
@@ -55,12 +54,6 @@ THE PACKET TO CATCH
     cloonix cli nemo sniff station eth0 --bytes icmp
 
   The demo counts them itself while cnt1 pings.
-
-Important
-  Needs cloonix installed on this host (the bundle, /usr/libexec/cloonix),
-  not only a client on the PATH: it is that installation that is copied.
-  The kvm endu needs python3 for the client, which trixie.qcow2 has not:
-  python_trixie.qcow2 is trixie.qcow2 plus that package. Nothing of the host network is touched.
 """
 import os
 import shlex
@@ -75,7 +68,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    CLOONIX, NET, erase_net, run, show, step, story)
+    CLOONIX, NET, erase_net, run, show, step, story, unavailable)
 
 INNER = "endu"                       # the net of cloonix_config.py at .175
 USER = "cloonuser"                   # runs the inner net
@@ -107,8 +100,8 @@ def ssh(node, cmd, check=True):
 def inner(cmd, check=True):
     """One cloonix command of the INNER net, typed inside endu.
 
-    Printed on two lines: the outer ssh that carries it, then the inner
-    command as it reads from a shell of endu.
+    Printed as one line to paste on the host: the outer ssh that carries it,
+    the inner command quoted inside it, as it reads from a shell of endu.
     """
     print("cloonix cli %s ssh %s '%s'" % (NET, INNER, cmd))
     r = subprocess.run(CLOONIX + ["cli", NET, "ssh", INNER, cmd],
@@ -137,7 +130,7 @@ def wait_answer(node, timeout=180):
 
 r = run("cloonix cli %s dump commands" % NET)
 if r.returncode:
-    sys.exit("no answer from a cloonix net called '%s'.\n"
+    unavailable("no answer from a cloonix net called '%s'.\n"
              "  the client said: %s\n"
              "  start it:  cloonix start %s"
              % (NET, (r.stderr + r.stdout).strip() or "nothing", NET))
@@ -152,7 +145,7 @@ for d in ("/" + TREE[0] + "/cloonfs", "/" + TREE[1], "/" + TREE[2]):
 bulk_tgz = os.path.join(BULK, CNT_ROOTFS + ".tar.gz")
 bulk_dir = os.path.join(BULK, CNT_ROOTFS)
 if not (os.path.isfile(bulk_tgz) or os.path.isdir(bulk_dir)):
-    sys.exit("no container image %s in %s: fetch it\n"
+    unavailable("no container image %s in %s: fetch it\n"
              "    cd %s\n"
              "    wget https://clownix.net/downloads/cnt_bulk/"
              "%s.tar.gz\n"
@@ -174,13 +167,13 @@ place(INNER, "station")
 r = run("cloonix cli %s add kvm %s ram=4000 cpu=2 eth=1 %s"
         % (NET, INNER, KVM_ROOTFS))
 if r.returncode:
-    sys.exit("no virtual machine on %s:\n  %s\n  build it: "
+    unavailable("no virtual machine on %s:\n  %s\n  build it: "
              "cd vm_create/cnt_kvm_demo && ./kvm_python_trixie.sh"
              % (KVM_ROOTFS, (r.stdout + r.stderr).strip()))
 r = run("cloonix cli %s add kvm station ram=1000 cpu=2 eth=1 %s"
         % (NET, STATION_ROOTFS))
 if r.returncode:
-    sys.exit("no virtual machine on %s:\n  %s\n  build it: "
+    unavailable("no virtual machine on %s:\n  %s\n  build it: "
              "cd vm_create/cnt_kvm && ./kvm_trixie.sh"
              % (STATION_ROOTFS, (r.stdout + r.stderr).strip()))
 run("cloonix cli %s plug %s eth0 lan1" % (NET, INNER))
@@ -293,7 +286,7 @@ step("ACT 4  the recipe on the inner net: cnt1 as a station of the segment")
 r = inner("cloonix cli %s add cnt cnt1 eth=1 %s" % (INNER, CNT_ROOTFS),
           check=False)
 if r.returncode:
-    sys.exit("the inner server would not start a container on %s:\n  %s"
+    unavailable("the inner server would not start a container on %s:\n  %s"
              % (CNT_ROOTFS, (r.stdout + r.stderr).strip()))
 
 def inner_evidence(why):

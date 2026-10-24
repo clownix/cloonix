@@ -11,12 +11,8 @@ ATOP_MIN_WIDTH = 80
 ATOP_GAP = 3
 
 class _AtopCanvas:
-    """A character grid, plus the one thing worth counting while drawing.
-
-    Every place a cable crosses another is a place the drawing gets harder
-    to follow, so the crossings are counted as they are made and the caller
-    decides, once the whole thing is down, whether what came out is a
-    picture or a thicket.
+    """A character grid that counts the cable crossings it draws; the caller
+    decides from the count whether the drawing is shown.
     """
 
     def __init__(self, w, h):
@@ -135,14 +131,12 @@ def _atop_components(vx, edges):
     return out
 
 def _atop_levels(vx, edges, comp):
-    """Rows, by breadth first from the middle of the component.
+    """Rows, breadth first from the middle of the component.
 
-    The root decides the height. From one end of a chain the drawing is as
-    tall as the chain is long; from its middle it is half that and reads
-    outwards both ways. So the root is the box whose furthest box is
-    nearest -- the centre -- and among equals the one with the most cables,
-    which puts a lan with ten machines on it above the ten rather than
-    somewhere in the middle of them."""
+    The root is the box whose furthest box is nearest, the centre, so the
+    drawing is half as tall as from an end; among equals the box with the most
+    cables, which puts a lan above its machines.
+    """
     best = None
     for key in comp:
         level = _atop_bfs(vx, edges, key)
@@ -228,15 +222,14 @@ def _atop_place(vx, rows):
     return total
 
 def _atop_spread(targets, sizes, left, right, gap):
-    """Port columns as near as they can be to where their cable is going.
+    """Port columns as near as they can be to where their cable goes.
 
-    Each port wants to sit directly above (or below) the far end of its
-    cable, so that the cable comes out a straight line. They cannot all have
-    it: they must stay inside their box and keep clear of each other. This
-    pushes them apart from the left, then back in from the right, then apart
-    again, which lands every one of them on its wish or as close to it as
-    the two constraints allow. The box was measured wide enough for the
-    tightest packing, so this always terminates with them in order."""
+    Each port wants the column above or below the far end of its cable, inside
+    its box and clear of the others: pushed apart from the left, back from the
+    right, apart again, each lands on its wish or the nearest the constraints
+    allow. The box is wide enough for the tightest packing, so the ports end in
+    order.
+    """
     n = len(targets)
     step = [sizes[i] + gap for i in range(n)]
     p = list(targets)
@@ -251,18 +244,14 @@ def _atop_spread(targets, sizes, left, right, gap):
     return p
 
 def _atop_ports(vx, edges, rows):
-    """Which column each cable leaves its box by, row by row from the top.
+    """The column each cable leaves its box by, row by row from the top.
 
-    A box sorts its cables by where the far end sits, so they leave it in
-    the same left to right order as the boxes they go to. That alone removes
-    most of the crossings any other order would make. Where the far end is
-    in the row above, its port column is already decided and is taken as the
-    target, so the cable comes out straight; where it is in the row below,
-    the middle of that box is the best guess there is.
-
-    On an object the port column is where the interface number is printed,
-    so every number sits at the end of its own cable and nothing has to be
-    matched up by eye."""
+    A box sorts its cables by where the far end sits, so they leave in the left
+    to right order of their targets, which removes most crossings. A far end in
+    the row above gives its port column, decided already, so the cable is
+    straight; one in the row below gives the middle of its box. On an object
+    the port column is where the interface number is printed.
+    """
     for lv in sorted(rows):
         for k in rows[lv]:
             v = vx[k]
@@ -291,14 +280,11 @@ def _atop_ports(vx, edges, rows):
                 v.ports[idx] = cols[i]
 
 def _atop_channels(band_edges):
-    """One row of the band per horizontal run, two runs sharing a row
-    whenever they do not overlap. A cable that is already straight takes no
-    row at all, and after the port placement above most of them are.
-
-    The order the rows are handed out in is what keeps a fan tidy: the cable
-    reaching furthest out gets the row nearest the box it leaves, so the
-    ones inside it pass underneath rather than through. Done the other way
-    round, every cable of a fan crosses every other."""
+    """One row of the band per horizontal run, two runs sharing a row when they
+    do not overlap; a straight cable takes none. The cable reaching furthest
+    gets the row nearest its box, so the ones inside it pass under it rather
+    than through.
+    """
     chan = {}
     used = []
     left = sorted([e for e in band_edges if e[2] < e[1]],
@@ -386,12 +372,10 @@ def _atop_draw(vx, edges, rows, total_w):
 def render_topo_ascii(topo, width=None):
     """The topology as a drawing, or a line saying why not.
 
-    Each piece of the net that hangs together is drawn on its own, so a net
-    cut in two by a missing cable comes out as two drawings, which is the
-    quickest way there is to see that it IS cut in two. Objects on no lan at
-    all are named on one line at the end rather than drawn as boxes with
-    nothing attached, and a lan with a single end is noted under the drawing
-    the same way "topo" flags it."""
+    Each connected piece is drawn on its own, so a net cut in two comes out as
+    two drawings; objects on no lan are named on one line, and a lan with a
+    single end is noted under the drawing, as topo flags it.
+    """
     if width is None:
         width = CL.term_size()[0]
     width = max(width, ATOP_MIN_WIDTH)

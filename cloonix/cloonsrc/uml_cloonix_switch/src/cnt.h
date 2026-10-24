@@ -41,6 +41,7 @@ int  cnt_add_lan(int llid, int tid, char *name, int num,
                        char *lan, char *err);
 int  cnt_del_lan(int llid, int tid, char *name, int num,
                        char *lan, char *err);
+int  cnt_is_going(char *name);
 int  cnt_name_exists(char *name, int *nb_eth);
 int cnt_dyn_snf(char *name, int num, int val);
 int  cnt_create(int llid, int cli_llid, int cli_tid, int vm_id,

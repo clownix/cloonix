@@ -5,7 +5,8 @@
     ./demo_voice.py cloonix/cnt.py    one line of it
 
 demos/voice gives the phrase of each demo; its clip is
-audio/<area>/<demo>.ogg in jscloonix. A clip no line asks for is removed.
+audio/<area>/<demo>.ogg in jscloonix. PANEL gives the clips of the Demo
+panel itself, audio/<name>.ogg. A clip nobody asks for is removed.
 
 Needs kokoro and ffmpeg, on the machine that makes the clips only:
   pip install kokoro-onnx
@@ -28,6 +29,9 @@ MODEL = os.path.expanduser(os.environ.get("KOKORO_DIR", "~/kokoro"))
 VOICE = "bf_emma"          # british english, female
 SPEED = 0.9                # a little slower than trained, for a foreign ear
 PAUSE = 0.5                # seconds between two sentences
+
+# the Demo panel's own clips: a demo stopped, before the browser reads why
+PANEL = {"demo_failed": "The demo stopped. Here is why."}
 
 def phrases():
     out = {}
@@ -56,6 +60,9 @@ def main():
     want = phrases()
     clips = dict((os.path.join(AUDIO, d[:-len(".py")] + ".ogg"), d)
                  for d in want)
+    for name, text in PANEL.items():
+        clips[os.path.join(AUDIO, name + ".ogg")] = name
+        want[name] = text
     for old in glob.glob(os.path.join(AUDIO, "**", "*.ogg"), recursive=True):
         if old not in clips:
             os.remove(old)

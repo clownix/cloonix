@@ -1,5 +1,5 @@
 #!/bin/bash
-# The insider agents iso, built from the sources beside this script.
+# The insider agents: an iso per kind of kvm, a directory for the cnt.
 HERE=`pwd`
 set -e
 
@@ -16,11 +16,14 @@ XORRISO="/usr/bin/xorrisofs"
 CDROM="${TARGET}/cdrom"
 CDROM_WIN="${TARGET}/cdrom_win"
 CDROM_BSD="${TARGET}/cdrom_bsd"
+# copied by suid-power into the cnf_fs of every cnt
+CNT="${TARGET}/insider_agent_cnt"
 
 rm -f ${TARGET}/${ISO_NAME} ${TARGET}/${ISO_WIN_NAME} ${TARGET}/${ISO_BSD_NAME}
-rm -rf ${CDROM} ${CDROM_WIN} ${CDROM_BSD}
+rm -rf ${CDROM} ${CDROM_WIN} ${CDROM_BSD} ${CNT}
 
 mkdir -p ${CDROM}/lib
+mkdir -p ${CNT}/lib
 mkdir -p ${CDROM_WIN}
 mkdir -p ${CDROM_BSD}
 
@@ -31,8 +34,11 @@ export CFLAGS=""
 
 cd ${HERE}/cloonix_agent
 make clean
-make
+make SIDE="main_kvm.c wifi.c"
 cp cloonix-agent ${CDROM}
+make clean
+make SIDE="main_cnt.c wifi_none.c"
+cp cloonix-agent ${CNT}
 make clean
 
 if ! which x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
@@ -64,8 +70,9 @@ make clean
 cd ${HERE}/cloonix_cxp_srv
 make clean
 make
+strip cloonix-cxp-srv
 cp cloonix-cxp-srv ${CDROM}
-strip ${CDROM}/cloonix-cxp-srv
+cp cloonix-cxp-srv ${CNT}
 make clean
 
 for i in clang ld.lld llvm-strip; do
@@ -175,7 +182,7 @@ export LDFLAGS="${LDFLAGS} -fuse-ld=lld -static --rtlib=libgcc"
 export LDFLAGS="${LDFLAGS} -Wno-unused-command-line-argument"
 cd ${HERE}/cloonix_agent
 make clean
-make
+make SIDE="main_kvm.c wifi_none.c"
 cp cloonix-agent ${CDROM_BSD}
 make clean
 cd ${HERE}/cloonix_cxp_srv
@@ -195,22 +202,25 @@ PATCHELF="/tmp/patchelf/src/patchelf"
 LIBC=$(ldd ${CDROM}/cloonix-cxp-srv | grep libc.so |awk '{print $3}')
 LIBD=$(ldd ${CDROM}/cloonix-cxp-srv | grep ld-linux |awk '{print $1}')
 LDLINUX="${LIB_DST}/ld-linux-x86-64.so.2"
-cp -vf ${LIBD} ${CDROM}/lib
-cp -vf ${LIBC} ${CDROM}/lib
+for d in ${CDROM} ${CNT}; do
+  cp -vf ${LIBD} ${d}/lib
+  cp -vf ${LIBC} ${d}/lib
+done
 
 echo $LIBC
 echo $LIBD
 
 set +e
-for i in "cloonix-agent" \
-         "cloonix-cxp-srv" \
-         ; do
-  ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${CDROM}/${i}
-  ${PATCHELF} --set-interpreter ${LDLINUX} ${CDROM}/${i}
+for d in ${CDROM} ${CNT}; do
+  for i in "cloonix-agent" "cloonix-cxp-srv"; do
+    ${PATCHELF} --force-rpath --set-rpath ${RPATH_LIB} ${d}/${i}
+    ${PATCHELF} --set-interpreter ${LDLINUX} ${d}/${i}
+  done
 done
 set -e
 
-cp ${HERE}/init_starter/* ${CDROM}
+cp ${HERE}/init_starter/* ${CNT}
+chmod -R 755 ${CNT}
 ${XORRISO} -J -o ${TARGET}/${ISO_NAME} ${CDROM}
 ${XORRISO} -J -o ${TARGET}/${ISO_WIN_NAME} ${CDROM_WIN}
 ${XORRISO} -J -o ${TARGET}/${ISO_BSD_NAME} ${CDROM_BSD}
@@ -230,13 +240,13 @@ ISO_BSD_LIST=$(xorriso -indev ${TARGET}/${ISO_BSD_NAME} -find / \
                2>/dev/null || true)
 ISO_OFFERS=$(xorriso -indev ${TARGET}/${ISO_WIN_NAME} -toc 2>&1 \
              | grep "^ISO offers" || true)
-for i in "cloonix-agent" "cloonix-cxp-srv" "cloonixsbininit"; do
+for i in "cloonix-agent" "cloonix-cxp-srv" "lib"; do
   if ! echo "${ISO_LIST}" | grep -q "'/${i}'"; then
     echo "MISSING ON THE ISO: ${i}" >&2
     exit 1
   fi
 done
-for i in "cloonix-agent.exe" "cloonix-cxp-srv.exe"; do
+for i in "cloonix-agent.exe" "cloonix-cxp-srv.exe" "cloonixsbininit"; do
   if echo "${ISO_LIST}" | grep -q "'/${i}'"; then
     echo "ON THE LINUX ISO AND SHOULD NOT BE: ${i}" >&2
     exit 1
@@ -315,7 +325,28 @@ case "${ISO_OFFERS}" in
     ;;
 esac
 
-# The staging trees are scratch: everything in them is inside the iso, which
-# is the only thing read at run time -- suid_power extracts it with osirrox.
+# The cnt directory, as delivered: its own agent, the one of the mountbear
+# socket, never the one of the virtio port.
+for i in "cloonix-agent" "cloonix-cxp-srv" "cloonixsbininit" \
+         "lib/ld-linux-x86-64.so.2" "lib/$(basename ${LIBC})"; do
+  if [ ! -s ${CNT}/${i} ]; then
+    echo "MISSING IN ${CNT}: ${i}" >&2
+    exit 1
+  fi
+done
+if ! grep -q "/cloonixmnt/mountbear/sock" ${CNT}/cloonix-agent; then
+  echo "NOT THE CNT AGENT: ${CNT}/cloonix-agent" >&2
+  exit 1
+fi
+if grep -q "/dev/virtio-ports/" ${CNT}/cloonix-agent; then
+  echo "THE KVM AGENT IS IN ${CNT}" >&2
+  exit 1
+fi
+if grep -q "/cloonixmnt/mountbear/sock" ${CDROM}/cloonix-agent; then
+  echo "THE CNT AGENT IS ON ${ISO_NAME}" >&2
+  exit 1
+fi
+
+# The staging trees are scratch: the isos are what qemu is given.
 rm -rf ${CDROM} ${CDROM_WIN} ${CDROM_BSD}
 rm -rf /tmp/cloonix_bsd_sysroot

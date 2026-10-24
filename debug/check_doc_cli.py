@@ -65,6 +65,8 @@ OLDER = [
     (re.compile(r"--(?:publish|startup_env|vmount|mac_addr|install_cdrom|"
                 r"added_cdrom|added_disk)="), "--<value>=, <value>= now"),
 ]
+# a clip, then editor and patch leftovers, which are no part of the tree
+LEFTOVER = (".ogg", "~", ".orig", ".rej", ".bak", ".swp", ".swo")
 # the client's own lines on what it still takes, and the tests of it
 OLDER_OK = re.compile(r"older scripts|76 clients|as older|still names a wlan")
 
@@ -73,7 +75,7 @@ def older_forms():
     """(path, line, text, why) of every older form in the tree."""
     for pat in DOCS + TREE:
         for path in sorted(glob.glob(pat, recursive=True)):
-            if not os.path.isfile(path) or path.endswith(".ogg") or \
+            if not os.path.isfile(path) or path.endswith(LEFTOVER) or \
                path.endswith("check_doc_cli.py"):
                 continue
             try:

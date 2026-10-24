@@ -1,6 +1,5 @@
-/* Websocket /rec: {"cmd":"start","dir":..,"ifaces":[{"name","num"},..]} / {"cmd":"stop"}.
-   Per iface: reserve, activate snf capture, thread copies <snf_dir>/<n>_<num>_pcap_sock
-   to <dir>/<n>_eth<num>_<k>.pcap. Sends started/count/error/stopped. */
+/* ws /rec start/stop: per iface the snf capture <n>_<num>_pcap_sock copied to
+   <dir>/<n>_eth<num>_<k>.pcap; replies started/count/error/stopped. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

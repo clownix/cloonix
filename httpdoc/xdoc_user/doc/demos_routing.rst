@@ -39,7 +39,7 @@ Sixty routers in a web, image *frr_trixie*, configured in parallel::
     cloonix cli nemo ssh tod1 vtysh -c "show ip ospf neighbor"
 
 *frrspider_bgp.py* is the same sixty, each its own autonomous system peering
-with its neighbours, 280 sessions::
+with its neighbours, 140 sessions::
 
     cloonix cli nemo demo routing/frrspider_bgp.py
     cloonix cli nemo ssh tod1 vtysh -c "show bgp summary"
@@ -57,14 +57,11 @@ routing/frrmix.py
    :align: center
    :width: 100%
 
-Two protocols with two authors. OSPF, John Moy, RFC 1131 in 1989: an interior
-protocol where every router holds the map of its own network. BGP, Kirk
-Lougheed and Yakov Rekhter, RFC 1105 the same year: an exterior protocol where
-an autonomous system tells the next what it can reach and nothing more. The
-split is the architecture of the internet since the early 1990s. FRRouting
-runs both in one process family, descended from GNU Zebra begun by Kunihiro
-Ishiguro in 1996, Quagga from 2002, forked as FRR in 2017 under the Linux
-Foundation.
+The two protocols of the section above, with their authors: OSPF, the
+interior protocol, where every router holds the map of its own network, and
+BGP, the exterior one, where an autonomous system tells the next what it can
+reach and nothing more. The split is the architecture of the internet since
+the early 1990s, and FRRouting runs both in one process family.
 
 Today: the pair shown here is the usual shape of a real network: an interior
 protocol inside each site, BGP between sites and toward providers, and
@@ -93,8 +90,10 @@ routing/bird.py
    :align: center
    :width: 100%
 
-BIRD, the BIRD Internet Routing Daemon, has been developed at CZ.NIC since
-1998, led for years by Ondrej Filip and Martin Mares. It is one of the two
+BIRD, the BIRD Internet Routing Daemon, began in 1998 as a student project
+at the Faculty of Mathematics and Physics of Charles University in Prague, by
+Martin Mares, Pavel Machek and Ondrej Filip; CZ.NIC, the Czech domain
+registry, maintains it since 2009. It is one of the two
 open routing daemons carrying real internet routes at scale: many route
 servers at internet exchanges run BIRD. Where frr descends from Zebra and
 mimics a vendor's command line, BIRD has a configuration language of its own.

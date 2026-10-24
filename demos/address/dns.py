@@ -3,62 +3,52 @@
 
     ./dns.py [net]                 the net defaults to nemo
 
-Five machines and four lans:
+Five machines and four lans::
 
   user1 --lanA-- dns1 --lanC-- dnstop --lanD-- dns2 --lanB-- user2
  10.1.0.10    10.1.0.1        10.0.13.3       10.2.0.1     10.2.0.10
               10.0.13.1       10.0.23.3       10.0.23.2
                               lo 10.255.0.3
 
-Each user resolves through the machine next to it and knows no other name
-server. Neither resolver knows any answer: both forward the demo zone to the
-top server, and the address they forward to is 10.255.0.3, a loopback that
-exists on no lan. The only way to reach it is a route learned from ospf.
+Each user resolves through the machine next to it. Neither resolver knows
+an answer: both forward the demo zone to the top server, at 10.255.0.3, a
+loopback on no lan, reached only by a route learned from ospf. So routing is
+checked by a name resolving: with the adjacency between dns1 and dnstop
+down, "user2.demo.lab" does not answer, the failure a user would see.
 
-That is the point of putting bind and frr on one image. Routing is not
-checked here by reading a table, it is checked by a name resolving: if the
-adjacency between dns1 and dnstop is down, "user2.demo.lab" does not answer,
-and the failure arrives as the thing a user would actually notice.
-
-  ACT 1  ospf comes up on the three servers, and dns1 and dns2 learn a route
-         to the top server's loopback.
-  ACT 2  named starts everywhere. dnstop is authoritative for demo.lab; the
-         two others are recursive resolvers that forward that zone to it.
-  ACT 3  user1 asks its own resolver for a name on the far side, and gets
-         user2's address. Then the same the other way.
-  ACT 4  the query is caught on the wire arriving at the top server, so the
-         forwarding is proved rather than assumed.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+  ACT 1  ospf comes up on the three servers, and dns1 and dns2 learn a
+         route to the loopback of the top server.
+  ACT 2  named starts everywhere: dnstop authoritative for demo.lab, the
+         two others recursive resolvers forwarding that zone to it.
+  ACT 3  user1 asks its resolver for a name of the far side and gets the
+         address of user2; then the other way.
+  ACT 4  the query caught arriving at the top server: the forwarding
+         proved on the wire.
 
 Image: dns_trixie (bind9 and frr together)
 Size:  5 containers, 4 lans
 
 THE PACKET TO CATCH
 -------------------
-  Two protocols on one demo, and the capture that matters catches the
-  moment one depends on the other.
+  The moment one protocol depends on the other:
 
-    cloonix cli nemo cnf d1 eth1 sniff=on
-    cloonix cli nemo sniff d1 eth1 --dump udp port 53 and host 10.0.13.3
+    cloonix cli nemo cnf dns1 eth1 sniff=on
+    cloonix cli nemo sniff dns1 eth1 --dump udp port 53 and host 10.0.13.3
 
-  The packet to catch is the forwarded query on its way to dt, and the
-  answer coming back. Then stop ospf on the middle and watch the same
-  subscription: the query still leaves d1 and no answer ever returns.
-  The name has not changed and neither has bind's configuration.
+  The packet to catch is the forwarded query on its way to dnstop, and the
+  answer coming back. Stop ospf in the middle, and the query still leaves
+  dns1 with no answer ever returning, name and bind configuration
+  unchanged. The routing underneath, on the same wire, ospf being IP
+  protocol 89, reached by exclusion:
 
-  The routing underneath it, on the same wire:
+    cloonix cli nemo sniff dns1 eth1 --dump ip and not udp and not tcp
 
-    cloonix cli nemo sniff d1 eth1 --dump ip and not udp and not tcp
-
-  ospf is IP protocol 89, so this is how the filter grammar reaches it.
-  The hellos stopping is what the dns failure is made of, and having
-  both on one wire, seconds apart, is the demo.
+  The hellos stopping is what the dns failure is made of.
 
 Important
-  The unbound and knot demos are the other half of the DNS story -- this one
-  is forwarding and routing, those are validation and signing.
+  address/unbound.py and address/knot.py are the other half of the DNS
+  story: validation and zone transfer, where this one is forwarding and
+  routing.
 """
 import os
 import subprocess
@@ -75,7 +65,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, create_cnt, erase_net,
     in_parallel, net_answers, parse_bytes_line, show, step, story, trace,
-    trace_ssh, wait_ready)
+    trace_ssh, wait_ready, unavailable,
+    needs_subuid)
 
 ROOTFS_CHOICES = ("dns_trixie",)
 
@@ -149,8 +140,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -194,7 +185,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -211,7 +202,7 @@ def tools_present(node, *tools):
                             "command -v %s >/dev/null 2>&1" % t],
                            capture_output=True, stdin=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit("%s has no %s: this is not the dns image.\n"
+            unavailable("%s has no %s: this is not the dns image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -252,7 +243,7 @@ def name_resolution(node):
         ssh(node, "rm -f /etc/resolv.conf")
 
 FRRINIT = "/usr/lib/frr/frrinit.sh"
-VTYSH_CONF = "service integrated-vtysh-config"
+VTYSH_CONF = "service integrated-vtysh-config\\nusername root nopassword"
 
 DAEMON_OPTS = ('zebra_options="-A 127.0.0.1 -u root -g root"\\n'
                'ospfd_options="-A 127.0.0.1 -u root -g root"\\n'
@@ -306,6 +297,12 @@ def frr_start(node):
     ssh(node, "%s start </dev/null >/dev/null 2>&1" % FRRINIT)
     ssh(node, "for i in $(seq 1 20); do pgrep -x ospfd >/dev/null && exit 0; "
               "sleep 1; done; echo 'ospfd did not start'; exit 1")
+    # frr.conf applied and checked: under load the daemons can come up after
+    # frrinit has run vtysh -b, and watchfrr restarts them empty.
+    ssh(node, "for i in $(seq 1 30); do vtysh -b >/dev/null 2>&1; "
+              "vtysh -c 'show running-config' 2>/dev/null | "
+              "grep -qF 'router ospf' && exit 0; sleep 1; done; "
+              "echo 'frr.conf not applied, see /var/log/syslog'; exit 1")
     trace("%s: ospfd running", node)
 
 def enable_forwarding(node):
@@ -852,6 +849,7 @@ def place():
         cli("cnf", name, num, "angle=%s" % deg, ack=ACK_FAST)
 
 def main():
+    needs_subuid()
     story(HISTORY)
     step("looking for the image")
     rootfs = choose_rootfs()
@@ -965,7 +963,7 @@ def main():
                  "\n  the history says where: on a terminal, CLOONIX_DEMO_STORY=1 prints it")
 
     story("""
-the network is left up. Things worth trying, in rough order of how much
+the network is left up. Things to try, in rough order of how much
 they teach:
 
   see the whole journey again, live and decoded, at any interface:

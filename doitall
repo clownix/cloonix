@@ -16,7 +16,7 @@ VERSION_NUM=$(grep -m1 '^CLOONIX_VERSION=' ${SRC_TREE_ROOT}/cloonix/cloonix_conf
 VERSION_NUM=${VERSION_NUM#*=}
 VERSION_NUM=${VERSION_NUM%-*}
 BUNDLE="${HOME}/cloonix_bundle"
-RESBUNDLE="${HOME}/cloonix-bundle-${VERSION_NUM}"
+RESBUNDLE="${HOME}/cloonix-bundle"
 TARGZ_STORE="${BUNDLE}/targz_store"
 printf "\n\nCREATE BUNDLE VERSION ${VERSION_NUM}\n\n"
 ./allclean
@@ -78,4 +78,4 @@ else
   echo "WARNING no certificate made, this bundle will serve http only"
 fi
 cd ${HOME}
-tar zcvf cloonix-bundle-${VERSION_NUM}.tar.gz cloonix-bundle-${VERSION_NUM}
+tar zcvf cloonix-bundle.tar.gz cloonix-bundle

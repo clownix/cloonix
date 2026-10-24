@@ -1,78 +1,48 @@
 #!/usr/bin/env python3
-"""asterisk - a PBX, two SIP phones, and two calls that really carry audio.
+"""asterisk - a PBX, two SIP phones, and two calls that carry audio.
 
     ./asterisk.py [net]            the net defaults to nemo
 
-Three containers on one lan:
+Three containers on one lan::
 
     phone1 ---- lan1 ---- pbx ---- lan1 ---- phone2
    10.0.0.2            10.0.0.1            10.0.0.3
 
-pbx runs asterisk. The two phones run SIPp, which is a SIP traffic
-generator rather than a softphone: it drives a call flow from a scenario
-and can carry RTP while doing it, so a call can be placed and measured
-without a sound card anywhere.
+pbx runs asterisk. The two phones run SIPp, a SIP traffic generator and not
+a softphone: it drives a call flow from a scenario and carries RTP, so a
+call is placed and measured with no sound card.
 
-Two calls are placed, and they test different halves of a PBX.
+  CALL A  phone1 dials 100: asterisk answers itself with a 440 Hz tone,
+          Playtones, synthesised in the switch with no sound file, and
+          phone1 echoes the RTP back; six seconds later phone1 sends BYE.
+          The media test: "pjsip show channelstats" then counts packets
+          both ways, audio carried and not only negotiated.
+  CALL B  phone1 dials 200: asterisk finds the extension in the dialplan,
+          calls phone2 and bridges the two; phone2 answers, six seconds
+          pass, phone1 sends BYE and asterisk relays it. The switching
+          test: two SIP legs, one bridge, a release relayed.
 
-  CALL A  phone1 dials 100. Asterisk answers it itself, emits a 440 Hz
-          tone for as long as the call lasts, and phone1 echoes the RTP
-          straight back. Six seconds later phone1 sends BYE.
-
-          This is the media test. Asterisk is the one generating audio,
-          with Playtones, which synthesises the tone in the switch and
-          needs no sound file: an image missing the optional
-          asterisk-sound-en package still passes. Afterwards
-          "pjsip show channelstats" has non-zero packet counts in both
-          directions, which is the proof that something was actually
-          spoken and heard rather than merely negotiated.
-
-  CALL B  phone1 dials 200. Asterisk looks the extension up in the
-          dialplan, places a second call to phone2, and bridges the two.
-          phone2 answers, six seconds pass, phone1 sends BYE and asterisk
-          passes it on.
-
-          This is the switching test. Two SIP legs, one bridge, and a
-          release that has to be relayed from one leg to the other.
-
-Nothing is baked into the image. Every configuration file asterisk needs
-is written here, at run time, over cloonix cli ssh -- so the image is a plain
-alpine with asterisk and the SIP tools in it, and this demo runs on any
-image that has them.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+Every configuration file of asterisk is written at run time over cloonix
+cli ssh: the image is a plain alpine with asterisk and the SIP tools.
 
 Image: asterisk_alpine
 Size:  3 containers, 1 lan
 
 THE PACKET TO CATCH
 -------------------
-  This is the demo where a filter is the only way to read anything at
-  all: cloonix/snf is the one about the capture path itself.
-
   A call is two conversations on one wire. The signalling:
 
     cloonix cli nemo cnf pbx eth0 sniff=on
     cloonix cli nemo sniff pbx eth0 --dump udp port 5060
 
-  The packet to catch is the INVITE, and then the SDP body inside the
-  200 OK -- which is where the two phones tell each other the RTP port
-  they will actually use. Everything after that happens on ports nobody
-  chose in advance, which is why the image pins them to a narrow range:
+  The packet to catch is the INVITE, then the SDP body of the 200 OK, where
+  the phones give the RTP port they use; the media follows on the ports
+  chosen there, which the image pins to a narrow range:
 
     cloonix cli nemo sniff pbx eth0 --dump udp portrange 10000-10010
 
-  Two subscriptions running together show the shape of SIP better than
-  any explanation: a short conversation on 5060 that stops, and a long
-  stream on another port that starts when it stopped.
-
-  cloonix/snf does this deliberately and measures it: four subscriptions
-  with four filters on one noisy wire, counting what each one let through.
-
-Important
-  Every configuration file asterisk needs is written at run time over cloonix cli
-  ssh. The image is a plain alpine with asterisk and the SIP tools in it.
+  The two subscriptions together show the shape of SIP: a short exchange
+  on 5060 that stops, and a long stream on another port that starts then.
 """
 import os
 import queue
@@ -89,7 +59,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, erase_net, in_parallel,
-    net_answers, show, step, story, trace, trace_ssh, wait_ready)
+    net_answers, show, step, story, trace, trace_ssh, wait_ready, unavailable,
+    needs_subuid)
 
 # asterisk_alpine only.
 ROOTFS_CHOICES = ("asterisk_alpine",)
@@ -199,7 +170,7 @@ def ssh(node, cmd, check=True, log=None):
     """Run one command in a guest.
 
     A command whose output has been redirected into a file says nothing on
-    failure, and the bare "-> " that produced was worse than useless. When
+    failure, and the bare "-> " that produced said nothing. When
     the caller names the log, it is fetched and shown instead.
     """
     trace_ssh("ssh %s: %s", node, cmd if len(cmd) < 70 else cmd[:67] + "...")
@@ -221,8 +192,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -249,7 +220,7 @@ def put(node, path, text):
 def create_cnt(node, rootfs):
     """Create one container, and check that the server took it.
 
-    Two things made this worth its own function.
+    Two things make this a function of its own.
 
     A create issued with the short ack does not report a refusal: the client
     waits a third of a second, hears nothing, and calls that success. So a
@@ -306,7 +277,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  If /var/lib/cloonix/bulk/%s is not there, fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -476,7 +447,7 @@ class PacketStream:
 
         This matters more than it looks. Subscribing and then immediately
         making the traffic happen is a race the scenario loses about as often
-        as it wins, and it loses silently: the packets simply are not there
+        as it wins, and it loses silently: the packets are not there
         and the test reports that the INVITE never came.
         """
         end = time.time() + timeout
@@ -610,7 +581,7 @@ def describe(pkt):
 
 def sip_line(pkt):
     """The first line of a SIP message, or None. Ports checked as well as
-    content: a lot of things are text and only one of them is on 5060."""
+    content: many things are text and only one of them is on 5060."""
     d = pkt["data"]
     payload = udp_payload(pkt)
     if not payload:
@@ -637,7 +608,7 @@ def watched_call():
 
     Step 4 is the pbx hanging up, not the phone: it is the more interesting
     direction to check, because the BYE then has to be generated by the thing
-    under test rather than merely forwarded by it.
+    under test rather than forwarded by it.
     """
     story("\n--- watching the wire while a call is made and released")
     # A filter, so the server drops what this act does not want.
@@ -710,6 +681,7 @@ def place():
         cli("cnf", name, num, "angle=%s" % deg, ack=ACK_FAST)
 
 def main():
+    needs_subuid()
     story(HISTORY)
     step("looking for the image")
     rootfs = choose_rootfs()

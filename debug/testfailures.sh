@@ -1,10 +1,8 @@
 #!/bin/bash
-# testfailures.sh - things going wrong on purpose: bad input, killed
-# helpers, aborted clients, garbage on the ports, guests that misbehave, a
-# chowned image, the kill of a full net.
+# testfailures.sh - faults on purpose (bad input, killed helpers, aborted
+# clients, port garbage, bad guests, chowned image, net killed); starts nemo
+# and mito, the first unhandled fault ends it.
 #   ./testfailures.sh
-# Cleans and starts nemo and mito, then runs testfailures.py on them; the
-# first fault that is not handled ends it, the nets left as they are.
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 cd "${HERE}"

@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/sysinfo.h>
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
@@ -106,15 +107,11 @@ int get_killing_cloonix(void)
 
 int get_inhib_new_clients(void)
 {
-  if (g_inhib_new_clients)
-    {
-    KERR("ERROR Server being killed, no new client");
-    }
   return g_inhib_new_clients;
 }
 
-/* Refusals shared by every request: the server is not started, the net is  */
-/* in autodestruct, or the name already belongs to an object. 1 = refused.  */
+/* Refusals shared by every request: the server is not started, the net is */
+/* in autodestruct, or the name already belongs to an object. 1 = refused. */
 /* A refusal: one reason, the same to syslog and to the client. */
 static void refuse(int llid, int tid, const char *fmt, ...)
   __attribute__ ((format (printf, 3, 4)));
@@ -155,7 +152,10 @@ static int refuse_new_name(int llid, int tid, char *name)
     }
   if (cfg_name_is_in_use(0, name, err))
     {
-    KERR("ERROR %s refused: %s", name, err);
+    if (strlen(name))
+      KERR("ERROR %s refused: %s", name, err);
+    else
+      KERR("ERROR refused: %s", err);
     send_status_ko(llid, tid, err);
     return 1;
     }
@@ -428,8 +428,7 @@ static int test_dev_kvm(char *info)
       inside_cloonix_test_dev_kvm(info);
     if (dev_file_rw_ko("/dev/kvm", why))
       {
-      KERR("ERROR KO /dev/kvm %s, Maybe: chmod 0666 /dev/kvm", why);
-      KERR("OR: sudo setfacl -m u:${USER}:rw /dev/kvm");
+      KERR("ERROR /dev/kvm %s: sudo setfacl -m u:${USER}:rw /dev/kvm", why);
       }
     else
       result = 0;
@@ -450,8 +449,8 @@ static int image_missing(char *image, int is_qcow2, char *info)
   /* An image named, not a path: the name rule of every other object. */
   if ((int) strlen(image) >= MAX_NAME_LEN)
     {
-    snprintf(info, MAX_PATH_LEN, "image name refused: \"%.40s...\" has %d "
-             "chars, %d at most", image, (int) strlen(image), MAX_NAME_LEN-1);
+    snprintf(info, MAX_PATH_LEN, "the image name \"%.40s...\" has %d chars, "
+             "%d at most", image, (int) strlen(image), MAX_NAME_LEN-1);
     return -1;
     }
   snprintf(path, MAX_PATH_LEN-1, "%s/%s", cfg_get_bulk(), image);
@@ -512,18 +511,14 @@ static int test_qemu_kvm_wanted_files(t_topo_kvm *kvm, char *rootfs,
                                       char *info)
 {
   int result = 0;
-  char qemu_kvm_exe[MAX_PATH_LEN];
   char backing[MAX_PATH_LEN];
-  memset(qemu_kvm_exe, 0, MAX_PATH_LEN);
-  snprintf(qemu_kvm_exe, MAX_PATH_LEN-1,
-           "%s/cloonfs/bin/cloonix-qemu-system", cfg_get_bin_dir());
-  if (test_dev_kvm(info))
-    result = -1;
-  else if (!file_exists(qemu_kvm_exe, R_OK))
+  if (!pthexec_qemu_bin())
     {
-    info_path(info, "not found", qemu_kvm_exe);
+    snprintf(info, MAX_PATH_LEN-1, "this cloonix has no kvm, containers only");
     result = -1;
     }
+  else if (test_dev_kvm(info))
+    result = -1;
   else if (!file_exists(rootfs, R_OK))
     {
     if (file_exists(kvm->rootfs_input, R_OK) ||
@@ -572,17 +567,40 @@ static int bulk_disc(char *path, char *info)
 static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info, int nb_eth)
 {
   int result = 0;
+  int host_cpu = (int) sysconf(_SC_NPROCESSORS_ONLN), host_ram;
+  struct sysinfo si;
   char rootfs[2*MAX_PATH_LEN];
+  memset(&si, 0, sizeof(si));
+  sysinfo(&si);
+  host_ram = (int) ((((unsigned long long) si.totalram + si.totalswap) *
+                     si.mem_unit) >> 20);
   if (kvm->cpu == 0)
     kvm->cpu =  1;
   if (kvm->mem == 0)
     kvm->mem =  128;
-  if (kvm->vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM)
-    result |= bulk_disc(kvm->install_cdrom, info);
-  if (kvm->vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM)
-    result |= bulk_disc(kvm->added_cdrom, info);
-  if (kvm->vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK)
-    result |= bulk_disc(kvm->added_disk, info);
+  /* the host bounds a kvm: qemu takes more cpus, and more ram where the
+     kernel overcommits always */
+  if ((kvm->cpu < 0) || (kvm->cpu > host_cpu))
+    {
+    snprintf(info, MAX_PATH_LEN-1, "cpu=%d asked: a kvm has 1 to %d cpus, "
+             "those of this host", kvm->cpu, host_cpu);
+    result = -1;
+    }
+  else if ((kvm->mem < 0) || (kvm->mem > host_ram))
+    {
+    snprintf(info, MAX_PATH_LEN-1, "ram=%d asked: a kvm has %d MB at most, "
+             "the ram and swap of this host", kvm->mem, host_ram);
+    result = -1;
+    }
+  else
+    {
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_INSTALL_CDROM)
+      result |= bulk_disc(kvm->install_cdrom, info);
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_ADDED_CDROM)
+      result |= bulk_disc(kvm->added_cdrom, info);
+    if (kvm->vm_config_flags & VM_CONFIG_FLAG_ADDED_DISK)
+      result |= bulk_disc(kvm->added_disk, info);
+    }
   if (result == 0)
     {
     memset(rootfs, 0, 2*MAX_PATH_LEN);
@@ -624,15 +642,15 @@ static int test_topo_kvm(t_topo_kvm *kvm, int vm_id, char *info, int nb_eth)
     else if ((kvm->nb_tot_nb_vwif < 0) ||
              (kvm->nb_tot_nb_vwif > MAX_VWIF))
       {
-      sprintf(info, "wlan=%d refused: a kvm has %d radios at most",
-              kvm->nb_tot_nb_vwif, MAX_VWIF);
+      sprintf(info, "a kvm has %d radios at most, wlan=%d asked",
+              MAX_VWIF, kvm->nb_tot_nb_vwif);
       result = -1;
       }
     else if ((kvm->nb_tot_nb_vwif) && (kvm->vm_config_flags &
              (VM_CONFIG_FLAG_NO_QEMU_GA | VM_CONFIG_FLAG_WINDOWS |
               VM_CONFIG_FLAG_FREEBSD)))
       {
-      sprintf(info, "wlan=%d refused: the radio of a kvm is made by the "
+      sprintf(info, "wlan=%d asked: the radio of a kvm is made by the "
               "cloonix agent of a linux guest", kvm->nb_tot_nb_vwif);
       result = -1;
       }
@@ -820,26 +838,30 @@ static void delayed_add_vm(t_timer_zombie *tz)
   clownix_free(tz, __FUNCTION__);
 }
 
+/* The add waits for a kvm of that name still being deleted, 6 s at most. */
 static void timer_zombie(void *data)
 {
   char err[MAX_PATH_LEN];
   t_timer_zombie *tz = (t_timer_zombie *) data;
+  t_vm *vm = cfg_get_vm(tz->kvm.name);
   tz->count++;
-  if (tz->count >= 30)
+  memset(err, 0, MAX_PATH_LEN);
+  if ((vm) && (!vm->vm_to_be_killed))
+    snprintf(err, MAX_PATH_LEN-1, "%s is a kvm", tz->kvm.name);
+  else if (tz->count >= 30)
+    snprintf(err, MAX_PATH_LEN-1, "%s is a kvm still being deleted after "
+             "6 s", tz->kvm.name);
+  if (err[0])
     {
-    snprintf(err, sizeof(err), "zombie too long to die: %s", tz->kvm.name);
+    KERR("ERROR %s refused: %s", tz->kvm.name, err);
     send_status_ko(tz->llid, tz->tid, err);
     clownix_free(tz, __FUNCTION__);
     recv_coherency_unlock();
-    KERR("ERROR %s", tz->kvm.name);
     }
+  else if ((vm) || (cfg_is_a_zombie(tz->kvm.name)))
+    clownix_timeout_add(20, timer_zombie, (void *) tz, NULL, NULL);
   else
-    {
-    if (cfg_is_a_zombie(tz->kvm.name))
-      clownix_timeout_add(20, timer_zombie, (void *) tz, NULL, NULL);
-    else
-      delayed_add_vm(tz);
-    }
+    delayed_add_vm(tz);
 }
 
 void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
@@ -850,9 +872,9 @@ void recv_add_vm(int llid, int tid, t_topo_kvm *kvm)
   if (refuse_not_ready(llid, tid))
     return;
 
-  if (vm)
+  if ((vm) && (!vm->vm_to_be_killed))
     {
-    snprintf(err, sizeof(err), "%s is used by running vm", kvm->name);
+    snprintf(err, sizeof(err), "%s is a kvm", kvm->name);
     KERR("ERROR %s refused: %s", kvm->name, err);
     send_status_ko(llid, tid, err);
     }
@@ -1071,7 +1093,10 @@ static void pid_measure(int pid, int *cpu_tenth, int *rss_kb)
   snprintf(path, MAX_PATH_LEN-1, "/proc/%d/uptime", 0);
   fp = fopen("/proc/uptime", "r");
   if (fp == NULL)
+    {
+    KERR("ERROR /proc/uptime: %s", strerror(errno));
     return;
+    }
   if (fscanf(fp, "%lf", &uptime) != 1)
     uptime = 0;
   fclose(fp);
@@ -1485,6 +1510,13 @@ void recv_del_name(int llid, int tid, char *name)
     {
     ovs_c2c_del(llid, tid, name);
     }
+  else if (lan_get_with_name(name))
+    {
+    KERR("ERROR del refused: %s is a lan, it goes away with the unplug of "
+         "its last cable", name);
+    send_status_ko(llid, tid, "a lan goes away with the unplug of its last "
+                   "cable");
+    }
   else
     {
     KERR("ERROR del refused: nothing named %s is a kvm, cnt, tap, nat, "
@@ -1502,8 +1534,17 @@ void recv_sav_vm(int llid, int tid, char *name, char *path)
 
   if (!vm)
     {
-    KERR("WARNING save refused: no machine named %s", name);
-    send_status_ko(llid, tid, "error MACHINE NOT FOUND");
+    char use[MAX_PATH_LEN];
+    if (cfg_name_is_in_use(0, name, use))
+      {
+      KERR("WARNING save refused: %s, save writes the disk of a kvm", use);
+      send_status_ko(llid, tid, "error save writes the disk of a kvm");
+      }
+    else
+      {
+      KERR("WARNING save refused: no machine named %s", name);
+      send_status_ko(llid, tid, "error MACHINE NOT FOUND");
+      }
     }
   else if (file_exists(path, R_OK))
     {
@@ -1598,13 +1639,10 @@ static void pcap_trace_arrival(char *what, int llid, int tid,
 void recv_pcap_open(int llid, int tid, char *name, int num,
                     char *filter)
 {
-  char err[MAX_PATH_LEN];
   pcap_trace_arrival("pcap_open", llid, tid, name, num);
   if (wifi_air_num(name, num) < 0)
     {
-    snprintf(err, sizeof(err), "%s has no%s", name,
-             wifi_air_iface(name, num));
-    send_status_ko(llid, tid, err);
+    refuse(llid, tid, "%s has no%s", name, wifi_air_iface(name, num));
     }
   else
     pcap_relay_open(llid, tid, name, wifi_air_num(name, num), filter);
@@ -1633,9 +1671,8 @@ typedef struct t_snf_ctx
   int val;
 } t_snf_ctx;
 
-/* The record is created at the request: none any more means the object
-   went (deleted underneath the wait) or the eth was switched back the other
-   way by a later request. Either is answered at once, not after 20 s. */
+/* No record: the object went or a later request switched the eth back;
+   answered at once. */
 static int snf_state_test(void *ctx, char *err)
 {
   t_snf_ctx *c = (t_snf_ctx *) ctx;
@@ -1687,7 +1724,11 @@ static void ack_snf(int llid, int tid, char *name, int num, int val)
   strncpy(c->name, name, MAX_NAME_LEN-1);
   c->num = num;
   c->val = val;
-  ack_pending(llid, tid, 100, 20000, "cnf sniff=", snf_state_test,
+  char what[MAX_PATH_LEN];
+  memset(what, 0, MAX_PATH_LEN);
+  snprintf(what, MAX_PATH_LEN-1, "cnf %s eth%d sniff=%s", name, num,
+           val ? "on" : "off");
+  ack_pending(llid, tid, 100, 20000, what, snf_state_test,
               snf_state_stalled, c);
 }
 
@@ -1883,8 +1924,8 @@ void recv_snf_add(int llid, int tid, char *name, int wire_num, int val)
     }
   else
     {
-    KERR("WARNING cnf %s sniff= refused: nothing named so is a kvm or a cnt",
-         name);
+    KERR("WARNING cnf %s eth%d sniff=%s refused: nothing named so is a kvm "
+         "or a cnt", name, num, val ? "on" : "off");
     snprintf(err, sizeof(err), "nothing named %s is a kvm or a cnt", name);
     send_status_ko(llid, tid, err);
     }
@@ -1996,6 +2037,21 @@ void recv_cnt_cnf(int llid, int tid, char *name, char *cmd)
     refuse(llid, tid, "%s", err);
 }
 
+/* The setting as the cli words it: dir=0 cmd=delay val=1 is A2B delay=1. */
+static char *a2b_cnf_words(char *cmd)
+{
+  static char words[MAX_PATH_LEN];
+  char word[MAX_NAME_LEN];
+  int dir, val;
+  memset(words, 0, MAX_PATH_LEN);
+  if (sscanf(cmd, "dir=%d cmd=%63s val=%d", &dir, word, &val) == 3)
+    snprintf(words, MAX_PATH_LEN-1, "%s %s=%d", dir ? "B2A" : "A2B",
+             word, val);
+  else
+    strncpy(words, cmd, MAX_PATH_LEN-1);
+  return words;
+}
+
 void recv_a2b_cnf(int llid, int tid, char *name, char *cmd)
 {
   if (refuse_not_ready(llid, tid))
@@ -2003,7 +2059,8 @@ void recv_a2b_cnf(int llid, int tid, char *name, char *cmd)
 
   if (!ovs_a2b_exists(name))
     {
-    refuse(llid, tid, "cnf %s %s refused: no a2b of that name", name, cmd);
+    refuse(llid, tid, "cnf %s %s refused: no a2b of that name", name,
+           a2b_cnf_words(cmd));
     }
   else
     {
@@ -2056,27 +2113,26 @@ void recv_c2c_peer_create(int llid, int tid, char *name,
   if (is_ack == 0)
     {
     if (get_inhib_new_clients())
-      {
-      KERR("ERROR %s %s %s", name, dist, loc);
-      }
-    else 
+      KERR("WARNING c2c %s: the peer create of %s refused, this server is "
+           "being killed", name, dist);
+    else
       {
       res = cfg_name_is_in_use(0, name, err);
       if (res == 0)
         ovs_c2c_peer_add(llid, tid, name, dist, loc, conf->c2c_udp_port_low);
-      else if (res != 2)  
-        KERR("ERROR %s %s %s %s", name, dist, loc, err);
+      else if (res != 2)
+        KERR("ERROR c2c %s: the peer create of %s refused: %s",
+             name, dist, err);
       }
     }
   else
     {
     c2c = find_c2c(name);
     if (c2c)
-      {
       ovs_c2c_peer_add_ack(llid, tid, name, dist, loc, is_ack);
-      }
     else
-      KERR("ERROR %s %s %s", name, dist, loc);
+      KERR("WARNING c2c %s: the ack of %s came for a c2c gone here, ignored",
+           name, dist);
     }
 }
 
@@ -2095,7 +2151,7 @@ void recv_c2c_peer_ping(int llid, int tid, char *name, int status_peer_ping)
 }
 
 /* Every source of "<src>:<dst> <src>:<dst>" must be a directory the server */
-/* sees; crun would fail on it later with nothing said.                     */
+/* sees; crun would fail on it later with nothing said. */
 static int vmount_missing(char *vmount, char *err)
 {
   char copy[MAX_SIZE_VMOUNT], src[MAX_PATH_LEN];
@@ -2128,9 +2184,58 @@ static int vmount_missing(char *vmount, char *err)
   return 0;
 }
 
+/* The name of a kvm being deleted: free in a moment. */
+static int kvm_dying(char *name)
+{
+  t_vm *vm = cfg_get_vm(name);
+  return ((cfg_is_a_zombie(name) != NULL) || ((vm) && (vm->vm_to_be_killed)));
+}
+
+typedef struct t_cnt_wait
+{
+  int llid;
+  int tid;
+  int count;
+  t_topo_cnt cnt;
+} t_cnt_wait;
+
+void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt);
+
+/* A cnt add on the name of a kvm still being deleted waits, 6 s at most. */
+static void timer_cnt_wait(void *data)
+{
+  t_cnt_wait *w = (t_cnt_wait *) data;
+  char use[MAX_PATH_LEN];
+  if (!msg_exist_channel(w->llid))
+    KTRC("%s: its client left while the add waited", w->cnt.name);
+  else if (!kvm_dying(w->cnt.name))
+    recv_cnt_add(w->llid, w->tid, &(w->cnt));
+  else if (++(w->count) < 30)
+    {
+    clownix_timeout_add(20, timer_cnt_wait, data, NULL, NULL);
+    return;
+    }
+  else
+    {
+    cfg_name_is_in_use(0, w->cnt.name, use);
+    KERR("ERROR %s refused: %s after 6 s", w->cnt.name, use);
+    send_status_ko(w->llid, w->tid, use);
+    }
+  clownix_free(w, __FUNCTION__);
+}
+
+static void cnt_wait_dying_kvm(int llid, int tid, t_topo_cnt *cnt)
+{
+  t_cnt_wait *w = (t_cnt_wait *) clownix_malloc(sizeof(t_cnt_wait), 3);
+  memset(w, 0, sizeof(t_cnt_wait));
+  w->llid = llid;
+  w->tid = tid;
+  memcpy(&(w->cnt), cnt, sizeof(t_topo_cnt));
+  clownix_timeout_add(20, timer_cnt_wait, (void *) w, NULL, NULL);
+}
+
 void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
 {
-  char *locnet = cfg_get_cloonix_name();
   char err[MAX_PATH_LEN];
   int i, vm_id, max, targz;
 
@@ -2142,15 +2247,20 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     KERR("ERROR %s refused: the net is stopping", cnt->name);
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
     }
+  else if (kvm_dying(cnt->name))
+    cnt_wait_dying_kvm(llid, tid, cnt);
   else if (cfg_name_is_in_use(0, cnt->name, err))
     {
-    KERR("ERROR %s refused: %s", cnt->name, err);
+    if (strlen(cnt->name))
+      KERR("ERROR %s refused: %s", cnt->name, err);
+    else
+      KERR("ERROR refused: %s", err);
     send_status_ko(llid, tid, err);
     }
   else if (strcmp(cnt->brandtype, "brandcnt"))
     {
-    snprintf(err, MAX_PATH_LEN-1, "%s %s bad brandtype:%s (only brandcnt)",
-             locnet, cnt->name, cnt->brandtype);
+    snprintf(err, MAX_PATH_LEN-1, "%s bad brandtype:%s (only brandcnt)",
+             cnt->name, cnt->brandtype);
     KERR("ERROR %s", err);
     send_status_ko(llid, tid, err);
     }
@@ -2166,12 +2276,12 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     }
   else if (vmount_missing(cnt->vmount, err))
     {
-    KERR("ERROR %s: %s", cnt->name, err);
+    KERR("ERROR %s refused: %s", cnt->name, err);
     send_status_ko(llid, tid, err);
     }
   else if ((targz = targz_resolve(llid, tid, cnt, err)) < 0)
     {
-    KERR("ERROR %s: %s", cnt->name, err);
+    KERR("ERROR %s refused: %s", cnt->name, err);
     send_status_ko(llid, tid, err);
     }
   else if (targz > 0)
@@ -2180,7 +2290,7 @@ void recv_cnt_add(int llid, int tid, t_topo_cnt *cnt)
     }
   else if (image_missing(cnt->image, 0, err))
     {
-    KERR("ERROR %s: %s", cnt->name, err);
+    KERR("ERROR %s refused: %s", cnt->name, err);
     send_status_ko(llid, tid, err);
     }
   else
@@ -2239,9 +2349,62 @@ void recv_item_pos(int llid, int tid, char *name, int x, int y)
     send_status_ok(llid, tid, "ok");
 }
 
-void recv_item_poseth(int llid, int tid, char *name, int wire_num, int deg)
+/* A note on an item: printable, MAX_NOTE_LEN-1 bytes at most, and short
+   enough for dump commands to give it back; "" removes it. */
+void recv_item_note(int llid, int tid, char *name, char *txt)
 {
   char info[MAX_PATH_LEN];
+  char line[MAX_LIST_COMMANDS_LEN];
+  char use[MAX_PATH_LEN];
+  int i, ctrl = 0;
+  for (i = 0; txt[i]; i++)
+    if (((unsigned char) txt[i] < 0x20) || (txt[i] == 0x7f))
+      ctrl = 1;
+  if (!get_uml_cloonix_started())
+    {
+    send_status_ko(llid, tid, "SERVER NOT READY");
+    KERR("ERROR SERVER NOT READY");
+    }
+  else if (!name_is_sane(name))
+    {
+    KERR("WARNING request refused: bad name %s", name);
+    send_status_ko(llid, tid, "Bad name");
+    }
+  else if ((!strcmp(name, "bulk")) || (!strcmp(name, "cloonix")) ||
+           (!strcmp(name, "lan")) || (!strcmp(name, "all")) ||
+           (!cfg_name_is_in_use(0, name, use) && !wifi_air_in_use(name)))
+    {
+    KERR("WARNING note refused: %s does not exist", name);
+    snprintf(info, sizeof(info), "%s does not exist", name);
+    send_status_ko(llid, tid, info);
+    }
+  else if (ctrl)
+    {
+    KERR("WARNING note on %s refused: a control character", name);
+    send_status_ko(llid, tid, "a note is one line of printable text");
+    }
+  else if (strlen(txt) > MAX_NOTE_LEN-1)
+    {
+    KERR("WARNING note on %s refused: %d bytes", name, (int) strlen(txt));
+    snprintf(info, sizeof(info), "a note holds %d bytes at most, this one "
+             "has %d", MAX_NOTE_LEN-1, (int) strlen(txt));
+    send_status_ko(llid, tid, info);
+    }
+  else if (layout_note_cmd(line, sizeof(line), name, txt) < 0)
+    {
+    KERR("WARNING note on %s refused: too long for dump commands", name);
+    snprintf(info, sizeof(info), "this note on %s is too long for dump "
+             "commands to give it back: shorten it", name);
+    send_status_ko(llid, tid, info);
+    }
+  else if (!layout_set_note(name, txt))
+    send_status_ko(llid, tid, "Layout table full");
+  else
+    send_status_ok(llid, tid, "ok");
+}
+
+void recv_item_poseth(int llid, int tid, char *name, int wire_num, int deg)
+{
   int num = wifi_air_num(name, wire_num);
   if (!get_uml_cloonix_started())
     {
@@ -2255,17 +2418,14 @@ void recv_item_poseth(int llid, int tid, char *name, int wire_num, int deg)
     }
   else if (num < 0)
     {
-    snprintf(info, sizeof(info), "%s has no%s", name,
-             wifi_air_iface(name, wire_num));
-    send_status_ko(llid, tid, info);
+    refuse(llid, tid, "%s has no%s", name, wifi_air_iface(name, wire_num));
     }
   else if (num >= MAX_ETH_VM)
     {
-    snprintf(info, sizeof(info), "Eth %d is not between 0 and %d", num, MAX_ETH_VM-1);
-    send_status_ko(llid, tid, info);
+    refuse(llid, tid, "eth%d is not between 0 and %d", num, MAX_ETH_VM-1);
     }
   else if (!layout_set_eth(name, num, deg))
-    send_status_ko(llid, tid, "Layout table full");
+    refuse(llid, tid, "the layout table is full");
   else
     send_status_ok(llid, tid, "ok");
 }

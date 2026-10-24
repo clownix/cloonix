@@ -22,6 +22,23 @@ static void extract_json_str(const char *body, const char *key, char *out, int o
     }
 }
 
+/* The "type" of each entry of the "eth" array: eths, ethv or none. */
+static void parse_eth_types(const char *body, t_eth_table *tab, int nb)
+{
+    char *p = strstr(body, "\"eth\"");
+    if (p) p = strchr(p, '[');
+    for (int i = 0; i < nb && p; i++) {
+        char *t = strstr(p, "\"type\"");
+        if (!t) break;
+        t = strchr(t+6, ':'); if (!t) break;
+        while (*t == ':' || *t == ' ' || *t == '"') t++;
+        if (strncmp(t, "eths", 4) == 0) tab[i].endp_type = endp_type_eths;
+        else if (strncmp(t, "ethv", 4) == 0) tab[i].endp_type = endp_type_ethv;
+        else tab[i].endp_type = endp_type_none;
+        p = t;
+    }
+}
+
 static void handle_add_vm(int fd, const char *body, int blen)
 {
     t_topo_kvm kvm;
@@ -52,18 +69,7 @@ static void handle_add_vm(int fd, const char *body, int blen)
     if ((p = strstr(body, "\"nb_vwif\":")))   sscanf(p+10, "%d", &kvm.nb_tot_nb_vwif);
 
     if (kvm.nb_tot_eth > MAX_ETH_VM) kvm.nb_tot_eth = MAX_ETH_VM;
-    p = strstr(body, "\"eth\"");
-    if (p) p = strchr(p, '[');
-    for (int i = 0; i < kvm.nb_tot_eth && p; i++) {
-        char *t = strstr(p, "\"type\"");
-        if (!t) break;
-        t = strchr(t+6, ':'); if (!t) break;
-        while (*t == ':' || *t == ' ' || *t == '"') t++;
-        if (strncmp(t, "eths", 4) == 0) kvm.eth_table[i].endp_type = endp_type_eths;
-        else if (strncmp(t, "ethv", 4) == 0) kvm.eth_table[i].endp_type = endp_type_ethv;
-        else kvm.eth_table[i].endp_type = endp_type_none;
-        p = t;
-    }
+    parse_eth_types(body, kvm.eth_table, kvm.nb_tot_eth);
 
     if (!kvm.name[0] || !kvm.rootfs_input[0]) {
         KERR("WARNING handle_add_vm: missing name=%s rootfs=%s body=%.200s",
@@ -92,18 +98,7 @@ static void handle_add_cnt(int fd, const char *body, int blen)
     if ((p = strstr(body, "\"persistent\":"))) { int v=0; sscanf(p+13,"%d",&v); cnt.is_persistent=v; }
 
     if (cnt.nb_tot_eth > MAX_ETH_VM) cnt.nb_tot_eth = MAX_ETH_VM;
-    p = strstr(body, "\"eth\"");
-    if (p) p = strchr(p, '[');
-    for (int i = 0; i < cnt.nb_tot_eth && p; i++) {
-        char *t = strstr(p, "\"type\"");
-        if (!t) break;
-        t = strchr(t+6, ':'); if (!t) break;
-        while (*t == ':' || *t == ' ' || *t == '"') t++;
-        if (strncmp(t, "eths", 4) == 0) cnt.eth_table[i].endp_type = endp_type_eths;
-        else if (strncmp(t, "ethv", 4) == 0) cnt.eth_table[i].endp_type = endp_type_ethv;
-        else cnt.eth_table[i].endp_type = endp_type_none;
-        p = t;
-    }
+    parse_eth_types(body, cnt.eth_table, cnt.nb_tot_eth);
 
     if (!cnt.name[0] || !cnt.brandtype[0]) {
         KERR("WARNING handle_add_cnt: missing name=%s brand=%s body=%.200s",
@@ -289,6 +284,26 @@ static void handle_poseth(int fd, const char *body, int blen)
         return;
     }
     topo_web_poseth(name, num, deg);
+    const char *ok = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nConnection: close\r\n\r\nok\n";
+    (void)write(fd, ok, strlen(ok));
+}
+
+/* {"name":..,"txt":..}: the switch checks the note and broadcasts it */
+static void handle_note(int fd, const char *body, int blen)
+{
+    char name[MAX_NAME_LEN] = {0};
+    char txt[MAX_PATH_LEN] = {0};   /* a long one goes on, for the switch to refuse */
+    char copy[2048];
+    (void)blen;
+    snprintf(copy, sizeof(copy), "%s", body);
+    json_get_str(copy, "name", name, MAX_NAME_LEN);
+    if (!name[0] || !json_find_key(copy, "txt")) {
+        KERR("WARNING handle_note: bad params body=%.200s", body);
+        http_fail(fd, 400, NULL, "Bad params");
+        return;
+    }
+    json_get_str(copy, "txt", txt, MAX_PATH_LEN);
+    topo_web_note(name, txt);
     const char *ok = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nConnection: close\r\n\r\nok\n";
     (void)write(fd, ok, strlen(ok));
 }

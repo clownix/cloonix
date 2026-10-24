@@ -221,9 +221,6 @@ class Console:
         self.send("end", timeout=timeout)
         return self
 
-    def write_mem(self, timeout=180):
-        return self.send("write memory", timeout=timeout)
-
 def main():
     if len(sys.argv) < 4:
         sys.exit("usage: %s <net> <vm> <config file>\n"

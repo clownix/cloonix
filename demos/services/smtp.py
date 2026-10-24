@@ -13,54 +13,39 @@ Five machines and three lans::
   lanB  10.2.0.0/24   userB .10   mailB .1
   lanC  10.0.0.0/24   mailA .1    mailB .2    dns .3
 
-Two mail domains, a.lab and b.lab, one on each site. userA sends a message
-to bob@b.lab and it has to cross the network to get there.
+Two mail domains, a.lab and b.lab, one per site; userA sends to bob@b.lab.
+Mail routing is dns: mailA asks for the MX record of b.lab, resolves the
+host it names, and only then moves the mail. smtp itself is plain text:
+the greeting, the sender, the recipient, the message and its acceptance are
+readable on the wire with no decoder, and the demo prints them as the two
+ends say them.
 
-Mail routing IS dns, and that is the first half of this demo. mailA is given
-an address ending in b.lab and does not know what to do with it until it has
-asked for an **MX record**. The answer names a host, that host is resolved to
-an address, and only then does any mail move.
-
-The second half is smtp itself, which is plain text and always has been. The
-whole conversation -- the greeting, who it is from, who it is for, the
-message, the acceptance -- is readable on the wire with no decoder at all.
-This demo prints it as the two ends say it.
-
-  ACT 1  userA hands the message to its own server, in a conversation this
-         demo speaks itself so that every line is deliberate.
-  ACT 2  mailA works out where b.lab lives -- MX, then A -- and the lookups
-         are caught on lanC.
-  ACT 3  mailA delivers to mailB, and the same protocol appears again
-         between two servers rather than between a person and a server.
-  ACT 4  the message is read out of the mailbox where it landed.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+  ACT 1  userA hands the message to its own server, in a conversation the
+         demo speaks itself, line by line.
+  ACT 2  mailA finds where b.lab lives, MX then A, the lookups caught on
+         lanC.
+  ACT 3  mailA delivers to mailB: the same protocol between two servers.
+  ACT 4  the message read out of the mailbox where it landed.
 
 Image: smtp_trixie (postfix, bind9, s-nail)
 Size:  5 containers, 3 lans
 
 THE PACKET TO CATCH
 -------------------
-  This demo is two protocols in sequence on one wire, and one
-  subscription catches both if it is left running:
+  Two protocols in sequence on one wire, one subscription left running:
 
     cloonix cli nemo cnf mailA eth1 sniff=on
     cloonix cli nemo sniff mailA eth1 --dump udp port 53 or tcp port 25
 
-  The packet to catch is the MX query, and then -- moments later, to the
-  address that answer contained -- the SYN that opens the SMTP session.
-  Cause and effect, two protocols, one capture, in order.
-
-  The conversation itself is the part people do not believe until they
-  see it:
+  The packet to catch is the MX query, then, to the address its answer
+  gave, the SYN that opens the SMTP session: cause and effect in one
+  capture. The conversation itself:
 
     cloonix cli nemo sniff mailA eth1 --dump tcp port 25
 
-  EHLO, MAIL FROM, RCPT TO, DATA and the message body, all in ASCII on
-  the wire. The headers, the subject and the text of the mail are
-  readable in the dump exactly as typed. Read this demo next to wg.py:
-  it is the same page of hex, with and without a reason to be opaque.
+  EHLO, MAIL FROM, RCPT TO, DATA and the body in ASCII, headers, subject
+  and text readable as typed; security/wg.py shows the same page of hex
+  with a reason to be opaque.
 """
 import os
 import subprocess
@@ -77,7 +62,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, create_cnt, erase_net,
     in_parallel, net_answers, parse_bytes_line, show, step, story, trace,
-    trace_ssh, wait_ready)
+    trace_ssh, wait_ready, unavailable,
+    needs_subuid)
 
 ROOTFS_CHOICES = ("smtp_trixie",)
 
@@ -150,8 +136,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -192,7 +178,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -209,7 +195,7 @@ def tools_present(node, *tools):
                             "command -v %s >/dev/null 2>&1" % t],
                            capture_output=True, stdin=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit("%s has no %s: this is not the smtp image.\n"
+            unavailable("%s has no %s: this is not the smtp image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -245,7 +231,7 @@ def routes():
 def resolver(node):
     """One name server for everybody, and it is not on a mail machine.
 
-    The point of act 2 is that mail routing is a dns question, and that is
+    Act 2 shows that mail routing is a dns question, and that is
     only visible if the question has to leave the machine asking it.
     """
     ssh(node, "printf 'nameserver %s\\n' > /etc/resolv.conf" % DNS_IP)
@@ -511,7 +497,7 @@ def decode_smtp(pkt):
     off = base + ((d[base + 12] >> 4) * 4)
     payload = d[off:]
     if not payload:
-        return None            # a bare ack carries nothing worth printing
+        return None            # a bare ack carries nothing to print
     try:
         text = payload.decode("ascii", "replace")
     except Exception:                                   # noqa: BLE001
@@ -708,6 +694,7 @@ def place():
         cli("cnf", name, num, "angle=%s" % deg, ack=ACK_FAST)
 
 def main():
+    needs_subuid()
     story(HISTORY)
     step("looking for the image")
     rootfs = choose_rootfs()
@@ -828,10 +815,10 @@ def main():
                  "\n  the history says where: on a terminal, CLOONIX_DEMO_STORY=1 prints it")
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   say it yourself. smtp is the one protocol you can speak with your
-  fingers, and doing it once is worth reading ten explanations:
+  fingers, and doing it once shows more than ten explanations:
     cloonix cli %s ssh userA "nc 10.1.0.1 25"
       EHLO me
       MAIL FROM:<alice@a.lab>

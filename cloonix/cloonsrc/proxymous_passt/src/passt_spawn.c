@@ -1,9 +1,9 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* Launch and supervise the vendored passt on the host, outside the crun:  */
-/*   cloonix-passt --socket PATH --foreground --no-map-gw --mtu 1500        */
-/*                 -t <ports> -u <ports> --pid PIDFILE                      */
-/* -t/-u are the published ports of the nat, "none" for egress only.        */
-/* passt assigns the guest ip by its own dhcp/ndp.                          */
+/* Launch and supervise the vendored passt on the host, outside the crun: */
+/* cloonix-passt --socket PATH --foreground --no-map-gw --mtu 1500 */
+/* -t <ports> -u <ports> --pid PIDFILE */
+/* -t/-u are the published ports of the nat, "none" for egress only. */
+/* passt assigns the guest ip by its own dhcp/ndp. */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +22,7 @@
 #include "pthexec.h"
 #include "passt_spawn.h"
 
-/* PASST_TRACE: the per-nat passt chatter.                                  */
+/* PASST_TRACE: the per-nat passt chatter. */
 #define PASST_TRACE 0
 #if PASST_TRACE
 #define PASST_DBG(format, a...) KERR(format, ## a)
@@ -102,10 +102,8 @@ static void passt_kill_one(t_passt *cur)
 
 static int said_no_dns;
 
-/* Result goes to out[] (caller-sized MAX_NAME_LEN). Returns the passt option
-   it goes with: --dns-forward maps it to the resolver of the host; with no
-   such resolver passt forwards to nothing and advertises nothing, so the
-   fallback is given to the guests by dhcp instead, --dns. */
+/* Result in out[] (MAX_NAME_LEN); returns its option: --dns-forward to the
+   host resolver, --dns (given by dhcp) when there is none. */
 static const char *find_host_dns(char *out)
 {
   const char *files[2];
@@ -252,9 +250,7 @@ int passt_spawn_start(char *socket_path, char *ports, char *why)
     for (k = 3; k < 1024; k++)
       close(k);
     }
-    /* CLOONIX_PASST_DEBUG set in the environment of proxymous: passt logs
-       every connection event (a reset on a fresh publish is being chased),
-       else quiet: twenty lines per start, six hundred a run with thirty nats. */
+    /* CLOONIX_PASST_DEBUG set: passt logs every connection event. */
     execl(bin, "cloonix-passt",
           "--socket",     sock_path,
           "--foreground",

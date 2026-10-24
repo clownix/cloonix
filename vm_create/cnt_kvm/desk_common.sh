@@ -1,8 +1,6 @@
-# Sourced by the desktop builders kvm_<distro>_<desktop>.sh, which set
-# NET VMNAME SRC QCOW2 BULK first.
-# Rule: nothing fails quietly. What the desktop cannot do without is fatal,
-# says what failed and removes the image. What it can do without is a WARNING,
-# printed when it happens and again at the end. doitall.sh counts them.
+# Sourced by kvm_<distro>_<desktop>.sh, NET VMNAME SRC QCOW2 BULK set first.
+# Nothing fails quietly: fatal removes the image, else a WARNING, repeated at
+# the end and counted by doitall.sh.
 DESK_WARN=""
 DESK_MADE=0
 
@@ -100,10 +98,8 @@ desk_start()
   cloonix cli ${NET} add nat nat || desk_fatal "add nat refused"
   cloonix cli ${NET} plug nat lan_nat || desk_fatal "plug nat refused"
   cloonix cli ${NET} plug ${VMNAME} eth0 lan_nat || desk_fatal "plug ${VMNAME} refused"
-  # Whichever dhcp client the image has, ipv4 only: the mirror is 10.117.0.1,
-  # and a dhclient -6 never returns when the nat has no ipv6 to give. Bounded
-  # from here too: a client that does not return must not stop the build.
-  # The mirror wait below is the test.
+  # ipv4 only dhcp (dhclient -6 never returns without nat ipv6), bounded; the
+  # mirror wait below is the test.
   timeout 120 cloonix cli ${NET} ssh ${VMNAME} "\
     ip link set dev eth0 up; \
     ip -4 addr show dev eth0 | grep -q 'inet ' && exit 0; \

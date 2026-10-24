@@ -3,48 +3,45 @@ r"""ovn - one logical switch spread across two hosts by an overlay.
 
     ./ovn.py [net]                 the net defaults to nemo
 
-Three machines on one underlay lan: a controller and two hypervisors::
+Three machines on one underlay lan, a controller and two hypervisors::
 
   hv1 ---+           +--- hv2
          |  underlay |
          +--- ovnc --+
              10.0.0.0/24
 
-  ovnc runs ovn-northd over the northbound and southbound databases. hv1 and
-  hv2 each run Open vSwitch and ovn-controller. A single logical switch sw0
-  is defined once, in the northbound database; its two ports p1 and p2 land
-  on different hypervisors. OVN builds a Geneve tunnel between the two hosts
-  so that p1 (on hv1) and p2 (on hv2) sit on the same layer-2 network though
-  no cable joins them.
+ovnc runs ovn-northd over the northbound and southbound databases; hv1 and
+hv2 each run Open vSwitch and ovn-controller. One logical switch, sw0, is
+defined once, in the northbound database; its ports p1 and p2 land on two
+hypervisors, and OVN builds a Geneve tunnel between them, so p1 and p2 share
+a layer 2 network with no cable between them.
 
   ACT 1  ovs and ovn come up on all three, the two controllers connect to
          the southbound database, and the Geneve tunnel appears.
-  ACT 2  sw0 is created with p1 and p2. Each hypervisor is given the port
-         that belongs to it. p1 pings p2: the frames ride the tunnel.
-  ACT 3  the underlay link of hv2 is cut. The tunnel has no second path, so
-         p1 can no longer reach p2 -- proof the overlay was riding it.
+  ACT 2  sw0 is created with p1 and p2, each hypervisor given its port; p1
+         pings p2 through the tunnel.
+  ACT 3  the underlay link of hv2 is cut: the tunnel has no second path,
+         and p1 no longer reaches p2.
 
 Image: ovn_trixie (openvswitch, ovn)
 Size:  3 containers, 1 lan
 
 THE PACKET TO CATCH
 -------------------
-  Geneve is UDP on port 6081. On the underlay it is all you see; the tenant
-  ping is inside it, encapsulated:
+  Geneve is UDP port 6081, all there is on the underlay, the ping of the
+  tenant inside it:
 
     cloonix cli nemo cnf hv1 eth0 sniff=on
     cloonix cli nemo sniff hv1 eth0 --dump udp port 6081
 
 Important
-  Open vSwitch needs its kernel datapath module. A container run as your
-  normal user cannot load a module, but it can use one already loaded on the
-  host. On the host, once per boot, load it as yourself:
+  Open vSwitch needs its kernel module, which a container of a user can use
+  and cannot load. On the host, once per boot, then the demo as a user, the
+  net not run as root:
 
     sudo modprobe openvswitch
 
-  then run this demo as your normal user -- no need to run the net as root.
-  Nothing else is baked in: the databases and the logical switch are built at
-  run time.
+  The databases and the logical switch are made at run time.
 """
 import os
 import sys
@@ -58,20 +55,19 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
     NET, build, check_net, choose_rootfs, count_on, cut_off, erase_net, hold,
-    in_parallel, place, reached, run, ssh, step, story, tools_present)
+    in_parallel, need_host_modules, place, reached, run, ssh, step, story,
+    tools_present)
 
 HISTORY = """\
 OVN, the Open Virtual Network, was started around 2015 by the Open vSwitch
-team -- Ben Pfaff, Justin Pettit and others, then at Nicira and VMware -- to
-put a proper control plane on top of OVS. Open vSwitch itself switches
-frames on one host; OVN adds the idea of a logical network described once, in
-a northbound database, and realised across many hosts by a controller on
-each. It is the network layer under OpenStack and much of Kubernetes
-networking. Here it shows its central trick: one logical switch whose ports
-live on different machines, joined by a Geneve overlay.
+team, Ben Pfaff, Justin Pettit and others, to put a control plane on top of
+Open vSwitch: a logical network described once, in a northbound database,
+and realised across many hosts by a controller on each. It is the network
+layer under much of OpenStack and Kubernetes networking.
 """
 
 ROOTFS_CHOICES = ("ovn_trixie",)
+HOST_MODULES = ("openvswitch",)
 
 OVNC, HV1, HV2 = "ovnc", "hv1", "hv2"
 ALL = (OVNC, HV1, HV2)
@@ -107,13 +103,6 @@ def start_hv(node):
     ssh(node, "ovs-vsctl set open . external-ids:ovn-encap-type=geneve")
     ssh(node, "ovs-vsctl set open . external-ids:ovn-encap-ip=%s" % under)
     ssh(node, "%s start_controller" % OVN_CTL)
-
-def datapath_ok(node):
-    # ovs-vswitchd loads the openvswitch module on first bridge; if the
-    # module is present the datapath is usable.
-    r = ssh(node, "test -d /sys/module/openvswitch && echo yes || echo no",
-            check=False)
-    return "yes" in r
 
 def make_switch():
     nb("ls-add sw0")
@@ -187,13 +176,7 @@ def main():
     story()
     start_central()
     in_parallel(start_hv, [HV1, HV2], "start hv")
-    if not datapath_ok(HV1):
-        sys.exit("the Open vSwitch datapath module is not loaded.\n"
-                 "  a container run as your normal user cannot load a kernel\n"
-                 "  module, but it can use one already on the host. On the\n"
-                 "  host, once per boot, run as yourself:\n"
-                 "    sudo modprobe openvswitch\n"
-                 "  then start this demo again as your normal user.")
+    need_host_modules(HV1, HOST_MODULES)
     if not tunnel_up():
         sys.exit("the Geneve tunnel between hv1 and hv2 never formed")
     story("    hv1 sees the tunnel to hv2 (10.0.0.12):")
@@ -238,7 +221,7 @@ def main():
         sys.exit("a check failed: over=%s broken=%s" % (ok_over, ok_broken))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the logical network, and where OVN placed each port:
     cloonix cli %s ssh ovnc "ovn-nbctl show"

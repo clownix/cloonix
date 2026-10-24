@@ -28,7 +28,6 @@ says so instead of pretending. So does a net whose host has no systemd
 bus: crun then uses the cgroupfs manager, which cannot delegate a cgroup
 to a user.
 
-Standard library only, like cloonix itself.
 
 Image: trixie
 Size:  2 containers, 1 lan
@@ -46,7 +45,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    CLOONIX, NET, erase_net, show, step, story)
+    CLOONIX, NET, erase_net, show, step, story, unavailable, guarded)
 
 CNT_ROOTFS_CHOICES = ("trixie",)
 
@@ -117,7 +116,7 @@ def check_net():
                        capture_output=True, text=True,
                        stdin=subprocess.DEVNULL)
     if r.returncode:
-        sys.exit("no answer from %s\n"
+        unavailable("no answer from %s\n"
                  "  start it:  cloonix start %s" % (NET, NET))
 
 def choose_image():
@@ -132,7 +131,7 @@ def choose_image():
         if ok:
             return cand
         said = (r.stdout + r.stderr).strip() or "nothing"
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -337,13 +336,4 @@ def main():
         story("    cloonix cli %s del %s" % (NET, name))
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit as stop:
-        if stop.code:
-            sys.stderr.write("%s\n" % stop.code)
-            up = [n for n in CNT if in_lst(n)]
-            if up:
-                sys.stderr.write("Still running: %s\n" % ", ".join(up))
-            raise SystemExit(1)
-        raise
+    guarded(main, CNT)

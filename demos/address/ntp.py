@@ -50,17 +50,13 @@ from demolib import (
 
 HISTORY = """\
 chrony was started by Richard Curnow in 1997 and is now maintained mainly by
-Miroslav Lichvar at Red Hat. It is an implementation of NTP, the Network Time
-Protocol whose original design goes back to David Mills at the University of
-Delaware in the 1980s. chrony was written to keep good time on machines that
-are not always connected and whose clocks drift -- laptops, virtual machines
--- and it has become the default time daemon on most linux distributions.
-Keeping clocks together matters more than it looks: logs, certificates and
-kerberos all break when time disagrees.
+Miroslav Lichvar at Red Hat. It implements NTP, the Network Time Protocol
+whose design goes back to David Mills in the 1980s, and was written to keep
+good time on machines that are not always connected and whose clocks drift.
 
 Today: chrony is the default time daemon of Red Hat, Fedora, SUSE and Ubuntu
-server; a virtual machine that pauses and resumes, or a laptop that sleeps, is
-the case it was written for.
+server; a virtual machine that pauses and resumes, or a laptop that sleeps,
+is the case it was written for.
 """
 
 ROOTFS_CHOICES = ("ntp_trixie",)
@@ -178,7 +174,7 @@ def main():
         sys.exit("a check failed: sync=%s" % ok_sync)
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the client's view of its server and its own clock:
     cloonix cli %s ssh ntpc "chronyc -n sources -v"

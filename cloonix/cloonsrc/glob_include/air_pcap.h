@@ -1,7 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The capture of an air: the fifo <snf_dir>/<air>_0, radiotap pcap, read by
-   the cloonix-dumpcap of the switch as the capture "<air> 0". Written by
-   suid_power, the medium of every air. */
+/* Air capture: radiotap pcap fifo <snf_dir>/<air>_0 written by suid_power,
+   served by the switch's cloonix-dumpcap as capture "<air> 0". */
 #ifndef AIR_PCAP_H
 #define AIR_PCAP_H
 #include <stdint.h>

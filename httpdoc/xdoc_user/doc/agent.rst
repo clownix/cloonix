@@ -7,8 +7,9 @@ blue on the canvas and carries a shell or a file into a machine that has no
 usable address; the two gauges of a node are read from its qemu process on
 the host, not from the agent.
 
-The agent is not in the guest images. It comes on a cd-rom that cloonix
-builds, *cmd_mk_iso* in *cloonsrc/insider_agents*, attached to every guest.
+The agent is not in the guest images. cloonix builds it, *cmd_mk_iso* in
+*cloonsrc/insider_agents*: on a cd-rom attached to every kvm, in a directory
+copied into every cnt.
 A guest image contains no cloonix at all: no agent, no library, no binary.
 An image built for an older release picks up the current agent at its next
 boot.
@@ -17,11 +18,16 @@ boot.
    :align: center
    :width: 100%
 
-Three discs, one per kind of guest::
+Three discs, one per kind of kvm, and one directory for the cnt::
 
-    insider_agent_x86_64.iso        linux kvm and cnt: cloonix-agent, cloonix-cxp-srv, cloonixsbininit
+    insider_agent_x86_64.iso        linux kvm: cloonix-agent, cloonix-cxp-srv
     insider_agent_win_x86_64.iso    windows: cloonix-agent.exe, cloonix-cxp-srv.exe
     insider_agent_bsd_x86_64.iso    freebsd: the same sources, cross compiled static
+    insider_agent_cnt/              cnt: cloonix-agent, cloonix-cxp-srv, cloonixsbininit
+
+The agent of a kvm talks on a virtio port and relays the radios of the
+guest; the agent of a cnt talks on the socket of its shared mount and has
+no radio to relay. One source tree, two builds.
 
 *cloonix cli <net> trace qemu* shows which disc a kvm was given.
 
@@ -46,8 +52,9 @@ without a working *qemu-guest-agent.service* never turns blue: create it
 with *--no_qemu_ga* and reach it by the Console entry of its menu. A windows
 guest gets *C:\agent_cloonix_launcher.bat* through the same channel.
 
-**A cnt** has no boot: crun starts one process as init, and cloonix points
-it at the disc, */cloonixmnt/cnf_fs/cloonixsbininit*. It starts the agent,
+**A cnt** has no boot: suid-power copies *insider_agent_cnt* into
+*/cloonixmnt/cnf_fs*, crun starts one process as init, and cloonix points it
+at */cloonixmnt/cnf_fs/cloonixsbininit*. It starts the agent,
 the exec server and the syslog daemon of the image, waits for the interfaces,
 then hands over to the init of the image only when asked::
 

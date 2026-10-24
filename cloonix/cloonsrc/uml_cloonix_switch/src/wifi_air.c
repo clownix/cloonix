@@ -1,12 +1,7 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The airs of the net: an air is a name some radio is on, cnt or kvm.
-   suid_power is the medium of every air, the frames of the kvm radios
-   relayed by doorways, and writes each air into the fifo snf/<air>_0; a
-   cloonix-dumpcap started here serves it as <air>_0_pcap_sock and
-   _pcap_fifo, the capture "<air> 0" of sniff and webshark. A wlan is
-   plugged into an air with plug and taken off with unplug, its number
-   the one after the eths of its guest. The cnt radios start on the air
-   cntwifi, the kvm radios on kvmwifi. */
+/* Airs of the net, the names radios are on: suid_power writes snf/<air>_0,
+   served by a cloonix-dumpcap as capture "<air> 0"; cnt radios start on
+   cntwifi, kvm radios on kvmwifi. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -298,6 +293,8 @@ void wifi_air_snf(int llid, int tid, char *air, int on)
     cap->pid = 0;
     cap->serial = 0;
     }
+  /* the topology carries it, in the radios on the air */
+  cfg_hysteresis_send_topo_info();
   if (err[0])
     refuse_air(llid, tid, err);
   else
@@ -357,9 +354,8 @@ int wifi_air_num(char *name, int num)
   return nb_eth + num - WLAN_NUM_BASE;
 }
 
-/* An interface as the user writes it, after a space: eth<i> or wlan<i> of
-   a guest, A or B of an a2b, nothing for the one interface of a tap, nat,
-   c2c or phy. */
+/* An interface as the user writes it: eth<i>/wlan<i> of a guest, A/B of an
+   a2b, nothing for a tap, nat, c2c or phy. */
 char *wifi_air_iface(char *name, int num)
 {
   static char buf[4][MAX_NAME_LEN];
@@ -379,8 +375,7 @@ char *wifi_air_iface(char *name, int num)
     }
   else if (ovs_a2b_exists(name) && ((num == 0) || (num == 1)))
     snprintf(s, MAX_NAME_LEN-1, " %c", 'A' + num);
-  else if ((num != 0) || !(ovs_tap_exists(name) || ovs_nat_main_exists(name) ||
-           ovs_c2c_exists(name) || ovs_phy_exists_vhost(name)))
+  else if (num != 0)
     snprintf(s, MAX_NAME_LEN-1, " %d", num);
   return s;
 }
@@ -409,7 +404,7 @@ static void refuse_air(int llid, int tid, char *txt)
   send_status_ko(llid, tid, txt);
 }
 
-/*------------------------------ kvm airs -------------------------------*/
+/* kvm airs */
 /* An air change of a kvm radio waits for suid_power to say it is done. */
 #define MAX_PEND 16
 #define PEND_WAIT 300
@@ -519,6 +514,7 @@ void wifi_air_kvm_done(char *line)
       {
       snprintf(txt, MAX_PATH_LEN-1, "%s wlan%d: %s", name, idx,
                why ? why + 7 : "ko");
+      KERR("ERROR %s", txt);
       send_status_ko(p->llid, p->tid, txt);
       }
     memset(p, 0, sizeof(t_pend));
@@ -568,7 +564,7 @@ void wifi_air_kvm_default(t_topo_kvm *kvm)
     strncpy(kvm->vwif_air[i], KVMWIFI_LAN, MAX_NAME_LEN-1);
 }
 
-/*------------------------------ plugging --------------------------------*/
+/* plugging */
 static int air_reserved(char *air)
 {
   return ((!strcmp(air, CNTWIFI_LAN)) || (!strcmp(air, KVMWIFI_LAN)));

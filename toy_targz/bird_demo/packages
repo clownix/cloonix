@@ -1,0 +1,19 @@
+# packages - the bird_demo part of the Demo picker of the bird toy, appended to
+# demos/packages by create_bird_toy_targz.sh. Same format: "<number> <title>",
+# then "<area>/<demo>.py  <one line>". The line is the chapter and section
+# title of the BIRD User's Guide the demo plays.
+
+11 BIRD User's Guide examples
+bird_demo/ospf_example.py        OSPF: Example
+bird_demo/rip_example.py         RIP: Example
+bird_demo/babel_example.py       Babel: Example
+bird_demo/bfd_example.py         BFD: Example
+bird_demo/bgp_example.py         BGP: Example (TCP-AO, else TCP-MD5)
+bird_demo/rpki_example.py        RPKI: Examples, BGP origin validation
+bird_demo/static_example.py      Static: Example static configs
+bird_demo/kernel_example.py      Kernel: Example
+bird_demo/pipe_example.py        Pipe: Example
+bird_demo/radv_example.py        RAdv: Example
+bird_demo/mrt_example.py         MRT: Example
+bird_demo/aggregator_example.py  Aggregator: Example
+bird_demo/l3vpn_example.py       L3VPN: Example (modprobe mpls_router mpls_iptunnel vrf)

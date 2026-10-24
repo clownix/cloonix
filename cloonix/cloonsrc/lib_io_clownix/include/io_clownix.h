@@ -30,6 +30,9 @@ void fct_seqtap_tx(int kind, uint8_t *tx, uint16_t seqtap,
                    int len, uint8_t *buf);
 int fct_seqtap_rx_udp(int len, int fd, uint8_t *rx, uint16_t *seq, int *buf_len, uint8_t **buf);
 int fct_seqtap_rx(int fd, uint8_t *rx, uint16_t *seq, int *buf_len, uint8_t **buf);
+/* Frames a tap pipe reader takes per event, while fct_seqtap_pipe_more. */
+#define SEQTAP_PIPE_BATCH 32
+int fct_seqtap_pipe_more(int fd);
 
 
 int get_fd_with_cidx(int cidx);
@@ -118,7 +121,7 @@ int msg_tx_queue_high(int llid);
 int msg_tx_queue_low(int llid);
 
 char *get_cloonix_name(void);
-/* ctrl_link.c: the control link of an ovs satellite to the main server.   */
+/* ctrl_link.c: the control link of an ovs satellite to the main server. */
 #define CTRL_LINK_GRACE_MS 5000
 void ctrl_link_init(char *net, char *kind, char *name, int type_hop,
                     char *ctrl_path);

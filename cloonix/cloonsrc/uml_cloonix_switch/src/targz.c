@@ -1,10 +1,10 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* A cnt image given as bulk/<image>.tar.gz when bulk/<image>/ is absent.   */
-/* Extracted once into bulk/<image>_targz, shared by every net; the cnt is  */
+/* A cnt image given as bulk/<image>.tar.gz when bulk/<image>/ is absent. */
+/* Extracted once into bulk/<image>_targz, shared by every net; the cnt is */
 /* created on that directory. Never persistent, by its name. The tree stays */
-/* what the tar.gz holds: its modes are the image's (tar -p), so they do   */
-/* not protect it; suid_power mounts it read only under the overlay.        */
-/* Top writable: a plain rm -rf removes it.                                 */
+/* what the tar.gz holds: its modes are the image's (tar -p), so they do */
+/* not protect it; suid_power mounts it read only under the overlay. */
+/* Top writable: a plain rm -rf removes it. */
 #define _XOPEN_SOURCE 700
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <ftw.h>
+#include <dirent.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -28,8 +29,9 @@
 #include "targz.h"
 
 #define TARGZ_SUFFIX "_targz"
-/* Marker at the top of an extracted tree; a tree without the current one is redone. */
-#define TARGZ_MARKER ".cloonix_targz_3"
+/* Marker at the top of an extracted tree; a tree without the current one is
+   redone. 4: trees of 3 can lack their setuid bits. */
+#define TARGZ_MARKER ".cloonix_targz_4"
 
 typedef struct t_pending
 {
@@ -112,7 +114,7 @@ static char *targz_bulk(char *image)
 }
 
 /* The directory of the image, in whichever bulk, has no write bit for its */
-/* owner: a tree chmoded read only by its owner is not persistent.         */
+/* owner: a tree chmoded read only by its owner is not persistent. */
 static int dir_read_only(char *image, char *found)
 {
   struct stat sb;
@@ -159,6 +161,74 @@ static void rm_tree(char *path)
   nftw(path, rm_cb, 16, FTW_DEPTH|FTW_PHYS);
 }
 
+/* A tree a container stands on: another mount of its device whose root is
+   the tree or below, in the mount table. Unreadable table: in use. */
+static int tree_in_use(char *dir)
+{
+  FILE *fp = fopen("/proc/self/mountinfo", "r");
+  char line[3*MAX_PATH_LEN], root[MAX_PATH_LEN], mnt[MAX_PATH_LEN];
+  char best[MAX_PATH_LEN] = "", broot[MAX_PATH_LEN] = "/";
+  char rel[2*MAX_PATH_LEN];
+  unsigned int maj, min, bmaj = 0, bmin = 0;
+  size_t len;
+  int used = 0;
+  if (fp == NULL)
+    return 1;
+  while (fgets(line, sizeof(line), fp))
+    {
+    if (sscanf(line, "%*d %*d %u:%u %299s %299s", &maj, &min, root, mnt) != 4)
+      continue;
+    len = strlen(mnt);
+    if ((!strncmp(dir, mnt, len)) &&
+        ((len == 1) || (dir[len] == '/') || (dir[len] == 0)) &&
+        (len >= strlen(best)))
+      {
+      strcpy(best, mnt);
+      strcpy(broot, root);
+      bmaj = maj;
+      bmin = min;
+      }
+    }
+  snprintf(rel, sizeof(rel), "%s%s", strcmp(broot, "/") ? broot : "",
+           strcmp(best, "/") ? dir + strlen(best) : dir);
+  rewind(fp);
+  len = strlen(rel);
+  while ((!used) && fgets(line, sizeof(line), fp))
+    if ((sscanf(line, "%*d %*d %u:%u %299s", &maj, &min, root) == 3) &&
+        (maj == bmaj) && (min == bmin) && (!strncmp(root, rel, len)) &&
+        ((root[len] == 0) || (root[len] == '/')))
+      used = 1;
+  fclose(fp);
+  return used;
+}
+
+/* The trees set aside while in use, erased once nothing stands on them. */
+static void retired_cleanup(char *bulk, char *image)
+{
+  char prefix[MAX_PATH_LEN], path[2*MAX_PATH_LEN];
+  struct dirent *ent;
+  size_t len, n;
+  DIR *d = opendir(bulk);
+  if (d == NULL)
+    {
+    KERR("ERROR %s: %s", bulk, strerror(errno));
+    return;
+    }
+  snprintf(prefix, MAX_PATH_LEN-1, ".%s%s.", image, TARGZ_SUFFIX);
+  len = strlen(prefix);
+  while ((ent = readdir(d)) != NULL)
+    {
+    n = strlen(ent->d_name);
+    if (strncmp(ent->d_name, prefix, len) || (n < len + 4) ||
+        strcmp(ent->d_name + n - 4, ".old"))
+      continue;
+    snprintf(path, sizeof(path), "%s/%s", bulk, ent->d_name);
+    if (!tree_in_use(path))
+      rm_tree(path);
+    }
+  closedir(d);
+}
+
 static int tree_is_current(char *dir)
 {
   char marker[MAX_PATH_LEN];
@@ -196,12 +266,13 @@ static int run_tar(char *targz, char *dir, char *log)
   return (WIFEXITED(status) && (WEXITSTATUS(status) == 0)) ? 0 : -1;
 }
 
-/* In the clone. The lock serialises every net of the machine on one tar.  */
+/* In the clone. The lock serialises every net of the machine on one tar. */
 static int extract_clone(void *data)
 {
   t_job *job = (t_job *) data;
   char targz[MAX_PATH_LEN], dir[MAX_PATH_LEN], tmp[MAX_PATH_LEN];
   char lock[MAX_PATH_LEN], log[MAX_PATH_LEN], marker[MAX_PATH_LEN];
+  char old[MAX_PATH_LEN];
   int fd, fd_marker, result = -1;
   snprintf(targz, MAX_PATH_LEN-1, "%s/%s.tar.gz", job->bulk, job->image);
   snprintf(dir, MAX_PATH_LEN-1, "%s/%s%s", job->bulk, job->image,
@@ -224,11 +295,24 @@ static int extract_clone(void *data)
       close(fd);
     return -1;
     }
+  retired_cleanup(job->bulk, job->image);
   if (tree_is_current(dir))
     result = 0;
   else
     {
-    if (is_dir(dir))
+    if (is_dir(dir) && tree_in_use(dir))
+      {
+      /* never erased under a container: set aside, erased once unused */
+      snprintf(old, MAX_PATH_LEN-1, "%s/.%s%s.%d.old", job->bulk,
+               job->image, TARGZ_SUFFIX, (int) getpid());
+      if (rename(dir, old))
+        KERR("ERROR %s: in use by a container, cannot be set aside: %s",
+             dir, strerror(errno));
+      else
+        KERR("WARNING %s: tree of an earlier extraction, in use by a "
+             "container: set aside as %s, extracted again", dir, old);
+      }
+    else if (is_dir(dir))
       {
       KERR("WARNING %s: tree of an earlier extraction, erased and "
            "extracted again", dir);
@@ -295,6 +379,7 @@ static void extract_death(void *data, int status, char *nm)
                "%s.tar.gz could not be extracted into %s/%s%s, "
                "see %s/%s%s.%d.log", job->image, job->bulk, job->image,
                TARGZ_SUFFIX, job->bulk, job->image, TARGZ_SUFFIX, host_uid());
+      KERR("ERROR %s", err);
       send_status_ko(p->llid, p->tid, err);
       }
     else

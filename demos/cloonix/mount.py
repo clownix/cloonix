@@ -12,6 +12,8 @@ Two options of add cnt that nothing else in demos/ uses::
           /tmp/cloonix_mount_<net>
             seen as /shared in both
             conf/ seen as /etc/demo in cnt1 only
+          (a toy: /var/lib/cloonix/bulk/cloonix_mount_<net>, which its
+           server sees as /root/bulk_host/cloonix_mount_<net>)
 
   vmount="<host dir>:<guest path> [<host dir>:<guest path> ...]"
       the host directory IS the guest directory, docker's -v. What one
@@ -29,7 +31,6 @@ Two options of add cnt that nothing else in demos/ uses::
   ACT 4  the host configures cnt1 through conf/, without touching the image
   ACT 5  what survives a delete: the mount does, the overlay does not
 
-Standard library only, like cloonix itself.
 
 Image: trixie
 Size:  2 containers, 1 lan
@@ -52,11 +53,12 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    CLOONIX, NET, erase_net, show, ssh, step, story)
+    CLOONIX, NET, erase_net, shared_dir, show, ssh, step, story, unavailable,
+    guarded)
 
 CNT_ROOTFS_CHOICES = ("trixie",)
 
-HOST_DIR = "/tmp/cloonix_mount_%s" % NET
+HOST_DIR, SEEN_DIR = shared_dir("cloonix_mount_%s" % NET)
 CONF_DIR = HOST_DIR + "/conf"
 
 CNT = ("cnt1", "cnt2")
@@ -66,8 +68,8 @@ ADDR = {"cnt1": "10.0.0.1", "cnt2": "10.0.0.2"}
 # What each container is given: the same image, a different role.
 ENV = {"cnt1": "NODE_ID=cnt1 ROLE=writer",
        "cnt2": "NODE_ID=cnt2 ROLE=reader"}
-VMOUNT = {"cnt1": "%s:/shared %s:/etc/demo" % (HOST_DIR, CONF_DIR),
-          "cnt2": "%s:/shared" % HOST_DIR}
+VMOUNT = {"cnt1": "%s:/shared %s/conf:/etc/demo" % (SEEN_DIR, SEEN_DIR),
+          "cnt2": "%s:/shared" % SEEN_DIR}
 
 def run(line, ack=None):
     """Show a cloonix command line, then give it to the client."""
@@ -122,7 +124,7 @@ def check_net():
                        capture_output=True, text=True,
                        stdin=subprocess.DEVNULL)
     if r.returncode:
-        sys.exit("no answer from %s\n"
+        unavailable("no answer from %s\n"
                  "  start it:  cloonix start %s" % (NET, NET))
 
 def choose_image():
@@ -137,7 +139,7 @@ def choose_image():
         if ok:
             return cand
         said = (r.stdout + r.stderr).strip() or "nothing"
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -161,7 +163,7 @@ def place():
 def host_dir():
     """The directory the two containers will share, on the server's disk.
 
-    An earlier run may have left files: they are the point of ACT 5, so
+    An earlier run may have left files: ACT 5 is about them, so
     the directory is emptied here and not deleted, to show the delete
     later touches none of it.
     """
@@ -339,13 +341,4 @@ def main():
     story("  the host directory stays: rm -rf %s" % HOST_DIR)
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit as stop:
-        if stop.code:
-            sys.stderr.write("%s\n" % stop.code)
-            up = [n for n in CNT if in_lst(n)]
-            if up:
-                sys.stderr.write("Still running: %s\n" % ", ".join(up))
-            raise SystemExit(1)
-        raise
+    guarded(main, CNT)

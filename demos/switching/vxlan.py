@@ -3,46 +3,43 @@ r"""vxlan - one layer 2 network carried over a routed layer 3 core.
 
     ./vxlan.py [net]               the net defaults to nemo
 
-Two sites, each a host and a VTEP, joined by a routed core they do not
-share a subnet with::
+Two sites, each a host and a VTEP, joined by a routed core that does not
+carry their subnet::
 
     h1 -- lan1 -- vtep1 == core == vtep2 -- lan2 -- h2
    10.0.0.1        192.168.1.1   192.168.2.1        10.0.0.2
 
-  h1 and h2 are on 10.0.0.0/24 and believe they share one wire. They do
-  not: their frames are wrapped by the VTEPs in UDP and sent across the
-  192.168.0.0/16 core, which knows nothing of 10.0.0.0/24.
+h1 and h2 are on 10.0.0.0/24 and behave as on one wire: the VTEPs wrap their
+frames in UDP across the 192.168.0.0/16 core, which knows nothing of
+10.0.0.0/24.
 
-  ACT 1  the core alone: vtep1 reaches vtep2 by a routed hop, and h1
-         cannot reach h2 -- there is no layer 2 path yet.
-  ACT 2  a vxlan interface on each VTEP, vni 100, over the core. h1 and
-         h2 are now on one broadcast domain; h1 arps for h2 and pings it.
-  ACT 3  the arp of h1 is shown to be a broadcast the core carried as a
-         unicast UDP datagram between the VTEPs.
+  ACT 1  the core alone: vtep1 reaches vtep2 by a routed hop, and h1 does
+         not reach h2, there being no layer 2 path.
+  ACT 2  a vxlan interface on each VTEP, vni 100, over the core: h1 and h2
+         share a broadcast domain; h1 arps for h2 and pings it.
+  ACT 3  the arp of h1, a broadcast, shown crossing the core as one unicast
+         UDP datagram between the VTEPs.
 
 Image: frr_trixie (iproute2)
 Size:  5 containers, 3 lans
 
 THE PACKET TO CATCH
 -------------------
-  VXLAN is UDP to port 4789. On a core interface the inner frame, arp or
-  icmp, rides inside it:
+  VXLAN is UDP port 4789, the inner frame, arp or icmp, inside it:
 
     cloonix cli nemo cnf vtep1 eth1 sniff=on
     cloonix cli nemo sniff vtep1 eth1 --dump udp port 4789
 
-  The packet worth catching is the first: h1's arp for h2, a layer 2
+  The packet to catch is the first: the arp of h1 for h2, a layer 2
   broadcast, crossing the routed core as one UDP datagram to vtep2.
 
-Needs on the host, once per boot
-  The vxlan kernel module, as kvm needs kvm_intel. A container run by an
-  ordinary user cannot load a module; it uses one already on the host:
+Important
+  The vxlan module, used by a container of a user and not loaded by it,
+  on the host once per boot:
 
     sudo modprobe vxlan
 
-Important
-  Nothing is baked into the image: the vxlan interfaces are made at run
-  time with ip, no configuration file at all.
+  The vxlan interfaces are made at run time with ip, no configuration file.
 """
 import os
 import sys
@@ -56,7 +53,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
     NET, build, check_net, choose_rootfs, count_on, erase_net, hold,
-    module_on_host, place, reached, ssh, step, story, tools_present)
+    need_host_modules, place, reached, ssh, step, story, tools_present)
 
 HISTORY = """\
 VXLAN was written by VMware, Cisco, Arista and others and published as RFC
@@ -75,6 +72,7 @@ on, the subject of switching/ovn.py.
 """
 
 ROOTFS_CHOICES = ("frr_trixie",)
+HOST_MODULES = ("vxlan",)
 
 H1, V1, V2, H2 = "h1", "vtep1", "vtep2", "h2"
 CORE = "core"
@@ -154,13 +152,7 @@ def main():
     build(rootfs)
     tools_present(V1, "ip", "bridge")
 
-    if not module_on_host(V1, "vxlan"):
-        sys.exit("the vxlan module is not on the host.\n"
-                 "  a container run as your normal user cannot load a kernel\n"
-                 "  module, but it can use one already on the host. On the\n"
-                 "  host, once per boot, run as yourself:\n"
-                 "    sudo modprobe vxlan\n"
-                 "  then start this demo again as your normal user.")
+    need_host_modules(V1, HOST_MODULES)
 
     step("act 1: the core routes; h1 cannot yet reach h2")
     story()
@@ -216,7 +208,7 @@ def main():
                  % (ok_core, no_l2, ok_overlay))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the overlay traffic on the core, inner frame and all:
     cloonix cli %s sniff vtep1 eth1 --dump udp port 4789

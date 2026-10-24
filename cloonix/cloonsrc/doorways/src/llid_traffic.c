@@ -107,11 +107,8 @@ static t_llid_traf *llid_traf_get(int dido_llid)
   return (g_llid_traf[dido_llid]);
 }
 
-/*--------------------------------------------------------------------------*/
-/* Flow control of a leg: its client is not read while the agent said xoff
-   or the backdoor of the guest is past msg_tx_queue_high; the agent is told
-   xoff while the client is past it. A leg held 10 s with its queues not
-   shrinking is a WARNING. */
+/* Leg flow control: client unread while agent xoff or guest backdoor over
+   msg_tx_queue_high; held 10 s without shrinking warns. */
 #define STALL_MS 10000
 
 static void watch_del(t_llid_traf *lt)
@@ -229,7 +226,6 @@ static void timer_watch(void *data)
   else
     g_watch_timer = 0;
 }
-/*--------------------------------------------------------------------------*/
 
 static void send_to_traf_client(int dido_llid, int val, int len, char *buf)
 {
@@ -632,9 +628,8 @@ void llid_traf_heartbeat(void)
     }
 }
 
-/* Client end of a dbssh leg died: tell the agent, do NOT arm the deferred
-   close, the caller frees the leg synchronously (a second free landed on a
-   reused llid). */
+/* dbssh client end died: tell the agent; no deferred close, the caller
+   frees the leg (a second free hit a reused llid). */
 void llid_traf_client_gone(int dido_llid)
 {
   t_llid_traf *lt = llid_traf_get(dido_llid);

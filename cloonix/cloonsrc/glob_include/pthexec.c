@@ -17,12 +17,13 @@ static int g_is_in_crun;
 
 #define PTHEXEC_LIST \
   X(pthexec_agent_iso_amd64,      "/insider_agents/insider_agent_x86_64.iso") \
+  X(pthexec_agent_dir_cnt,        "/insider_agents/insider_agent_cnt") \
   X(pthexec_agent_iso_win,        "/insider_agents/insider_agent_win_x86_64.iso") \
   X(pthexec_agent_iso_bsd,        "/insider_agents/insider_agent_bsd_x86_64.iso") \
   X(pthexec_iw_bin,               "/cloonfs/sbin/iw") \
   X(pthexec_crun_bin,             "/cloonfs/bin/cloonix-crun") \
   X(pthexec_ovsdb_tool_bin,       "/cloonfs/bin/cloonix-ovsdb-tool") \
-  X(pthexec_osirrox_bin,          "/cloonfs/bin/xorriso") \
+  X(pthexec_cp_bin,               "/cloonfs/bin/cp") \
   X(pthexec_umount_bin,           "/cloonfs/bin/umount") \
   X(pthexec_mount_bin,            "/cloonfs/bin/mount") \
   X(pthexec_bash_bin,             "/cloonfs/bin/bash") \
@@ -47,6 +48,7 @@ static int g_is_in_crun;
   X(pthexec_cloonfs_suid_power,   "/cloonfs/bin/cloonix-suid-power") \
   X(pthexec_cloonfs_doorways,     "/cloonfs/bin/cloonix-doorways") \
   X(pthexec_cloonfs_gui_server,   "/cloonfs/bin/jscloonix/cloonix-gui-server") \
+  Y(pthexec_qemu_bin,             "/cloonfs/bin/cloonix-qemu-system") \
   Y(pthexec_ovmf_code,            "/cloonfs/bin/qemu/edk2-x86_64-code.fd") \
   Y(pthexec_ovmf_vars,            "/cloonfs/bin/qemu/edk2-i386-vars.fd")
 
@@ -165,8 +167,8 @@ PTHEXEC_LIST
 #undef X
 #undef Y
 
-/* The directory of the running binary: a helper the toy carries beside    */
-/* proxymous is found there, in the bundle it is cloonfs/bin.              */
+/* The directory of the running binary: a helper the toy carries beside */
+/* proxymous is found there, in the bundle it is cloonfs/bin. */
 char *pthexec_self_bin_dir(void)
 {
   static char dir[MAX_PATH_LEN];

@@ -39,7 +39,7 @@ of the chapter *Learning with cloonix*, read from *demos/packages*.
 What a demo is about is the docstring at its top: the network as ascii
 art, the acts, the image, the packet to catch. *cloonix cli <net> demo*
 lists each demo with the first line of that docstring, and the canvas shows
-the whole of it in the *About* view of its History popup.
+the whole of it in the *About* view of its Comments panel.
 
 
 One form
@@ -70,21 +70,19 @@ every command prints itself as it runs, so a run is a worked example::
     $ cloonix cli nemo plug a10 eth0 lan_trunk
     $ cloonix cli nemo ssh a10 "ip link add link eth0 name eth0.10 type vlan id 10"
 
-A demo checks that the net is up and that its image is in bulk before
-building anything, printing the refusal of the server, which names the
-build script and the download, when it is not. It then erases the net,
-*del all*, and reads the topology until it is empty, so every run starts on
-a clean canvas, and sends the position of each item and the angle of each
-interface before creating them, so the topology is drawn as its figure in
-this chapter and nothing lands on the layout spiral. A result is shown at reading speed: a ping is five pings with its last
-lines in the history, and what an act proved stays there four seconds,
-blank lines around it, before the next act starts; *CLOONIX_DEMO_FAST=1*
-removes the pauses for a script, *debug/demo_test.py* sets it, and a
-terminal run has none. A demo
-that has something to try by hand while it runs, a published port
-to open in a browser, stops and asks for Enter, in the terminal or in the
-Demo panel of the canvas; run by a script, with nobody to answer, it goes
-on. Every demo ends with the network running.
+A demo checks that the net is up and its image in bulk before building
+anything, and prints the refusal of the server, which names the build script
+and the download, when it is not. It then erases the net, *del all*, waits
+for the topology to be empty, and sends the position of each item and the
+angle of each interface before creating them, so every run starts on a clean
+canvas and draws the figure of this chapter. On the canvas a result is shown
+at reading speed: a ping is five pings, and what an act proved stays four
+seconds, blank lines around it, before the next act; a terminal run has no
+pause, nor a script with *CLOONIX_DEMO_FAST=1*, which *debug/demo_test.py*
+sets. A demo with something to try by hand, a published port to open in a
+browser, stops for Enter, in the terminal or in the Demo panel; run by a
+script, with nobody to answer, it goes on. Every demo ends with the network
+running.
 
 The image of a demo is *ROOTFS_CHOICES* at the top of the script; the
 builders are in *vm_create/cnt_kvm_demo*, keyed by the demo name, *frr* for
@@ -116,8 +114,8 @@ type to build the same thing by hand::
 
 The **history** is everything else: the paragraph on the protocol, what
 each step is for, the output of the ping or the capture that proves it, the
-commands it suggests once it is over. It is shown by the *History*
-popup that the Demo panel opens on the canvas, step by step, each step
+commands it suggests once it is over. It is shown by the *Comments*
+panel that the Demo panel opens on the canvas, step by step, each step
 folding the commands it ran; the chapter on the web canvas describes it.
 A terminal run does not print it, and does not pause for it either::
 
@@ -128,6 +126,34 @@ A terminal run does not print it, and does not pause for it either::
 A refusal, *the image is not in bulk*, or a failure, *the string was still
 readable on lanC*, is for both readers: it is printed on the error output,
 shows in the terminal and in the log, and the popup repeats it in red.
+
+
+all.py
+======
+
+Every demo of the Demo picker, in the order of *demos/packages*, one after
+the other, for a reader who only watches::
+
+    cloonix cli nemo demo all.py
+
+Each demo erases the net, builds its network, proves it and leaves it up
+until the next one starts; each is first printed as the line that plays it
+alone. A key a demo would wait for is not awaited. Before the first demo,
+when the server runs on this machine, all.py checks the kernel modules of
+every demo of its list and names the missing ones at once, with the
+*modprobe* lines that load them. all.py is a check: the
+demos it plays run with *CLOONIX_DEMO_FAST=1*, no pause for a reader and
+none between two demos; *CLOONIX_DEMO_FAST=0* in its environment gives the
+pace of a reader back. A demo that cannot run here, its image absent, a
+kernel module not loaded on the host, a net not run as root, a toy with a
+single uid mapping, says why and stops the run there, as a demo that fails
+does: its network is left for inspection, and the voice says that the demo
+stopped and reads the first line of the reason. The Comments panel tells one
+demo at a time: its title names the demo being played, *7/69
+cloonix/snf.py*, and its current step; at its end a line says *End of
+demo*; after the last, the number of demos played to their end. all.py has
+no phrase of its own: the voice says the phrase of each demo as it begins.
+In a toy, all.py plays the demos of that toy.
 
 
 cloonix/cnt.py and cloonix/kvm.py
@@ -269,7 +295,8 @@ The variables are read from */proc/1/environ* of each; *cnt1* writes in
 and *cnt1* reads it at */etc/demo*; then *cnt1* is deleted and made again:
 the file in the mount is still there, the one written in */root* is gone.
 The demo makes the directory on the machine of the server, where a mount
-takes its source.
+takes its source; in a toy, in its bulk, which the server sees as
+*/root/bulk_host*.
 
 
 cloonix/limit.py
@@ -297,7 +324,8 @@ cloonix/systemd.py
    :align: center
    :width: 100%
 
-Three containers, one with an init, image *trixie_systemd*::
+Three containers, one with an init, images *trixie_systemd* for that one
+and *trixie* for the others::
 
     cd vm_create/cnt_kvm && ./cnt_trixie_systemd.sh
     cloonix cli nemo demo cloonix/systemd.py

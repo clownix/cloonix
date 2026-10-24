@@ -1,6 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* cxp_wire.c - see cxp_wire.h. Compiled by gcc and by the mingw cross       */
-/* compiler both, so nothing here may be platform specific.                  */
+/* cxp_wire.c - see cxp_wire.h. Compiled by gcc and by the mingw cross */
+/* compiler both, so nothing here may be platform specific. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

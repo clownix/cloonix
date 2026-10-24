@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-FROM_HERE=`pwd`
 BUNDLE="/root/cloonix_bundle"
 ROOTFS="${BUNDLE}/cloonfs"
 PATCHELF="${ROOTFS}/bin/patchelf"
@@ -10,7 +9,7 @@ if [ ! -e ${BUNDLE}/cloonix/cloonix_config.py ]; then
   echo ${BUNDLE}/cloonix/cloonix_config.py
   exit 1   
 fi  
-printf "\n\nPACKING ${pretty_name} ${ROOTFS}\n\n"
+printf "\n\nPACKING ${ROOTFS}\n\n"
 cp_built()
 {
   local bin="$1"
@@ -30,7 +29,7 @@ cp_built()
     echo "the last build of that directory did not succeed; fix it and rebuild"
     exit 1
   fi
-  cp -f "${bin}" "${dst}"
+  cp -rf "${bin}" "${dst}"
 }
 cp -f ${BUNDLE}/cloonix/cloonix ${ROOTFS}/bin
 chmod 755 ${ROOTFS}/bin/cloonix
@@ -40,12 +39,14 @@ for i in ${BUNDLE}/cloonix/cloonix_*.py; do
 done
 mkdir -p ${ROOTFS}/bin/qemu
 cp -f ${BUNDLE}/cloonix/cloonix_config.py ${ROOTFS}/etc/cloonix.cfg
+# One configuration: the client's cloonix_config.py is the server's cloonix.cfg.
+ln -sf ../etc/cloonix.cfg ${ROOTFS}/bin/cloonix_config.py
 # No unit file for the toy any more.
 cp_built ${CLOONSRC}/cxp_cli/cloonix-cxp-cli ${ROOTFS}/bin
 cp_built ${CLOONSRC}/dtach/cloonix-dtach ${ROOTFS}/bin
 cp_built ${CLOONSRC}/ovs/cloonix-vswitch.ovsschema ${ROOTFS}/bin/ovsschema
-# The iso, not the directory it is built in: that directory now holds the
-# agent sources as well, and copying it whole would put them in the delivery.
+# The isos and the cnt directory, not the directory they are built in: it
+# holds the agent sources as well.
 mkdir -p ${BUNDLE}/insider_agents
 cp_built ${CLOONSRC}/insider_agents/insider_agent_x86_64.iso \
          ${BUNDLE}/insider_agents
@@ -53,6 +54,8 @@ cp_built ${CLOONSRC}/insider_agents/insider_agent_win_x86_64.iso \
          ${BUNDLE}/insider_agents
 cp_built ${CLOONSRC}/insider_agents/insider_agent_bsd_x86_64.iso \
          ${BUNDLE}/insider_agents
+rm -rf ${BUNDLE}/insider_agents/insider_agent_cnt
+cp_built ${CLOONSRC}/insider_agents/insider_agent_cnt ${BUNDLE}/insider_agents
 cp_built ${CLOONSRC}/suid_power/cloonix-suid-power ${ROOTFS}/bin
 cp_built ${CLOONSRC}/doorways/cloonix-doorways ${ROOTFS}/bin
 cp_built ${CLOONSRC}/uml_cloonix_switch/cloonix-main-server ${ROOTFS}/bin

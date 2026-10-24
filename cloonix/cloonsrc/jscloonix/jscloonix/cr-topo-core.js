@@ -10,7 +10,6 @@ const SPECIAL_R = 14; // tap / nat / a2b / c2c / phy — half-size; VMs/CNTs dom
 const ETH_R   = 12;   // Interface dot radius (same as LAN)
 const LAN_R   = 12;   // LAN dot radius
 const ETH_GAP =  2;   // gap between node circle edge and eth dot centre
-const MAX_ETH =  5;   // max eth shown in dialog
 const INNER_R =  5;   // inner RX indicator dot radius
 
 // Canvas / context
@@ -118,6 +117,9 @@ function lanKind(name) {
   return isWlan(g_nodes.find(n => n.name === e.name), e.num) ? "air" : "lan";
 }
 function isAir(name) { return lanKind(name) === "air"; }
+// the airs captured (cnf <air> sniff=on), the etype eths of topo.air as an
+// eth's; an air is born not
+let g_air_snf = new Set();
 function airOf(nd, i) {
   const e = g_edges.find(x => x.name === nd.name && x.num === i);
   return e ? e.lan : null;
@@ -160,9 +162,8 @@ let g_kvm_cfg = {
   // off by default too: an ios-xe image has no agent to answer, and ticking
   // it for a linux one leaves that guest with no agent channel at all
   cisco: 0,
-  // and off by default: it gives the guest the freebsd agent disc, whose
-  // binaries a linux guest cannot exec, so its node would stay red saying
-  // nothing
+  // and off by default: the freebsd agent disc does not run in a linux guest,
+  // whose node would stay red
   freebsd: 0,
   // radios, wlan0.. of the guest, on the air kvmwifi
   nb_vwif: 0,
@@ -179,6 +180,7 @@ let g_nat_counter = 1;
 let g_a2b_counter = 1;
 let g_c2c_counter = 1;
 let g_brand = "brandkvm";
+let g_kvm_absent = false;   // a cloonix without qemu: containers only
 
 // Helpers
 function post(url, body, onOk) {
@@ -189,15 +191,32 @@ function post(url, body, onOk) {
     .catch(e => alert("Network error: " + e));
 }
 
-function snfSet(name, num, on) {
+function snfSet(name, num, on, onOk) {
   fetch("/ctl/snf", { method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({ name, num, on }) })
     .then(r => {
-      if (r.ok) return;
+      if (r.ok) { if (onOk) onOk(); return; }
       return r.json().then(j => { throw new Error((j && j.error) || ("snf error ("+r.status+")")); })
                      .catch(err => { throw (err instanceof Error ? err : new Error("snf error ("+r.status+")")); });
     })
     .catch(e => alert(e.message || ("Network error: " + e)));
+}
+
+// Sniff from the menu: webshark opens once the server says sniffable (eths)
+// or the air captured; num null: an air; filter: initial display filter.
+function websharkWhenSniffable(name, num, filter) {
+  const end = Date.now() + 20000;
+  const t = setInterval(() => {
+    const it = (num === null) ? g_lans.find(l => l.name === name)
+                              : g_nodes.find(n => n.name === name);
+    if (!it || Date.now() > end) { clearInterval(t); return; }
+    if (num === null ? g_air_snf.has(name)
+                     : (it.etype && it.etype[num] === "eths")) {
+      clearInterval(t);
+      if (num === null) openAirWebshark(name, it, filter);
+      else              openWebsharkPanel(name, num, it, undefined, filter);
+    }
+  }, 300);
 }
 
 function ethPos(nd, i) {
@@ -229,8 +248,6 @@ const VM_COLOR = {
   booting: { fill:"#e61a1a", stroke:"#ff3333" },
   up:      { fill:"#8080ff", stroke:"#9999ff" },
 };
-// Before any event: dark red (same as "down") — qemu not yet started
-const CNT_COLOR_DEFAULT = { fill:"#804d4d", stroke:"#a06060" };
 
 let g_vm_states = {};  // name → "down" | "booting" | "up"
 // g_activity[name][num] = { tx: bool, rx: bool } — cleared after FLASH_MS
@@ -488,7 +505,7 @@ function forceLayout(nodes, lans, edges) {
           const z1 = Math.max(0.05, Math.min(1, z));   // never zoom IN past 1:1
           const cxw = (minx + maxx)/2, cyw = (miny + maxy)/2;
           const px1 = vw/2 - z1 * cxw;
-          // Under the Demo and History panels: the low edge of the drawing
+          // Under the Demo and Comments panels: the low edge of the drawing
           // near the low edge of the view; a tall one goes behind the panels.
           const py1 = g_demo_view ? vh - z1 * (maxy + NODE_R * 2)
                                   : vh/2 - z1 * cyw;

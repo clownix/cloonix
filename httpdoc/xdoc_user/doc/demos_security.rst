@@ -161,7 +161,7 @@ security/nftables.py
 
 Packet filtering in linux was rewritten three times by the same community:
 ipfwadm, then ipchains by Rusty Russell in 1998, then the netfilter framework
-and iptables, by Rusty Russell and Harald Welte, in kernel 2.4 of 2000.
+and iptables, by Rusty Russell and Harald Welte, in kernel 2.4 of 2001.
 nftables is the fourth: Patrick McHardy presented it in 2008 as one virtual
 machine in the kernel replacing the separate ip, ip6, arp and ethernet tables,
 it was merged in kernel 3.13 in January 2014, and Pablo Neira Ayuso leads the

@@ -1,6 +1,5 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-#define _XOPEN_SOURCE 700
-#define _DEFAULT_SOURCE
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -16,6 +15,12 @@
 #include <sys/prctl.h>
 #include <ftw.h>
 #include <sys/xattr.h>
+#include <sched.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <linux/ethtool.h>
+#include <linux/sockios.h>
 
 #include "io_clownix.h"
 #include "rpc_clownix.h"
@@ -58,9 +63,8 @@ char *crun_cgroup_manager(int is_privileged)
 char *get_net_name(void);
 char *get_root_path(void);
 
-/* The id crun knows a container by. Net-unique: with the systemd cgroup
-   manager the scope is crun-<id>.scope, one namespace for the machine,
-   and two nets both holding an hA would collide on it. */
+/* crun id unique per net: two nets would collide on crun-<id>.scope with
+   the systemd cgroup manager. */
 char *crun_id(char *name)
 {
   static char id[MAX_NAME_LEN];
@@ -112,11 +116,11 @@ static int nspace_ids(int pid, char *out, int outlen)
   return len;
 }
 
-static char *nspace_deleted(char *nspacecrun)
+void crun_utils_nspace_deleted(char *name, char *nspacecrun)
 {
-  static char txt[MAX_PATH_LEN];
+  char txt[MAX_PATH_LEN];
   snprintf(txt, MAX_PATH_LEN-1, "deleted %s", nspacecrun);
-  return txt;
+  suid_trace(trace_kind_nspace, name, txt);
 }
 
 void crun_utils_nspace_created(char *name, char *nspacecrun, int crun_pid)
@@ -220,10 +224,10 @@ static char *get_insider_agent(void)
 
   if (lstat(pthexec_cloonfs_lib64(), &sb) == 0)
     {
-    if (lstat(pthexec_agent_iso_amd64(), &sb) == 0)
-      result = pthexec_agent_iso_amd64();
+    if (lstat(pthexec_agent_dir_cnt(), &sb) == 0)
+      result = pthexec_agent_dir_cnt();
     else
-      KERR("ERROR %s NOT FOUND", pthexec_agent_iso_amd64());
+      KERR("ERROR %s NOT FOUND", pthexec_agent_dir_cnt());
     }
   else
     KERR("ERROR %s NOT FOUND", pthexec_cloonfs_lib64());
@@ -235,14 +239,14 @@ static int dirs_agent_copy_starter(char *mountbear)
   int result = -1;
   char path[MAX_PATH_LEN];
   char cmd[2*MAX_PATH_LEN];
-  char *iso = get_insider_agent();
-  if (iso)
+  char *dir = get_insider_agent();
+  if (dir)
     {
     memset(path, 0, MAX_PATH_LEN);
     memset(cmd, 0, 2*MAX_PATH_LEN);
     snprintf(path, MAX_PATH_LEN-1, "%s/cnf_fs", mountbear);
-    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -osirrox on -indev %s -extract / %s",
-             pthexec_osirrox_bin(), iso, path); 
+    snprintf(cmd, 2*MAX_PATH_LEN-1, "%s -rf --preserve=mode %s/. %s",
+             pthexec_cp_bin(), dir, path);
     if (execute_cmd(cmd, 1, 0))
       KERR("ERROR %s", cmd);
     else
@@ -862,12 +866,10 @@ int crun_utils_create_crun_create(char *cnt_dir, char *name, int ovspid,
   return pid;
 }
    
-/* One ip step of the veth build; the stderr of ip is kept in the report   */
-/* because exit 2 alone covers three different faults.                      */
-/* All the ip lines of one namespace in one ip -batch: one exec for any
-   number of eths, not five per eth, so a 32 eth create does not hold the
-   loop for seconds. netns NULL is the namespace of suid_power; force goes
-   on past a failed line, for the deletes of what may not exist. */
+/* One ip step of the veth build; the stderr of ip is kept in the report */
+/* because exit 2 alone covers three different faults. */
+/* All ip lines of a namespace in one ip -batch; netns NULL: our own; force:
+   go past failed lines (deletes). */
 #define IP_BATCH_LEN (MAX_ETH_VM * 3 * 160)
 static int ip_batch(char *netns, char *lines, int force, char *why)
 {
@@ -902,6 +904,23 @@ static int ip_batch(char *netns, char *lines, int force, char *why)
     }
   unlink(path);
   return result;
+}
+
+/* The host ends of the eths, in either namespace or nowhere: left by an
+   earlier run, or gone with the namespace of the container. */
+static void eths_del(int vm_id, int nb_eth)
+{
+  static char dels[IP_BATCH_LEN];
+  char net[MAX_NAME_LEN];
+  int i, len = 0;
+  memset(net, 0, MAX_NAME_LEN);
+  snprintf(net, MAX_NAME_LEN-1, "%s_%s", BASE_NAMESPACE, get_net_name());
+  dels[0] = 0;
+  for (i=0; i<nb_eth; i++)
+    len += snprintf(dels + len, IP_BATCH_LEN - len, "link del name %s\n",
+                    pthexec_ovs_port(vm_id, i));
+  ip_batch(net, dels, 1, "");
+  ip_batch(NULL, dels, 1, "");
 }
 
 static int crun_utils_create_veth(int vm_id, char *nspacecrun,
@@ -943,10 +962,7 @@ void crun_utils_prepare_with_delete(char *name, char *nspacecrun,
                                     int uid_image, int is_privileged)
 {
   char cmd[2*MAX_PATH_LEN];
-  static char dels[IP_BATCH_LEN];
-  char net[MAX_NAME_LEN];
-  int len = 0;
-  int i, pid = read_crun_create_pid(name, 1, is_privileged);
+  int pid = read_crun_create_pid(name, 1, is_privileged);
   char *ptr = get_var_crun_log();
   char *cgroupman;
   cgroupman = crun_cgroup_manager(is_privileged);
@@ -966,16 +982,8 @@ void crun_utils_prepare_with_delete(char *name, char *nspacecrun,
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s >/dev/null",
            pthexec_ip_bin(), nspacecrun);
   if (!execute_cmd(cmd, 0, 0))
-    suid_trace(trace_kind_nspace, name, nspace_deleted(nspacecrun));
-  memset(net, 0, MAX_NAME_LEN);
-  snprintf(net, MAX_NAME_LEN-1, "%s_%s", BASE_NAMESPACE, get_net_name());
-  dels[0] = 0;
-  for (i=0; i<nb_eth; i++)
-    len += snprintf(dels + len, IP_BATCH_LEN - len, "link del name %s\n",
-                    pthexec_ovs_port(vm_id, i));
-  /* left by an earlier run in either namespace, or nowhere */
-  ip_batch(net, dels, 1, "");
-  ip_batch(NULL, dels, 1, "");
+    crun_utils_nspace_deleted(name, nspacecrun);
+  eths_del(vm_id, nb_eth);
 }
 
 int crun_utils_user_nspacecrun_init(char *name, char *nspacecrun,
@@ -995,11 +1003,63 @@ int crun_utils_user_nspacecrun_init(char *name, char *nspacecrun,
   return result;
 }
 
+/* Checksums finished in software, as on a cable: left to an offload, a frame
+   crosses the veth unfinished, and a copy made in user space (an af-packet
+   ips) hands it on as it is, to be dropped at the far end. No checksum
+   offload takes the segmentation offload with it: no frame above the mtu. */
+static void eths_csum_off(char *nspace, int vm_id, int nb_eth, int peer)
+{
+  char path[MAX_PATH_LEN];
+  struct ifreq ifr;
+  struct ethtool_value ev;
+  int i, fd;
+  snprintf(path, MAX_PATH_LEN-1, "%s%s", PATH_NAMESPACE, nspace);
+  fd = open(path, O_RDONLY);
+  if (fd < 0)
+    {
+    KERR("ERROR %s: %s, checksum offload left on", path, strerror(errno));
+    return;
+    }
+  if (setns(fd, CLONE_NEWNET))
+    {
+    KERR("ERROR setns %s: %s, checksum offload left on", path,
+         strerror(errno));
+    close(fd);
+    return;
+    }
+  close(fd);
+  fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (fd < 0)
+    {
+    KERR("ERROR socket in %s: %s, checksum offload left on", nspace,
+         strerror(errno));
+    return;
+    }
+  for (i=0; i<nb_eth; i++)
+    {
+    memset(&ifr, 0, sizeof(ifr));
+    if (peer)
+      snprintf(ifr.ifr_name, IFNAMSIZ, "eth%d", i);
+    else
+      snprintf(ifr.ifr_name, IFNAMSIZ, "%s", pthexec_ovs_port(vm_id, i));
+    memset(&ev, 0, sizeof(ev));
+    ev.cmd = ETHTOOL_STXCSUM;
+    ifr.ifr_data = (char *) &ev;
+    if (ioctl(fd, SIOCETHTOOL, &ifr) < 0)
+      KERR("ERROR %s in %s: checksum offload left on: %s", ifr.ifr_name,
+           nspace, strerror(errno));
+    }
+  close(fd);
+}
+
+/* Run by the child of timer_start_stage (crun.c): its last step enters the
+   namespaces of the two ends of the eths. */
 int crun_utils_user_eth_create(char *name, char *nspacecrun,
                                int cloonix_rank, int vm_id,
                                int nb_eth, t_eth_mac *eth_mac)
 {
   char cmd[MAX_PATH_LEN];
+  char net[MAX_NAME_LEN];
   int result;
 
   result = crun_utils_create_veth(vm_id, nspacecrun, nb_eth, eth_mac);
@@ -1016,6 +1076,13 @@ int crun_utils_user_eth_create(char *name, char *nspacecrun,
       result = -1;
       }
     }
+  if (result == 0)
+    {
+    memset(net, 0, MAX_NAME_LEN);
+    snprintf(net, MAX_NAME_LEN-1, "%s_%s", BASE_NAMESPACE, get_net_name());
+    eths_csum_off(nspacecrun, vm_id, nb_eth, 1);
+    eths_csum_off(net, vm_id, nb_eth, 0);
+    }
   return result;
 }
 
@@ -1031,7 +1098,7 @@ int crun_utils_create_net(char *brandtype, int is_persistent,
     KERR("ERROR %s: %s/%s could not be prepared", name, cnt_dir, name);
   else if (dirs_agent_copy_starter(mountbear))
     {
-    KERR("ERROR %s: the agent iso could not be unpacked into %s", name,
+    KERR("ERROR %s: the agent could not be copied into %s", name,
          mountbear);
     result = -1;
     }
@@ -1227,11 +1294,13 @@ void crun_utils_delete_crun_stop(char *name, int pid, int uid_image,
   execute_cmd(cmd, 0, 0);
 }
 
-void crun_utils_delete_crun_delete(char *name, char *nspacecrun,
-                                   int vm_id, int nb_eth,
-                                   int uid_image, int is_privileged)
+/* Run by a child of the loop (crun.c): it sends nothing, and answers 1 when
+   the namespace of the container is deleted. */
+int crun_utils_delete_crun_delete(char *name, char *nspacecrun,
+                                  int vm_id, int nb_eth,
+                                  int uid_image, int is_privileged)
 {
-  int i, pid;
+  int i, pid, nspace_deleted;
   char cmd[2*MAX_PATH_LEN];
   char said[MAX_PATH_LEN];
   char *ptr = get_var_crun_log();
@@ -1287,15 +1356,9 @@ void crun_utils_delete_crun_delete(char *name, char *nspacecrun,
   memset(cmd, 0, MAX_PATH_LEN);
   snprintf(cmd, MAX_PATH_LEN-1, "%s netns del %s >/dev/null",
            pthexec_ip_bin(), nspacecrun);
-  if (!execute_cmd(cmd, 0, 0))
-    suid_trace(trace_kind_nspace, name, nspace_deleted(nspacecrun));
-  for (i=0; i<nb_eth; i++)
-    {
-    memset(cmd, 0, MAX_PATH_LEN);
-    snprintf(cmd, MAX_PATH_LEN-1, "%s link del name %s",
-             pthexec_ip_bin(), pthexec_ovs_port(vm_id, i));
-    execute_cmd(cmd, 0, 0);
-    }
+  nspace_deleted = (execute_cmd(cmd, 0, 0) == 0);
+  eths_del(vm_id, nb_eth);
+  return nspace_deleted;
 }
 
 int crun_utils_create_crun_start(char *name, int ovspid, int uid_image,

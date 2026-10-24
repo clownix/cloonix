@@ -21,6 +21,7 @@ not need its kind::
     sniff=           snf_add            any interface, any air
     x= y=            item_pos           any item of the canvas
     angle=           item_poseth        an interface of any item
+    note=            item_note          any item, the rest of the line (build_note)
     A2B|B2A ...      a2b_cnf            dir=<0|1> cmd=<name> val=<n>
     publish=         nat_cnf            publish=<ports>
     cpu= ram=        cnt_cnf            the keys given only

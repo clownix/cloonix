@@ -89,16 +89,17 @@ static int max_tx_sock_queue_len_reached(int llid, int cidx, int fd)
   int used, max_reached = 0;
   unsigned long ul_llid = llid;
   if (!lid)
-    KERR(" ");
+    KERR("ERROR llid %d has no record", llid);
   else
     {
     if (ioctl(fd, SIOCOUTQ, &used))
-      KERR(" ");
+      KERR("ERROR SIOCOUTQ on llid %d: %s", llid, strerror(errno));
     else
       {
       if (used > MAX_TOT_LEN_DOORWAYS_SOCK_Q) 
         {
-        KERR("%d %d", used, MAX_TOT_LEN_DOORWAYS_SOCK_Q);
+        KERR("WARNING llid %d: %d bytes queued in its socket, above %d, flow control on",
+             llid, used, MAX_TOT_LEN_DOORWAYS_SOCK_Q);
         channel_tx_local_flow_ctrl(llid, 1);
         clownix_timeout_add(2, fct_stop_writing_timeout,
                             (void *) ul_llid,NULL,NULL);
@@ -271,16 +272,11 @@ static int local_header_get_info(char *rx, int *llid, int *len, int *type,
                                  int *val, int *nb_pkt, char **nrx)
 {
   int idx_hmac, i = 0, result=0;
+  /* Not a doorways frame: the reader closes and tells, once. */
   if ((rx[i++] & 0xFF) != 0xCA)
-    {
-    KERR("WARNING bad frame: first byte %02X", rx[0] & 0xFF);
-    result = -1; 
-    }
+    result = -1;
   else if ((rx[i++] & 0xFF) != 0xFE)
-    {
-    KERR("%02X \n", rx[1]);
-    result = -1; 
-    }
+    result = -1;
   else
     {
     *llid = ((rx[i] & 0xFF) << 8) + (rx[i+1] & 0xFF);
@@ -299,12 +295,12 @@ static int local_header_get_info(char *rx, int *llid, int *len, int *type,
     i += MSG_DIGEST_LEN;
     if ((rx[i++] & 0xFF) != 0xDE)
       {
-      KERR("%02X \n", rx[i-1]);
+      KERR("ERROR doorways frame: byte %02X where a marker was expected", rx[i-1] & 0xFF);
       result = -1; 
       }
     else if ((rx[i++] & 0xFF) != 0xCA)
       {
-      KERR("%02X \n", rx[i-1]);
+      KERR("ERROR doorways frame: byte %02X where a marker was expected", rx[i-1] & 0xFF);
       result = -1; 
       }
     else
@@ -571,7 +567,7 @@ static int server_new_connect_from_client(int id, int fd)
   t_llid *listen_lid = g_llid_data[id];
   t_llid *lid;
   if (!listen_lid)
-    KERR(" ");
+    KERR("ERROR listen llid %d has no record", id);
   else
     {
     if (listen_lid->fd != fd)

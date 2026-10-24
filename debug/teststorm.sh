@@ -1,10 +1,7 @@
 #!/bin/bash
-# teststorm.sh - flows on a moving target: iperf3 clients that never stop
-# while the topology around and under them is torn and rebuilt at random.
+# teststorm.sh - endless iperf3 flows while the topology is torn and rebuilt
+# at random (image flow_trixie); starts nemo and mito, first failure ends it.
 #   ./teststorm.sh
-# Needs the image flow_trixie (vm_create/cnt_kvm_demo/cnt_flow_trixie.sh).
-# Cleans and starts nemo and mito, then runs teststorm.py on them; the
-# first thing that does not hold ends it, the nets left as they are.
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 cd "${HERE}"

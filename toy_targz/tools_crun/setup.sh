@@ -30,6 +30,20 @@ if [ "${FOUND}" = "no" ]; then
 fi
 BIN="${EXTRACT}/bin"
 CONFIG="${EXTRACT}/config"
+# setup.sh moves and patches files: it runs once per extraction. A second
+# run would break what the first one made, the binaries of a running toy
+# included: say what was made and leave everything as it is.
+if [ -e ${CONFIG}/config.json ]; then
+  DONE=$(ls ${EXTRACT}/*cmd 2>/dev/null | head -1)
+  printf "\n\t./setup.sh was already run in this directory"
+  if [ -n "${DONE}" ]; then
+    printf ", for the net %s.\n" "$(basename ${DONE} cmd)"
+    printf "\tFor another net, extract the tarball again in another directory.\n"
+    sh ${DONE}
+  fi
+  printf "\n"
+  exit 0
+fi
 CLOONFS="${ROOTFS}/cloonix/cloonfs"
 PATCHELF="${EXTRACT}/bin/cloonix-patchelf"
 HOST_BULK="/var/lib/cloonix/bulk"
@@ -59,11 +73,9 @@ sed -i s"%__PROXYSHARE_OUT__%${PROXYSHARE_OUT}%g"   ${CONFIG}/config.json
 sed -i s"%__ROOTFS__%${ROOTFS}%g"                   ${CONFIG}/config.json
 sed -i s"%__USER_UID__%${USER_UID}%g"               ${CONFIG}/config.json
 sed -i s"%__USER_GID__%${USER_GID}%g"               ${CONFIG}/config.json
-# The toy userns. A single mapping (user onto 0) denies setgroups for good and
-# daemons that drop privileges (named, dnsmasq, postfix, mosquitto, nginx,
-# haproxy, asterisk) die at start. A second mapping (subuid/subgid onto 1..)
-# lifts that but needs newuidmap/newgidmap of the host, which crun calls.
-# config/idmap says which one this toy got.
+# Toy userns: a single mapping denies setgroups (privilege-dropping daemons
+# die); a second one (subuid/subgid onto 1..) needs the host's
+# newuidmap/newgidmap. config/idmap says which.
 subid_range() {
   # first range of $1 in $2, by name then by numeric id: "start count"
   awk -F: -v u="${USER}" -v n="$1" '$1 == u || $1 == n { print $2, $3; exit }' "$2" 2>/dev/null
@@ -150,16 +162,15 @@ USER="${USER}"
 PROXYSHARE_OUT="${PROXYSHARE_OUT}"
 EXTRACT="${EXTRACT}"
 WEB_PORT="${WEB_PORT}"
+WEB_PASSWD="${WEB_PASSWD}"
 
 PROXY="\${EXTRACT}/bin/cloonix-proxymous-\${IDENT}"
 CRUN="\${EXTRACT}/bin/cloonix-crun-\${IDENT}"
-CLOONIX_CLI="\${EXTRACT}/bin/cloonix"
-CLOONIX_CFG="\${EXTRACT}/rootfs/cloonix/cloonfs/etc/cloonix.cfg"
-DEMO_DIR="\${EXTRACT}/rootfs/cloonix/cloonfs/share/cloonix/demos"
-# The toy keeps its demos inside the tarball it was unpacked from; this is
-# what makes the client read them instead of /usr/share/cloonix/demos.
-export CLOONIX_DEMO_DIR="\${DEMO_DIR}"
 CRUNROOT="\${EXTRACT}/worktmp"
+# The demos played from the web gui run on the host, under the proxymous
+# started here: they find demos/lib (demolib.py, frrlib.py) of this toy
+# through this, not the /usr/share/cloonix/demos of a bundle on the host.
+export CLOONIX_DEMO_DIR="\${EXTRACT}/rootfs/cloonix/cloonfs/share/cloonix/demos"
 # No cgroup of its own: the toy stays in the cgroup it is started from, beside
 # its proxymous, the same on every host. A kernel (RHEL 10, 6.12) starves for
 # tens of seconds what runs outside a busy cgroup, proxymous first, and the
@@ -169,63 +180,60 @@ CRUNROOT="\${EXTRACT}/worktmp"
 CGROUPM_ON="--cgroup-manager=\${CLOONIX_TOY_CGROUPM:-disabled}"
 CGROUPM="--cgroup-manager=disabled"
 
-usage_cmd() {
-  printf "\n\tCHOICE:\n"
-  printf "./${IDENT}cmd start\n"
-  printf "./${IDENT}cmd stop\n"
-  printf "./${IDENT}cmd shell\n"
-  printf "./${IDENT}cmd demo <param>\n"
-  printf "./${IDENT}cmd cloonix <args of the cloonix client>\n"
-  printf "\n\te.g. ./${IDENT}cmd cloonix cli ${IDENT} del all\n"
-  printf "\t     ./${IDENT}cmd cloonix cli ${IDENT} ssh cnt1 ip route\n"
-  exit 
+# The demos and everything else are played from the web gui.
+web_gui() {
+  host_ip=\$(ip -4 route get 1.1.1.1 2>/dev/null | \\
+            sed -n 's/.* src \\([0-9.]*\\).*/\\1/p')
+  printf "\\n\\tTHE WEB GUI of \${IDENT}, the demos are in its Demo button:\\n"
+  printf "https://127.0.0.1:\${WEB_PORT}  or  https://\${host_ip:-<address of this machine>}:\${WEB_PORT}"
+  printf "   user: \${IDENT}   password: \${WEB_PASSWD}\\n\\n"
 }
 
-usage_demo() {
-  # demos/ is two levels, an area then the software, so a listing of the
-  # directory gives the areas and not a name that can be played. The client
-  # walks it and prints what works: ask it rather than repeat the rule here.
-  if command -v python3 >/dev/null 2>&1; then
-    python3 \${CLOONIX_CLI} --cfg \${CLOONIX_CFG} demo \${IDENT} |
-    while read -r i; do
-      case "\${i}" in
-        *.py|*.sh) printf "./${IDENT}cmd demo \${i}\n" ;;
-      esac
-    done
-  else
-    printf "python3 is needed to play a demo, the demos are in\n\${DEMO_DIR}\n"
+stop_toy() {
+  \${CRUN} \${CGROUPM} --root=\${CRUNROOT} kill \${IDENT} 9 2>/dev/null
+  sleep 1
+  \${CRUN} \${CGROUPM} --root=\${CRUNROOT} delete \${IDENT} 2>/dev/null
+  # The container init survives when crun lost track of the container; pid 1
+  # of a pid namespace drops SIGTERM.
+  left=\$(ps -axo pid,args | grep "cloonix-init-\${USER}-\${IDENT}" | \\
+         grep -v grep | awk '{print \$1}')
+  if [ ! -z "\${left}" ]; then
+    echo "the container init is still there, killing it: \${left}"
+    kill -9 \${left} 2>/dev/null
+    sleep 1
   fi
+  # The state directory too ("directory already exists" on the next start).
+  # Files written by an inner uid belong to a subuid: rm from the same map.
+  if [ "\$(head -c 6 \${EXTRACT}/config/idmap 2>/dev/null)" = "subuid" ]; then
+    unshare --map-root-user --map-auto rm -rf \${CRUNROOT}/\${IDENT} 2>/dev/null || \\
+      rm -rf \${CRUNROOT}/\${IDENT}
+  else
+    rm -rf \${CRUNROOT}/\${IDENT}
+  fi
+  rm -rf \${PROXYSHARE_OUT}
+  left=\$(ps -axo pid,args | grep -E "cloonix-init-\${USER}-\${IDENT}|\${PROXY}" | \\
+         grep -v grep)
+  if [ -z "\${left}" ]; then
+    echo "\${IDENT} stopped, nothing of it is left"
+  else
+    echo "WARNING these are still running:"
+    echo "\${left}"
+  fi
+}
+
+usage_cmd() {
+  printf "\\n\\tCHOICE:\\n"
+  printf "./${IDENT}cmd start\\n"
+  printf "./${IDENT}cmd stop\\n"
+  printf "./${IDENT}cmd shell\\n"
+  web_gui
   exit 
 }
 
-if [ \${#} -lt 1 ]; then
+if [ \${#} -ne 1 ]; then
   usage_cmd
 fi
 cmd=\$1
-shift
-case "\${cmd}" in
-  demo)
-    # no name given: list what can be played
-    if [ \${#} -eq 0 ]; then
-      usage_demo
-    fi
-    if [ \${#} -ne 1 ]; then
-      usage_cmd
-    fi
-    param=\$1
-    ;;
-  cloonix)
-    # everything after the verb belongs to the client, so no count is checked
-    if [ \${#} -eq 0 ]; then
-      usage_cmd
-    fi
-    ;;
-  *)
-    if [ \${#} -ne 0 ]; then
-      usage_cmd
-    fi
-    ;;
-esac
 
 case \$cmd in
 
@@ -267,21 +275,11 @@ case \$cmd in
       echo "\$exists"
       exit 1
     fi
-    exists=\$(ps -axo pid,args | grep cloonix-init-\${USER}-\${IDENT} | grep -v grep)
-    if [ ! -z "\$exists" ]; then
-      echo "Error, the container init of a previous run is still there:"
-      echo "\$exists"
-      echo
-      echo "       ./\${IDENT}cmd stop     clears it, whether or not crun"
-      echo "                            still knows about the container"
-      exit 1
-    fi
-    if [ -e \${EXTRACT}/worktmp/\${IDENT} ]; then
-      echo "Error, the state directory of a previous run is still there:"
-      echo \${EXTRACT}/worktmp/\${IDENT}
-      echo
-      echo "       ./\${IDENT}cmd stop     clears it too"
-      exit 1
+    # What a cloonix stop leaves, or a crash: cleared, not refused.
+    if [ -e \${EXTRACT}/worktmp/\${IDENT} ] || \\
+       [ ! -z "\$(ps -axo args | grep cloonix-init-\${USER}-\${IDENT} | grep -v grep)" ]; then
+      echo "leftovers of a previous run, clearing them"
+      stop_toy
     fi
     # The certificate is config/, made when the tarball was built, yours to
     # replace (a new one per start broke the browser trust). A config/ without
@@ -334,86 +332,19 @@ case \$cmd in
       sleep 3
     done
     echo server started and ready
+    web_gui
   ;;
 
   stop)
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} kill \${IDENT} 9
-    sleep 1
-    \${CRUN} \${CGROUPM} --root=\${CRUNROOT} delete \${IDENT}
-    # The container init, cloonix-init-<user>-<net>, survives when crun lost
-    # track of the container and the next start refuses on its name:
-    # SIGTERM then SIGKILL.
-    left=\$(ps -axo pid,args | grep "cloonix-init-\${USER}-\${IDENT}" | \\
-           grep -v grep | awk '{print \$1}')
-    if [ ! -z "\${left}" ]; then
-      echo "the container init is still there, stopping it: \${left}"
-      kill -15 \${left} 2>/dev/null
-      count=0
-      while [ ! -z "\$(ps -p \${left} -o pid= 2>/dev/null)" ]; do
-        sleep 1
-        count=\$((count+1))
-        if [ \${count} -gt 5 ]; then
-          echo "it did not go on its own, killing it"
-          kill -9 \${left} 2>/dev/null
-          sleep 1
-          break
-        fi
-      done
-    fi
-    # The state directory too ("directory already exists" on the next start).
-    # Files written by an inner uid belong to a subuid: rm from the same map.
-    if [ "\$(head -c 6 \${EXTRACT}/config/idmap 2>/dev/null)" = "subuid" ]; then
-      unshare --map-root-user --map-auto rm -rf \${CRUNROOT}/\${IDENT} 2>/dev/null || \\
-        rm -rf \${CRUNROOT}/\${IDENT}
-    else
-      rm -rf \${CRUNROOT}/\${IDENT}
-    fi
-    rm -rf \${PROXYSHARE_OUT}
-    left=\$(ps -axo pid,args | grep -E "cloonix-init-\${USER}-\${IDENT}|\${PROXY}" | \\
-           grep -v grep)
-    if [ -z "\${left}" ]; then
-      echo "\${IDENT} stopped, nothing of it is left"
-    else
-      echo "WARNING these are still running:"
-      echo "\${left}"
-    fi
-  ;;
-
-  cloonix)
-    # The real client on the host, the net name typed as on the command line:
-    # "./${IDENT}cmd cloonix cli ${IDENT} del all" cleans.
-    if ! command -v python3 >/dev/null 2>&1; then
-      echo "python3 is needed on this machine to run the cloonix client"
-      exit 1
-    fi
-    if [ ! -x "\${CLOONIX_CLI}" ]; then
-      echo "\${CLOONIX_CLI} missing"
-      exit 1
-    fi
-    # --cfg: the toy's own config, the host may have none or another cloonix.
-    exec python3 \${CLOONIX_CLI} --cfg \${CLOONIX_CFG} "\$@"
+    stop_toy
   ;;
 
   shell)
     \${CRUN} \${CGROUPM} --root=\${CRUNROOT} exec -ti \${IDENT} /bin/bash 
   ;;
 
-  demo)
-    # Played on the host by the real client (the container has no interpreter);
-    # the name is resolved against CLOONIX_DEMO_DIR.
-    if ! command -v python3 >/dev/null 2>&1; then
-      echo "python3 is needed on this machine to play a demo"
-      echo "the demos themselves are in \${DEMO_DIR}"
-      exit 1
-    fi
-    if [ ! -x "\${CLOONIX_CLI}" ]; then
-      echo "\${CLOONIX_CLI} missing"
-      exit 1
-    fi
-    python3 \${CLOONIX_CLI} --cfg \${CLOONIX_CFG} demo \${IDENT} \${param}
-    ;;
   *)
-    echo wrong cmd \${cmd}
+    usage_cmd
   ;;
 esac
 EOF
@@ -433,29 +364,32 @@ if [ -d ${CLOONFS}/share/cloonix ]; then
     fi
   done
 fi
-if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then 
-  printf "\n\t/dev/kvm usable as ${USER}"
-  if [ -r /dev/vhost-net ] && [ -w /dev/vhost-net ]; then 
-    printf "\n\t/dev/vhost-net usable as ${USER}"
-    if [ -r /dev/net/tun ] && [ -w /dev/net/tun ]; then 
-      printf "\n\t/dev/net/tun usable as ${USER}"
-      printf "\n\t${USER} should be able to use kvm (qemu)"
-      if [ -r "/var/lib/cloonix/bulk/trixie.qcow2" ]; then
-        printf "\n\ttrixie.qcow2 exists in bulk, kvm demos should work"
+# A specialised toy has no kvm and says nothing about it.
+if [ -e ${CLOONFS}/bin/cloonix-qemu-system ]; then
+  if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then 
+    printf "\n\t/dev/kvm usable as ${USER}"
+    if [ -r /dev/vhost-net ] && [ -w /dev/vhost-net ]; then 
+      printf "\n\t/dev/vhost-net usable as ${USER}"
+      if [ -r /dev/net/tun ] && [ -w /dev/net/tun ]; then 
+        printf "\n\t/dev/net/tun usable as ${USER}"
+        printf "\n\t${USER} should be able to use kvm (qemu)"
+        if [ -r "/var/lib/cloonix/bulk/trixie.qcow2" ]; then
+          printf "\n\ttrixie.qcow2 exists in bulk, kvm demos should work"
+        else
+          printf "\n\ttrixie.qcow does not exist in bulk, kvm demos will not work"
+        fi
       else
-        printf "\n\ttrixie.qcow does not exist in bulk, kvm demos will not work"
+        printf "\n\t/dev/net/tun not usable, to use qemu try:"
+        printf "\n\tchmod 666 /dev/net/tun"
       fi
     else
-      printf "\n\t/dev/net/tun not usable, to use qemu try:"
-      printf "\n\tchmod 666 /dev/net/tun"
+      printf "\n\t/dev/vhost-net not usable, to use qemu try:"
+      printf "\n\tusermod -a -G kvm ${USER}"
     fi
   else
-    printf "\n\t/dev/vhost-net not usable, to use qemu try:"
+    printf "\n\t/dev/kvm not usable, to use qemu try:"
     printf "\n\tusermod -a -G kvm ${USER}"
   fi
-else
-  printf "\n\t/dev/kvm not usable, to use qemu try:"
-  printf "\n\tusermod -a -G kvm ${USER}"
 fi
 if [ "${IDMAP}" = "subuid" ]; then
   printf "\n\tuser namespace: ${USER} onto 0 and subuid ${SUBUID_START}+${SUBUID_COUNT} onto 1..,"
@@ -476,19 +410,4 @@ else
 fi
 printf "\n\n"
 chmod +x ${EXTRACT}/${IDENT}cmd
-printf "\n\tCHOICE:\n"
-printf "./${IDENT}cmd start\n"
-printf "./${IDENT}cmd stop\n"
-printf "./${IDENT}cmd shell\n"
-printf "./${IDENT}cmd demo <param>\n"
-printf "./${IDENT}cmd cloonix <args of the cloonix client>\n"
-HOST_IP=$(ip -4 route get 1.1.1.1 2>/dev/null | \
-          sed -n 's/.* src \([0-9.]*\).*/\1/p')
-if [ -z "${HOST_IP}" ]; then
-  HOST_IP="<address of this machine>"
-fi
-printf "\n\tTHE WEB GUI of ${IDENT}, once it is started:\n"
-if [ -n "${WEB_PORT}" ]; then
-  printf "https://127.0.0.1:${WEB_PORT}  or  https://${HOST_IP}:${WEB_PORT}"
-  printf "   user: ${IDENT}   password: ${WEB_PASSWD}\n"
-fi
+sh ${EXTRACT}/${IDENT}cmd

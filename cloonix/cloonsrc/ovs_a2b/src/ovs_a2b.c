@@ -181,7 +181,7 @@ int main (int argc, char *argv[])
   memset(g_vhost1, 0, MAX_NAME_LEN);
   memset(g_a2b_path, 0, MAX_PATH_LEN);
 
-/* Setuid binary: its arguments are not trusted.                            */
+/* Setuid binary: its arguments are not trusted. */
   if (!name_is_sane(argv[1]))
     KOUT("ERROR refused net name");
   if (!path_is_sane(argv[2]))
@@ -202,13 +202,13 @@ int main (int argc, char *argv[])
   snprintf(g_netns_namespace, MAX_PATH_LEN-1, "%s%s_%s",
            PATH_NAMESPACE, BASE_NAMESPACE, g_net_name);
 
+  set_cloonix_name(g_net_name);
   pid0 = tun_tap_open(g_netns_namespace, g_vhost0,
                              &fd_rx_from_tap0, &fd_tx_to_tap0);
   pid1 = tun_tap_open(g_netns_namespace, g_vhost1,
                              &fd_rx_from_tap1, &fd_tx_to_tap1);
 
   msg_mngt_init("a2b", TRAF_TAP_BUF_LEN);
-  set_cloonix_name(g_net_name);
   msg_mngt_heartbeat_ms_set(1);
   rxtx_init(fd_rx_from_tap0, fd_tx_to_tap0, fd_rx_from_tap1, fd_tx_to_tap1);
   ctrl_link_init(g_net_name, "a2b", g_a2b_name, type_hop_a2b, g_ctrl_path);

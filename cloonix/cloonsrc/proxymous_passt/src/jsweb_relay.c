@@ -236,8 +236,8 @@ static void jsweb_connect(int llid_tcp_front)
   if (llid_unix_back == 0)
     {
     KERR("WARNING jsweb: a browser came for the canvas and the gui server "
-         "is not listening on %s (net stopping, or started without "
-         "cloonix_web)", back);
+         "is not listening on %s (net starting or stopping, or started "
+         "without cloonix_web)", back);
     proxy_tls_free(tls);
     msg_delete_channel(llid_tcp_front);
     }

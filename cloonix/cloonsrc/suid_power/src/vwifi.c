@@ -1,15 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The radios of the net and the airs they are on, cnt and kvm radios
-   alike: this process is the medium of every air. The cnt radios are made
-   from the namespace cloonix_<net>, a netgroup of their own, this process
-   registered as their medium; the kvm radios are made by the agent of their
-   guest, their frames relayed by doorways on the air link. Every frame goes
-   to the radios on the same air only, a cnt frame then reported back to its
-   sender. Each air is also written, radiotap pcap, into snf/<air>_0, which a
-   cloonix-dumpcap of the switch serves as the capture "<air> 0".
-   It runs as cloonix-suid-power-air, a process of its own, so the blocking
-   work of suid-power on the containers never stops a frame: asked on the
-   two pipes of air_proc.c, create on the sync one, the rest on the other. */
+/* Medium of every air (cnt and kvm radios): frames to the same air only, each
+   air written as radiotap pcap to snf/<air>_0; runs as cloonix-suid-power-air. */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -140,14 +131,12 @@ static int g_link_llid;
 static unsigned long g_link_dropped;
 static uint64_t g_link_last_say;
 
-/****************************************************************************/
 static int module_is_loaded(void)
 {
   return (!access("/sys/module/mac80211_hwsim", F_OK));
 }
 
-
-/*------------------------------ the airs ---------------------------------*/
+/* the airs */
 static t_air *air_find(char *name)
 {
   t_air *cur = g_airs;
@@ -200,10 +189,9 @@ static void air_prune(void)
     }
 }
 
-/*------------------------------ the medium -------------------------------*/
-/* The kernel names a radio by its address with bit 0x40 of the first byte
-   set, or without it, depending on its version: learnt from the first
-   frame, then used to name the receivers. */
+/* the medium */
+/* The kernel names a radio by its address with or without bit 0x40 of byte
+   0, by version: learnt from the first frame. */
 static int g_addr_form = -1;
 
 static uint8_t *radio_addr(t_radio *r)
@@ -279,7 +267,7 @@ static int radio_has(t_radio *r, uint8_t *a)
   return 0;
 }
 
-/*------------------------------ the air link -----------------------------*/
+/* the air link */
 static int kvm_radio_exists(void)
 {
   t_radio *r = g_radios;
@@ -423,9 +411,8 @@ static void peers_update(void)
     }
 }
 
-/* An address of a radio: of a cnt radio a vif, a random one for a scan,
-   of a kvm radio a sender of its frames. The frames to it are acknowledged
-   as frames to the radio. */
+/* A radio address (cnt vif, scan random, kvm sender): frames to it are
+   acked as frames to the radio. */
 static void alias_add(t_radio *r, uint8_t *m)
 {
   if (radio_has(r, m))
@@ -632,9 +619,7 @@ static int medium_rx(struct nl_msg *msg, void *arg)
   return NL_OK;
 }
 
-/* The kernel answers a delivery it drops with -EINVAL: a receiver on
-   another channel or down, nominal. Skipped, so that the frames after it in
-   the same read are processed. */
+/* -EINVAL: receiver down or on another channel, nominal: skip it. */
 static int medium_refused(struct sockaddr_nl *nla, struct nlmsgerr *e,
                           void *arg)
 {
@@ -1089,10 +1074,8 @@ static int medium_open(void)
   return 0;
 }
 
-/*------------------------------ the radios -------------------------------*/
-/* One radio made in cloonix_<net>: its wiphy index, -1 if none. suid-power
-   moves it into the container with iw, a command this process never waits
-   for. */
+/* the radios */
+/* One radio made in cloonix_<net>: its wiphy index, -1 if none. */
 static int radio_add(char *cnt, int vm_id, int idx, uint8_t *mac)
 {
   struct nl_sock *maker = genl_in_net();
@@ -1345,15 +1328,15 @@ static void air_msg(int llid, int tid, char *line)
     KERR("ERROR air: %s", line);
 }
 
-/*------------------------------ the process ------------------------------*/
+/* the process */
 static void medium_beat(void *data)
 {
   peers_update();
   medium_drops();
   if ((!g_module_inserted) && module_is_loaded())
     {
-    KERR("WARNING mac80211_hwsim has been loaded, wifi emulation is "
-         "available from now on");
+    KTRC("mac80211_hwsim has been loaded, wifi emulation is available "
+         "from now on");
     g_module_inserted = 1;
     }
   clownix_timeout_add(600, medium_beat, NULL, NULL, NULL);

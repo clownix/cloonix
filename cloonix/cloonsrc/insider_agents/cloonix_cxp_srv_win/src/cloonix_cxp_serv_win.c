@@ -1,24 +1,24 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* cloonix_cxp_serv_win.c - the exec pipe of a windows guest.                */
-/* The same place in the chain as cloonix_cxp_srv on linux, the same frames  */
-/* on the wire, and now the same opcodes: cxp_wire.h is shared by the two.   */
+/* cloonix_cxp_serv_win.c - the exec pipe of a windows guest. */
+/* The same place in the chain as cloonix_cxp_srv on linux, the same frames */
+/* on the wire, and now the same opcodes: cxp_wire.h is shared by the two. */
 /* The agent relays those frames between here and the host and reads none of */
-/* them, exactly as the linux agent relays to its unix socket.               */
-/* Listens on the loopback rather than a unix socket. AF_UNIX exists on      */
+/* them, exactly as the linux agent relays to its unix socket. */
+/* Listens on the loopback rather than a unix socket. AF_UNIX exists on */
 /* current windows but is not dependable across the builds a guest might be, */
-/* and the agent needs sockets in any case.                                  */
-/* The three shapes, and what windows gives for each:                        */
-/*   PTY      a pseudoconsole running cmd.exe. CreatePseudoConsole is what   */
-/*            gives a resizable terminal with the escape sequences a browser */
-/*            terminal expects; a plain pipe to cmd.exe gives neither.       */
-/*   EXEC     cmd.exe /c <command>, three pipes, stdout and stderr kept      */
-/*            apart so the client can tell them apart the way ssh does.      */
-/*   PUT/GET  files and whole trees, with the paths taken as windows paths:  */
-/*            "/" is accepted and turned into "\", and a destination that is */
-/*            an existing directory receives the file under its own name.    */
-/* Modes travel on the wire because linux has them. Windows has no chmod of  */
-/* that kind, so an incoming mode is dropped and an outgoing one is the      */
-/* usual 0644 or 0755: the client chmods what it writes on its own disk.     */
+/* and the agent needs sockets in any case. */
+/* The three shapes, and what windows gives for each: */
+/* PTY      a pseudoconsole running cmd.exe. CreatePseudoConsole is what */
+/* gives a resizable terminal with the escape sequences a browser */
+/* terminal expects; a plain pipe to cmd.exe gives neither. */
+/* EXEC     cmd.exe /c <command>, three pipes, stdout and stderr kept */
+/* apart so the client can tell them apart the way ssh does. */
+/* PUT/GET  files and whole trees, with the paths taken as windows paths: */
+/* "/" is accepted and turned into "\", and a destination that is */
+/* an existing directory receives the file under its own name. */
+/* Modes travel on the wire because linux has them. Windows has no chmod of */
+/* that kind, so an incoming mode is dropped and an outgoing one is the */
+/* usual 0644 or 0755: the client chmods what it writes on its own disk. */
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
@@ -216,7 +216,10 @@ static int recv_frame(SOCKET s, char **payload, int *plen)
   len = tot - 1;
   buf = (char *) malloc(len + 1);
   if (!buf)
+    {
+    srv_log("WARNING recv: no memory for %u bytes", (unsigned) len);
     return -1;
+    }
   if ((len) && (recv_all(s, buf, len)))
     {
     free(buf);

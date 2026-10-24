@@ -75,14 +75,14 @@ static void chain_copy(t_data_chunk *first, int offset, char *tot_rx, int max)
       if (len)
         KOUT(" %d ", len);
       if ((cur->len - offset) > max)
-        KOUT(" %d %d %d\n ", len, cur->len, max);
+        KOUT("%d %d %d", len, cur->len, max);
       memcpy(tot_rx + len, cur->chunk+offset, cur->len-offset);
       len += cur->len-offset;
       }
     else
       {
       if ((len + cur->len) > max)
-        KOUT(" %d %d %d\n ", len, cur->len, max);
+        KOUT("%d %d %d", len, cur->len, max);
       memcpy(tot_rx + len, cur->chunk, cur->len);
       len += cur->len;
       }

@@ -2,10 +2,11 @@
 Cloonix toy
 ===========
 
-This chapter is **way 2**, the rootless installation. Same binaries, same
-canvas, same demos as the bundle, packed so that an unprivileged user runs
-it: cloonix itself starts inside a crun container that your account creates,
-and nothing is written outside the extracted directory.
+This chapter is **way 2**, the rootless installation: the binaries, the
+canvas and the demos of the bundle, six demos aside (*The demos a toy does
+not carry*, below), packed for an unprivileged user. Cloonix starts inside a
+crun container your account creates, and nothing is written outside the
+extracted directory.
 
 .. image:: /svg/toy_flow.svg
    :align: center
@@ -15,12 +16,28 @@ and nothing is written outside the extracted directory.
 Install and setup
 =================
 
-::
+The images first. *setup.sh* gives the toy the */var/lib/cloonix/bulk* of the
+host, seen inside as */root/bulk_host*, only if that directory exists when
+*setup.sh* runs; a bulk made after it is not seen by the toy. So the
+container and machine images go in bulk before *setup.sh*::
 
-    wget https://clownix.net/downloads/cloonix-toy-__LAST__.tar.gz
-    tar xvf cloonix-toy-__LAST__.tar.gz
-    cd cloonix-toy-__LAST__
+    sudo mkdir -p /var/lib/cloonix/bulk
+    sudo chown ${USER}: /var/lib/cloonix/bulk
+    cd /var/lib/cloonix/bulk
+    wget https://clownix.net/downloads/cnt_bulk/trixie.tar.gz
+
+A bulk made too late is repaired by a new extraction: images in place, then
+*setup.sh* in the new directory. Then the toy::
+
+    cd
+    wget https://clownix.net/downloads/cloonix-toy.tar.xz
+    tar xvf cloonix-toy.tar.xz
+    cd cloonix-toy
     ./setup.sh
+
+*tar xvf* unpacks it with *xz*, there on every desktop distribution; a
+minimal host without it gets it from the package *xz-utils* (debian,
+ubuntu) or *xz* (the others).
 
 *setup.sh* takes one optional parameter, the net name from *cloonix.cfg*,
 *nemo* by default::
@@ -45,8 +62,13 @@ allows::
     ./nemocmd start
     ./nemocmd stop
     ./nemocmd shell
-    ./nemocmd demo <param>
-    ./nemocmd cloonix <args of the cloonix client>
+
+    THE WEB GUI of nemo, the demos are in its Demo button:
+    https://127.0.0.1:4444  or  https://<ip>:4444   user: nemo   password: nemoclown
+
+*setup.sh* runs once per extraction: run again in the same directory, it
+changes nothing and prints the same choice, for the net it was run for; a
+second net is a second extraction.
 
 A missing device or module is reported and is not fatal: the container demos
 need neither kvm nor wifi. *setup.sh* also loads the two host-side binaries
@@ -60,21 +82,19 @@ The commands
 
 ::
 
-    ./nemocmd start                        proxymous on the host, then the crun; waits for the server
-    ./nemocmd stop                         kills the container, removes the shared directory
-    ./nemocmd shell                        a bash inside the container
-    ./nemocmd demo                         lists the demos
-    ./nemocmd demo address/dhcp.py    plays one; dhcp.py, dhcp and address/dhcp resolve too
-    ./nemocmd cloonix cli nemo del all       the real client, whatever follows is handed to it
-    ./nemocmd cloonix cli nemo ssh cnt1 ip route
+    ./nemocmd start      proxymous on the host, then the crun; waits for the server, prints the web gui
+    ./nemocmd stop       kills the container, removes the shared directory
+    ./nemocmd shell      a bash inside the container
 
-*./nemocmd cloonix* runs the python client of the toy on the host with the
-toy's own *cloonix.cfg*; the net name is typed as for any client line. A
-*vmount=* names a directory the server sees, and the toy's server sees
-nothing of the host but its bulk, as */root/bulk_host*: a host directory
-to share with a container is made under */var/lib/cloonix/bulk* and given
-as */root/bulk_host/<name>*. A demo
-runs on the host too, by that client: the container carries no interpreter.
+Everything else is done in the web gui: the demos from its *Demo* button,
+the objects from the canvas, *Delete all* from its header. A *vmount=* names
+a directory the server sees, and the toy's server sees nothing of the host
+but its bulk, as */root/bulk_host*: a host directory to share with a
+container is made under */var/lib/cloonix/bulk* and given as
+*/root/bulk_host/<name>*.
+
+*cloonix stop nemo* also ends the toy: the container init lives as long as
+the main server, and the next *./nemocmd start* clears what is left.
 
 
 A first run
@@ -94,20 +114,19 @@ made once when the tarball was built; the browser warns once. Replace
 *config/cloonix_cert.pem* and *config/cloonix_key.pem* with your own on
 anything but a private lab machine.
 
-Then::
+Then the *Demo* button of the header, and *cloonix/cnt.py* in package 0:
+two containers on one lan, one ping.
 
-    ./nemocmd demo
-    ./nemocmd demo address/dhcp.py
+*address/dhcp.py*, in package 3, is five containers and three lans, no kvm;
+its daemons need the second uid mapping of the section *The one host
+dependency*. *routing/* holds *frrspider.py*, sixty routers; it needs
+*frr_trixie* in */var/lib/cloonix/bulk* of the host, which the container
+reads when the directory was there before *setup.sh*. *cloonix/cntwifi.py*
+and the demos *wifi/cnt_\** and *wifi/cntkvm_\** need *mac80211_hwsim* on
+the host; the radios of *wifi/kvm_\** are made in the guests.
 
-*address/dhcp.py* is five containers and three lans, no kvm. *routing/*
-holds *frrspider.py*, sixty routers; it needs *frr_trixie* in
-*/var/lib/cloonix/bulk* of the host, which the container reads when it is
-readable. *cloonix/cntwifi.py* and the demos of *wifi/* need *mac80211_hwsim*
-on the host.
-
-Between two demos::
-
-    ./nemocmd cloonix cli nemo del all
+Between two demos, *stop and del* of the Demo panel, or *Delete all* of the
+header.
 
 
 One net, one installation
@@ -116,12 +135,13 @@ One net, one installation
 A bundle and a toy on the same machine share the net name, its doors port,
 its work directory under */var/lib/cloonix* and */tmp*. A toy started on top
 of a running bundle of the same net is refused before anything starts, with
-the name of what is in the way. Give the toy another net::
+the name of what is in the way. Give the toy another net, in a new
+extraction, with the images already in */var/lib/cloonix/bulk*::
 
     ./setup.sh mito
 
-Leftovers of a previous run are refused in the same way; *./nemocmd stop*
-clears them and says whether anything of the net is left.
+Leftovers of a previous run, the state directory or the container init,
+are cleared by *./nemocmd start* itself.
 
 
 Deleting the directory while it runs
@@ -130,8 +150,9 @@ Deleting the directory while it runs
 *cloonix-proxymous* runs on the host, outside the crun, and watches the
 directory it was started from. When the directory is deleted under a running
 net, it asks the main server to stop the ordinary way, the one *cloonix
-stop <net>* takes; if the container init, *cloonix-init-<user>-<net>*, is
-still there ten seconds later, proxymous kills it by the pid it holds.
+stop <net>* takes, which ends the container init with the server; if the
+init, *cloonix-init-<user>-<net>*, is still there ten seconds later,
+proxymous kills it by the pid it holds.
 Syslog says which happened::
 
     ERROR <dir> IS GONE. The installation this net runs from has been
@@ -152,9 +173,11 @@ Content of the toy directory
                    make_cloonix_cert, the python client and its helpers
     worktmp/       the crun state and crun.log
 
-*rootfs* is usable as a guest root file-system under the name *self_rootfs*.
-The demos do not use it: they ask for *trixie* and the images of
-*vm_create*, read from */var/lib/cloonix/bulk* of the host.
+*rootfs* is usable as a guest root file-system under the name *self_rootfs*:
+an overlay on it per container, a *tmpfs* on */var*, and */etc/cloonix.cfg*
+hidden. The demos of the toy ask for *trixie* and the images of *vm_create*,
+read from */var/lib/cloonix/bulk* of the host, put there before *setup.sh*;
+those of a specialised toy run on *self_rootfs* (below).
 
 
 When the start fails
@@ -166,9 +189,9 @@ When the start fails
     <toy>/rootfs/root/cloonix-init-starter-crun.log
     <toy>/rootfs/cloonix/cloonfs/var/log/syslog
 
-A start refuses to run if a previous one is still there: the proxymous
-process, the init of the container, or *worktmp/<net>*. Run *./nemocmd stop*
-first.
+A start refuses to run while the proxymous process of a previous one is
+still there: run *./nemocmd stop* first. The init of the container or
+*worktmp/<net>* left alone is cleared by the start.
 
 
 The one host dependency: newuidmap, newgidmap, /etc/subuid, /etc/subgid
@@ -216,8 +239,9 @@ missing and what follows::
                     (sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 <user>,
                      then ./setup.sh nemo again in a fresh extraction)
 
+Those demos say so and stop, and *all.py* stops with them.
 Everything else of the toy works with the single mapping: the container
-and kvm demos of *cloonix/* but the four below, the routing, switching,
+and kvm demos of *cloonix/* it carries, the routing, switching,
 availability, security and watching demos, the web GUI, ssh, scp, the nat
 and its masquerade.
 The difference is those seven daemons, and only inside a toy: a bundle
@@ -243,25 +267,29 @@ Two consequences of the second mapping to know:
   the toy's libraries, does the *exec* of *newuidmap* and *newgidmap*, and
   that is the whole of the dependency.
 
-Four demos of cloonix/ the toy does not play
-============================================
+The demos a toy does not carry
+==============================
 
-Whatever the uid mapping, four demos stop partway in a toy::
+A toy started by a user leaves out the demos it cannot play, listed in
+*toy_targz/toy_drop*: their files, their lines of the Demo picker and of
+the voice, their clips. *all.py* in a toy plays the others::
 
-    cloonix/mount.py    the directory it mounts is in the /tmp of the host,
-                        and a toy sees nothing of the host but its bulk
-                        (as /root/bulk_host)
-    cloonix/limit.py    the cpu and ram caps need a cgroup per container,
-                        and a toy has none: cnf cpu= ram= is refused, the
-                        reason given says so
-    cloonix/c2c.py      it drives a third net, fido, and a toy is one net
-                        per extraction
-    cloonix/nat.py      its last step publishes a service of the host's
-                        loopback and fetches it from inside through DNAT,
-                        which does not cross the extra nesting of the toy
+    cloonix/limit.py      a container of a toy has no cgroup to cap
+    cloonix/systemd.py    systemd as pid 1 needs a cgroup the toy does not have
+    cloonix/phy.py        copies the cloonix installed on the host into its kvm
+    cloonix/realnet.py    copies the cloonix installed on the host into its kvm
+    security/ebpf.py      an XDP program needs a net started by root
+    cisco.py              drives the console with the dtach of an installed cloonix
 
-The c2c itself, between two toys, and the masquerade of the nat work: only
-these demos go further than a toy allows. The bundle plays all four.
+The bundle plays them. *cloonix/c2c.py* plays in a toy when its two other
+nets, *mito* and *fido*, answer: started before it, from a bundle or as toys
+of their own; otherwise it stops with a warning naming the ones missing and
+the commands that start them. *cloonix/nat.py* plays in a toy: its
+passt runs on the host, outside the crun, spawned by the proxymous of the
+toy.
+*cloonix/mount.py* plays in a toy: its directory is made under
+*/var/lib/cloonix/bulk* and given to the server as
+*/root/bulk_host/cloonix_mount_<net>*.
 
 No cgroup of its own, and systemd in a container of the toy
 ===========================================================
@@ -289,12 +317,73 @@ systemd user manager and a user bus::
 asks that manager for a delegated cgroup; the first
 line of the start says which was used.
 
+The toys for frr, BIRD, Suricata and BIND
+=========================================
+
+Four more toys carry one open source project each, containers only::
+
+    cloonix-frr-toy.tar.xz         frr: routing/frrspider.py, frrspider_bgp.py, frrmix.py
+                                   and 26 examples of the FRR User Guide in frr_demo/
+    cloonix-bird-toy.tar.xz        BIRD: routing/bird.py and 13 examples of the BIRD
+                                   User's Guide in bird_demo/
+    cloonix-suricata-toy.tar.xz    Suricata: security/suricata.py and 7 examples of the
+                                   Suricata User Guide in suricata_demo/
+    cloonix-bind-toy.tar.xz        BIND 9: address/dns.py and 12 examples of the BIND 9
+                                   Administrator Reference Manual in bind_demo/
+
+Each one is used as the toy::
+
+    wget https://clownix.net/downloads/cloonix-frr-toy.tar.xz
+    tar xf cloonix-frr-toy.tar.xz
+    cd cloonix-frr-toy
+    ./setup.sh nemo
+    ./nemocmd start
+
+The demos are in the *Demo* button of the canvas, with *all.py*, which plays
+them all in a row and stops with a voiced error at the first problem, as in
+every toy. The image of the project
+is merged into *rootfs* at build time, *usr* and *etc*, what *rootfs* has
+already being kept, and every program added is checked to load there; the
+containers run on that root, the image *self_rootfs*, so the bulk can stay
+empty. There is no kvm: no qemu, no firmware, no agent disc, no vnc console,
+no *xorriso*; the canvas offers cnt only, *add kvm* answers that this
+cloonix has containers only, and neither *setup.sh* nor the start says
+anything about */dev/kvm*. *toy_targz/create_<name>_toy_targz.sh* builds
+each of them.
+
+Some of their demos use kernel modules that a container cannot load; on
+the host, once per boot, for every demo of the frr toy::
+
+    sudo modprobe vrf
+    sudo modprobe mpls_router
+    sudo modprobe mpls_iptunnel
+    sudo modprobe vxlan
+    sudo modprobe bridge
+    sudo modprobe ip_gre
+    sudo modprobe macvlan
+
+and *vrf*, *mpls_router*, *mpls_iptunnel* for the BIRD toy. *all.py* names
+the missing ones before its first demo.
+
+Of the image of the project, a toy of this kind takes what its demos use:
+the commands their lines run, the packages of its *needs* file, and the
+libraries of both. frr keeps the daemons the demos start and no python;
+BIRD and Suricata keep the python modules that the scripts their demos
+write into the containers import; BIND keeps named and its tools, the frr
+daemons *address/dns.py* starts, and no python. A module missing at run
+time is a KERR line in the syslog of the toy, with its name.
+
+The demos of *bind_demo/* start named without *-u*: it stays uid 0 of its
+container and calls no *initgroups*, so they play with the single mapping
+too. *address/dns.py* starts it with *-u root* and needs the second one.
+
+
 Case of qemu-kvm
 ================
 
 The kvm demos need the three devices readable and writable by your user,
 see the host system chapter, and a qcow2 in */var/lib/cloonix/bulk* of the
-host::
+host, the directory being there before *setup.sh*::
 
     getfacl /dev/kvm /dev/vhost-net /dev/net/tun
     sudo setfacl -m u:${USER}:rw /dev/kvm /dev/vhost-net /dev/net/tun

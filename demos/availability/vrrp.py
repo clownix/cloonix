@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""vrrp - two routers, one address, and a ping that survives losing one.
+r"""vrrp - two routers, one address, and a ping that survives losing one.
 
     ./vrrp.py [net]                the net defaults to nemo
 
@@ -7,66 +7,49 @@ Four machines and two lans::
 
   client ---- lanA ---- rt1 ---- lanB ---- server
  10.1.0.10          10.1.0.1  10.2.0.1   10.2.0.10
-                  \\ rt2 /
+                  \ rt2 /
                    10.1.0.2  10.2.0.2
 
   lanA virtual address 10.1.0.254   <- the client's default gateway
   lanB virtual address 10.2.0.254   <- the server's default gateway
 
-Neither virtual address belongs to a machine. Both are held by whichever
-router is master, and the client and the server route through them without
-knowing or caring which one that is. rt1 has the higher priority, so it is
-master while it is alive.
+Neither virtual address belongs to a machine: the master router holds
+both, and the client and the server route through them whichever router
+that is. rt1 has the higher priority, so it is master while it is alive.
+The protocol is one packet repeated every second, a router announcing its
+priority for a virtual router id, the highest being in charge.
 
-The whole protocol is one packet repeated once a second: a router shouting
-its priority for a virtual router id. Everyone listening decides the loudest
-one is in charge. There is nothing else to it, and this demo prints those
-packets as they go past.
-
-  ACT 1  keepalived starts on both. The advertisements appear on the wire
-         and the virtual addresses appear on rt1 and on nobody else.
-  ACT 2  a ping is started from client to server, and rt1 is killed mid
-         flight. The advertisement carrying priority 0 is caught, then rt2
-         taking over, then the gratuitous arp that tells the lan the address
-         has moved to a different mac. The ping counts the outage.
-  ACT 3  rt1 comes back and takes the address again, because it is worth
-         more. The same three things happen in reverse.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+  ACT 1  keepalived starts on both: the advertisements appear on the wire,
+         the virtual addresses on rt1 alone.
+  ACT 2  a ping from client to server, and rt1 killed under it: its last
+         advertisement, priority 0, then rt2 taking over, then the
+         gratuitous arp telling the lan the address moved to another mac;
+         the ping counts the outage.
+  ACT 3  rt1 comes back and takes the address again, its priority being
+         higher: the same three things in reverse.
 
 Image: vrrp_trixie (keepalived)
 Size:  4 containers, 2 lans
 
 THE PACKET TO CATCH
 -------------------
-  VRRP is IP protocol 112 to a multicast group, so the filter grammar
-  reaches it by exclusion:
+  VRRP is IP protocol 112 to a multicast group, reached by exclusion:
 
     cloonix cli nemo cnf client eth0 sniff=on
-    cloonix cli nemo sniff client eth0 --dump \
-        "ip and not udp and not tcp and not icmp"
+    cloonix cli nemo sniff client eth0 --dump "ip and not udp and not tcp and not icmp"
 
-  The whole protocol is one advertisement per second from the master and
-  silence from the backup. The packet to catch is the last one before
-  the master is killed, and then the first one from the other router --
-  the gap between them is the failover time, measured rather than
-  claimed.
-
-  And the packet that actually moves the traffic:
+  One advertisement a second from the master, silence from the backup. The
+  packet to catch is the last one before the master is killed, then the
+  first from the other router: the gap is the failover time. The frame
+  that moves the traffic is a gratuitous arp for 10.1.0.254 with a new mac,
+  nothing on the client reconfigured:
 
     cloonix cli nemo sniff client eth0 --dump arp
 
-  A gratuitous arp for 10.1.0.100 with a new MAC address in it. That one
-  frame is the entire mechanism by which the client is told anything.
-  Nothing on the client changed, nothing was reconfigured, and the next
-  packet it sends goes to a different machine.
-
-  With the ping running under a third subscription,
+  With the ping under a third subscription, what went missing during the
+  switch is the result:
 
     cloonix cli nemo sniff client eth0 --dump icmp
-
-  the count of what went missing during the switch is the result.
 """
 import os
 import subprocess
@@ -83,7 +66,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, create_cnt, erase_net,
     in_parallel, net_answers, parse_bytes_line, show, step, story, trace,
-    trace_ssh, wait_ready)
+    trace_ssh, wait_ready, unavailable)
 
 ROOTFS_CHOICES = ("vrrp_trixie",)
 
@@ -140,8 +123,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -182,7 +165,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -199,7 +182,7 @@ def tools_present(node, *tools):
                             "command -v %s >/dev/null 2>&1" % t],
                            capture_output=True, stdin=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit("%s has no %s: this is not the vrrp image.\n"
+            unavailable("%s has no %s: this is not the vrrp image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -481,7 +464,7 @@ def show_packets(sink, lock, title, kinds=None, limit=60):
     table under "and 244 more". The ping is measured separately instead.
 
     Identical consecutive rows are collapsed. keepalived sends its gratuitous
-    arp five times in case one is lost, which is worth knowing once and not
+    arp five times in case one is lost: printed once, not
     five times.
     """
     with lock:
@@ -672,7 +655,7 @@ def main():
         story("      * rt2 starts advertising, priority %d, same vrid."
               % PRIORITY[RT2])
         story("      * rt2 sends a GRATUITOUS arp for each virtual address.")
-        story("        This is the half that actually moves the traffic: the")
+        story("        This is the half that moves the traffic: the")
         story("        client had %s cached against rt1's mac, and this is"
               % VIP_A)
         story("        what corrects it. Without it the ping would keep going")
@@ -705,7 +688,7 @@ def main():
             story()
             story("    So this act shows the protocol changing hands cleanly")
             story("    and proves nothing about outage. To measure a real")
-            story("    one the router has to actually go -- take the link")
+            story("    one the router has to go -- take the link")
             story("    down instead, which is the first suggestion at the")
             story("    end, and the backup then waits for three missed")
             story("    advertisements with nothing forwarding in between.")
@@ -741,7 +724,7 @@ def main():
                  "\n  the history says where: on a terminal, CLOONIX_DEMO_STORY=1 prints it")
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   watch the advertisements go past, live and decoded:
     cloonix cli %s sniff client eth0 --dump

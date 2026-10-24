@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-r"""wg - the same taps as every other demo, and a table that goes blank.
+r"""wg - a wireguard tunnel between two sites, and the wire that reads nothing.
 
     ./wg.py [net]                  the net defaults to nemo
 
@@ -27,12 +27,9 @@ knows nothing about any of it.
          payload -- same size, same timing, no content.
   ACT 4  what the two ends know that the middle does not, from wg show.
 
-This is the demo that only makes sense next to the others. A packet decoder
-is worth having because most protocols are legible; the value of a tunnel is
-that this one is not.
+A packet decoder reads most protocols; a tunnel is the one it cannot
+read.
 
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
 
 Image: wg_trixie (wireguard-tools)
 Size:  4 containers, 3 lans
@@ -61,15 +58,14 @@ THE PACKET TO CATCH
     cloonix cli nemo cnf gwA eth0 sniff=on
     cloonix cli nemo sniff gwA eth0 --dump tcp port 80
 
-  Same request, same page, in the clear, in both acts. The tunnel
-  protects the middle and nothing else, which is a thing worth showing
-  rather than saying.
+  Same request, same page, in the clear, in both acts: the tunnel protects
+  the middle and nothing else.
 
 Important
-  No configuration is written into the image. Keys, peers and addresses are
-  all done at run time -- keys especially have no business being baked in.
-  strongswan, libreswan and openvpn, whose images vm_create/cnt_kvm_demo
-  builds, solve the same problem other ways.
+  No configuration is in the image: keys, peers and addresses are written
+  at run time, so no key ends in a tarball. strongswan, libreswan and
+  openvpn, images of vm_create/cnt_kvm_demo too, solve the same problem
+  other ways.
 """
 import os
 import subprocess
@@ -86,22 +82,22 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, create_cnt, erase_net,
     in_parallel, net_answers, parse_bytes_line, show, step, story, trace,
-    trace_ssh, wait_ready)
+    trace_ssh, wait_ready, unavailable)
 
 ROOTFS_CHOICES = ("wg_trixie",)
 
 HISTORY = """\
 WireGuard was written by Jason A. Donenfeld and published in 2016, and
-merged into linux 5.6 in March 2020 after Linus Torvalds called its
-few thousand lines a work of art next to the ipsec code. It negotiates
-nothing: one key exchange from the Noise framework of Trevor Perrin,
-Curve25519 by Daniel J. Bernstein, ChaCha20-Poly1305 for the data, and
-a peer is a public key with a list of allowed addresses. The 1-RTT
-handshake caught below is the whole protocol.
+merged into linux 5.6 in March 2020 after Linus Torvalds called its few
+thousand lines a work of art next to the ipsec code. It negotiates nothing:
+one key exchange from the Noise framework of Trevor Perrin, Curve25519 by
+Daniel J. Bernstein, ChaCha20-Poly1305 for the data, and a peer is a public
+key with a list of allowed addresses. The 1-RTT handshake caught below is
+the whole protocol.
 
 Today: WireGuard is in the linux, windows, macos, ios and android of
 commercial VPN providers, in Tailscale and Netbird meshes and in kubernetes
-network plugins; its four thousand lines are auditable where IPsec stacks
+network plugins; its code is about four thousand lines, where IPsec stacks
 count hundreds of thousands.
 """
 
@@ -149,8 +145,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -191,7 +187,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -208,7 +204,7 @@ def tools_present(node, *tools):
                             "command -v %s >/dev/null 2>&1" % t],
                            capture_output=True, stdin=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit("%s has no %s: this is not the wireguard image.\n"
+            unavailable("%s has no %s: this is not the wireguard image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -265,7 +261,7 @@ socketserver.TCPServer(("", PORT), H).serve_forever()
 '''
 
 def page_start():
-    """A one-file web server on hostB, serving a string worth looking for.
+    """A one-file web server on hostB, serving a string to look for.
 
     The body is deliberately a distinctive run of characters. Act 1 finds it
     on lanC and act 3 does not, and "the string is there / the string is
@@ -641,9 +637,9 @@ def main():
     story("    arrived exactly as before.")
     story()
     story("    lanA and lanB are unchanged too -- a tunnel between the")
-    story("    gateways protects the middle and nothing else, which is worth")
-    story("    being clear about: this is not end to end encryption, and")
-    story("    anybody on either lan still reads everything.")
+    story("    gateways protects the middle and nothing else: this is not end")
+    story("    to end encryption, and anybody on either lan still reads")
+    story("    everything.")
     story()
     story("    lanC is the difference. Same packet count, same sizes, same")
     story("    timing -- and a decoder that can report the type and the")
@@ -678,7 +674,7 @@ def main():
         sys.exit("\nthe string was still readable on lanC with the tunnel up")
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   watch the tunnel carry traffic, live, and see how little it says:
     cloonix cli %s sniff gwA eth1 --dump

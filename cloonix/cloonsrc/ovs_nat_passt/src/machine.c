@@ -66,7 +66,7 @@ static t_arp_ip *find_arp_ip(uint8_t *mac)
   return cur;
 }
 
-/* The ip a machine uses, seen in its frames on the way to passt.           */
+/* The ip a machine uses, seen in its frames on the way to passt. */
 void machine_learn_ip(uint8_t *mac, uint32_t ip)
 {
   t_arp_ip *cur = find_arp_ip(mac);
@@ -85,7 +85,7 @@ void machine_learn_ip(uint8_t *mac, uint32_t ip)
   cur->ip = ip;
 }
 
-/* The mac a known ip belongs to: 0 with it copied into mac, -1 unknown.    */
+/* The mac a known ip belongs to: 0 with it copied into mac, -1 unknown. */
 int machine_mac_of_ip(uint32_t ip, uint8_t *mac)
 {
   t_arp_ip *cur = g_head_arp_ip;
@@ -97,7 +97,7 @@ int machine_mac_of_ip(uint32_t ip, uint8_t *mac)
   return 0;
 }
 
-/* The (mac, ip) pairs known, at most max of them.                          */
+/* The (mac, ip) pairs known, at most max of them. */
 int machine_known(uint8_t *macs, uint32_t *ips, int max)
 {
   int nb = 0;

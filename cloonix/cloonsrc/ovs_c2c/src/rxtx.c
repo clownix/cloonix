@@ -49,6 +49,10 @@ void rxtx_tx_enqueue(int len, uint8_t *buf)
 }
 
 
+static void rx_err(int llid, int err, int from);
+
+/* One frame per turn, not a batch: the next hop, the unix datagram queue of
+   proxymous, holds ten, and 32 at once overflowed it 26 times as often. */
 static int rx_cb(int llid, int fd)
 {
   int udp2tap = 0;
@@ -57,6 +61,8 @@ static int rx_cb(int llid, int fd)
   uint8_t *buf;
   int green_light = udp_get_traffic_mngt();
   len = read(fd, g_buf_rx, HEADER_TAP_MSG);
+  if (len == 0)
+    rx_err(llid, 0, 0);
   if (len != HEADER_TAP_MSG)
     KOUT("ERROR READ %d %d", len, errno);
   result = fct_seqtap_rx(fd, g_buf_rx, &seq, &buf_len, &buf);
@@ -75,9 +81,8 @@ static int rx_cb(int llid, int fd)
 
 static void rx_err(int llid, int err, int from)
 {
-  KERR("WARNING c2c: the pipe from its tap child closed (llid %d err %d "
-       "from %d), stopping so the main server starts a whole one again",
-       llid, err, from);
+  KERR("ERROR c2c %s: a tap child is gone, its pipe closed (llid %d err %d "
+       "from %d), stopping", get_c2c_name(), llid, err, from);
   ctrl_link_stop();
 }
 

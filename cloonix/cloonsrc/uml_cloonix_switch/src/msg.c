@@ -45,6 +45,12 @@ typedef struct t_ovsreq
 static t_ovsreq *g_head_ovsreq;
 static int g_qty_ovsreq;
 
+/* Beats with requests waiting and no answer from ovs_drv: a burst drains
+   slowly but is answered all along, a stuck ovs_drv answers nothing. */
+#define OVSDRV_SILENT_BEATS 10
+static int g_silent_beats;
+
+/* Called by the answers of ovs_drv only. */
 static t_ovsreq *ovsreq_find(int tid)
 {
   t_ovsreq *cur = g_head_ovsreq;
@@ -54,6 +60,8 @@ static t_ovsreq *ovsreq_find(int tid)
       break;
     cur = cur->next;
     }
+  if (cur)
+    g_silent_beats = 0;
   return cur;
 } 
 
@@ -109,9 +117,9 @@ int msg_send_add_lan_endp(int ovsreq_tag, char *name, int num,
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost) || (!lan))
-    KERR("ERROR");
+    KERR("ERROR a NULL argument");
   else if ((strlen(lan) == 0) || (strlen(name) == 0) || (strlen(vhost) == 0))  
-    KERR("ERROR %s %s %s", lan, name, vhost);
+    KERR("ERROR an empty name among: '%s' '%s' '%s'", lan, name, vhost);
   else if ((ovsreq_tag != ovsreq_add_kvm_lan) && 
            (ovsreq_tag != ovsreq_add_cnt_lan) &&
            (ovsreq_tag != ovsreq_add_tap_lan) &&
@@ -119,11 +127,12 @@ int msg_send_add_lan_endp(int ovsreq_tag, char *name, int num,
            (ovsreq_tag != ovsreq_add_nat_lan) &&
            (ovsreq_tag != ovsreq_add_a2b_lan) &&
            (ovsreq_tag != ovsreq_add_c2c_lan))
-    KERR("ERROR %s %d %s %s %d", name, num, vhost, lan, ovsreq_tag);
+    KERR("ERROR request %d is no add of a lan: %s %d vhost %s lan %s",
+         ovsreq_tag, name, num, vhost, lan);
   else if (!lan_get_with_name(lan))
-    KERR("ERROR %s %d %d %s", name, num, ovsreq_tag, lan);
+    KERR("ERROR lan %s unknown for %s %d (request %d)", lan, name, num, ovsreq_tag);
   else if (fmt_tx_add_lan_endp(tid, name, num, vhost, lan))
-    KERR("ERROR %s %d %s %s %d", name, num, vhost, lan, ovsreq_tag);
+    KERR("ERROR the request to ovs_drv was not sent: %s %d %s %s %d", name, num, vhost, lan, ovsreq_tag);
   else
     {
     ovsreq_alloc(tid, ovsreq_tag, name, num, vhost, lan);
@@ -137,9 +146,9 @@ int msg_send_del_lan_endp(int ovsreq_tag, char *name, int num,
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost) || (!lan))
-    KERR("ERROR");
+    KERR("ERROR a NULL argument");
   else if ((strlen(lan) == 0) || (strlen(name) == 0) || (strlen(vhost) == 0))
-    KERR("ERROR %s %s %s", lan, name, vhost);
+    KERR("ERROR an empty name among: '%s' '%s' '%s'", lan, name, vhost);
   else if ((ovsreq_tag != ovsreq_del_kvm_lan) &&
            (ovsreq_tag != ovsreq_del_cnt_lan) &&
            (ovsreq_tag != ovsreq_del_tap_lan) &&
@@ -147,7 +156,8 @@ int msg_send_del_lan_endp(int ovsreq_tag, char *name, int num,
            (ovsreq_tag != ovsreq_del_nat_lan) &&
            (ovsreq_tag != ovsreq_del_a2b_lan) &&
            (ovsreq_tag != ovsreq_del_c2c_lan))
-    KERR("ERROR %s %d %s %s %d", name, num, vhost, lan, ovsreq_tag);
+    KERR("ERROR request %d is no del of a lan: %s %d vhost %s lan %s",
+         ovsreq_tag, name, num, vhost, lan);
   else if (!lan_get_with_name(lan))
     KTRC("del of lan %s for %s %d (req %d): the lan is already gone",
          lan, name, num, ovsreq_tag);
@@ -155,7 +165,7 @@ int msg_send_del_lan_endp(int ovsreq_tag, char *name, int num,
     KERR("ERROR %s %d: a del of lan %s (req %d) is already in flight",
          name, num, lan, ovsreq_tag);
   else  if (fmt_tx_del_lan_endp(tid, name, num, vhost, lan))
-    KERR("ERROR %s %d %s %s %d", name, num, vhost, lan, ovsreq_tag);
+    KERR("ERROR the request to ovs_drv was not sent: %s %d %s %s %d", name, num, vhost, lan, ovsreq_tag);
   else
     {
     ovsreq_alloc(tid, ovsreq_tag, name, num, vhost, lan);
@@ -168,11 +178,11 @@ int msg_send_vhost_up(char *name, int num, char *vhost)
 { 
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost))
-    KERR("ERROR");
+    KERR("ERROR a NULL argument");
   else if ((!strlen(name)) || (!strlen(vhost)))
-    KERR("ERROR %s %s", name, vhost);
+    KERR("ERROR an empty name among: '%s' '%s'", name, vhost);
   else if (fmt_tx_vhost_up(tid, name, num, vhost))
-    KERR("ERROR %s %d", name, num);
+    KERR("ERROR the request to ovs_drv was not sent: %s %d", name, num);
   else
     {
     ovsreq_alloc(tid, ovsreq_vhost_up, name, num, vhost, NULL);
@@ -185,11 +195,11 @@ int msg_send_add_tap(char *name, char *vhost, char *mac)
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost) || (!mac))
-    KERR("ERROR");
+    KERR("ERROR a NULL argument");
   else if (!(strlen(name)) || (!strlen(vhost)) || (!strlen(mac)))
-    KERR("ERROR %s %s", name, mac);
+    KERR("ERROR an empty name among: '%s' '%s'", name, mac);
   else if (fmt_tx_add_tap(tid, name, vhost, mac))
-    KERR("ERROR %s %s %s", name, vhost, mac);
+    KERR("ERROR the request to ovs_drv was not sent: %s %s %s", name, vhost, mac);
   else
     {
     ovsreq_alloc(tid, ovsreq_add_tap, name, 0, vhost, NULL);
@@ -202,11 +212,11 @@ int msg_send_del_tap(char *name, char *vhost)
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost))
-    KERR("ERROR");
+    KERR("ERROR a NULL argument");
   else if ((!strlen(name)) || (!strlen(vhost)))
-    KERR("ERROR %s %s", name, vhost);
+    KERR("ERROR an empty name among: '%s' '%s'", name, vhost);
   else if (fmt_tx_del_tap(tid, name, vhost))
-    KERR("ERROR %s %s", name, vhost);
+    KERR("ERROR the request to ovs_drv was not sent: %s %s", name, vhost);
   else
     {
     ovsreq_alloc(tid, ovsreq_del_tap, name, 0, vhost, NULL);
@@ -219,11 +229,11 @@ int msg_send_add_phy(char *name, char *vhost, char *mac, int num_macvlan)
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost) || (!mac))
-    KERR("ERROR");
+    KERR("ERROR a NULL argument");
   else if (!(strlen(name)) || (!strlen(vhost)) || (!strlen(mac)))
-    KERR("ERROR %s %s", name, mac);
+    KERR("ERROR an empty name among: '%s' '%s'", name, mac);
   else if (fmt_tx_add_phy(tid, name, vhost, mac, num_macvlan))
-    KERR("ERROR %s %s %s", name, vhost, mac);
+    KERR("ERROR the request to ovs_drv was not sent: %s %s %s", name, vhost, mac);
   else
     {
     ovsreq_alloc(tid, ovsreq_add_phy, name, num_macvlan, vhost, NULL);
@@ -236,11 +246,11 @@ int msg_send_del_phy(char *name, char *vhost, int num_macvlan)
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost))
-    KERR("ERROR");
+    KERR("ERROR a NULL argument");
   else if ((!strlen(name)) || (!strlen(vhost)))
-    KERR("ERROR %s %s", name, vhost);
+    KERR("ERROR an empty name among: '%s' '%s'", name, vhost);
   else if (fmt_tx_del_phy(tid, name, vhost, num_macvlan))
-    KERR("ERROR %s %s", name, vhost);
+    KERR("ERROR the request to ovs_drv was not sent: %s %s", name, vhost);
   else
     {
     ovsreq_alloc(tid, ovsreq_del_phy, name, num_macvlan, vhost, NULL);
@@ -253,11 +263,11 @@ int msg_send_add_snf_lan(char *name, int num, char *vhost, char *lan)
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost) || (!lan))
-    KERR("ERROR");
+    KERR("ERROR a NULL argument");
   else if (!(strlen(name)) || (!strlen(vhost)) || (!strlen(lan)))
-    KERR("ERROR %s %s %s", name, vhost, lan);
+    KERR("ERROR an empty name among: '%s' '%s' '%s'", name, vhost, lan);
   else if (fmt_tx_add_snf_lan(tid, name, num, vhost, lan))
-    KERR("ERROR %s %d", name, num);
+    KERR("ERROR the request to ovs_drv was not sent: %s %d", name, num);
   else
     {
     ovsreq_alloc(tid, ovsreq_add_snf_lan, name, num, vhost, lan);
@@ -270,11 +280,11 @@ int msg_send_del_snf_lan(char *name, int num, char *vhost, char *lan)
 {
   int result = -1, tid = utils_get_next_tid();
   if ((!name) || (!vhost) || (!lan))
-    KERR("ERROR");
+    KERR("ERROR a NULL argument");
   else if (!(strlen(name)) || (!strlen(vhost)) || (!strlen(lan)))
-    KERR("ERROR %s %s %s", name, vhost, lan);
+    KERR("ERROR an empty name among: '%s' '%s' '%s'", name, vhost, lan);
   else if (fmt_tx_del_snf_lan(tid, name, num, vhost, lan))
-    KERR("ERROR %s %d", name, num);
+    KERR("ERROR the request to ovs_drv was not sent: %s %d", name, num);
   else
     {
     ovsreq_alloc(tid, ovsreq_del_snf_lan, name, num, vhost, lan);
@@ -283,14 +293,34 @@ int msg_send_del_snf_lan(char *name, int num, char *vhost, char *lan)
   return result;
 }
 
+/* the endpoint of an add is being deleted, its delete says so */
+static int add_endp_going(t_ovsreq *cur)
+{
+  if (cur->type == ovsreq_add_cnt_lan)
+    return cnt_is_going(cur->name);
+  if (cur->type == ovsreq_add_kvm_lan)
+    {
+    t_vm *vm = cfg_get_vm(cur->name);
+    return ((!vm) || (vm->vm_poweroff_done) ||
+            (!kvm_eth_present(cur->name, cur->num)));
+    }
+  return 0;
+}
+
 static void transmit_add_ack(int tid, t_ovsreq *cur, int is_ko)
 {
   if (!lan_get_with_name(cur->lan))
     {
-    KERR("WARNING %s %s %d: the lan went away while the add was in flight, "
-         "refusing the add instead of recreating it",
-         cur->lan, cur->name, cur->num);
-    lan_history_dump(cur->lan);
+    if (add_endp_going(cur))
+      KTRC("%s %s %d: the lan went with its endpoint while the add was in "
+           "flight", cur->lan, cur->name, cur->num);
+    else
+      {
+      KERR("WARNING %s %s %d: the lan went away while the add was in "
+           "flight, refusing the add instead of recreating it",
+           cur->lan, cur->name, cur->num);
+      lan_history_dump(cur->lan);
+      }
     int del_type = 0;
     is_ko = 1;
     if (cur->type == ovsreq_add_cnt_lan)      del_type = ovsreq_del_cnt_lan;
@@ -321,8 +351,8 @@ static void transmit_add_ack(int tid, t_ovsreq *cur, int is_ko)
   else if (cur->type == ovsreq_add_c2c_lan)
     c2c_chainlan_resp_add_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else
-    KERR("ERROR %s %d %s %s %d", cur->name, cur->num,
-                                 cur->vhost, cur->lan, cur->type);
+    KERR("ERROR add ack of an unknown request %d: %s %d vhost %s lan %s",
+         cur->type, cur->name, cur->num, cur->vhost, cur->lan);
 }
 
 static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
@@ -343,9 +373,8 @@ static void transmit_del_ack(int tid, t_ovsreq *cur, int is_ko)
   else if (cur->type == ovsreq_del_c2c_lan)
     c2c_chainlan_resp_del_lan(is_ko, cur->name, cur->num, cur->vhost, cur->lan);
   else
-    KERR("ERROR %s %d %s %s %d", cur->name, cur->num,
-                                 cur->vhost, cur->lan, cur->type);
-
+    KERR("ERROR del ack of an unknown request %d: %s %d vhost %s lan %s",
+         cur->type, cur->name, cur->num, cur->vhost, cur->lan);
 }
 
 void msg_ack_lan_endp(int tid, int is_ko, int is_add, char *name, int num,
@@ -355,13 +384,17 @@ void msg_ack_lan_endp(int tid, int is_ko, int is_add, char *name, int num,
   if (cur)
     {
     if (strcmp(lan, cur->lan))
-      KERR("ERROR %s %s is_add:%d is_ko:%d %d",lan,cur->lan,is_add,is_ko,tid);
+      KERR("ERROR ack tid %d names lan %s, the request lan %s (add %d ko %d)",
+           tid, lan, cur->lan, is_add, is_ko);
     else if (strcmp(name, cur->name))
-      KERR("ERROR %s %s is_add:%d is_ko:%d", name, cur->name, is_add,is_ko);
+      KERR("ERROR ack tid %d names %s, the request %s (add %d ko %d)",
+           tid, name, cur->name, is_add, is_ko);
     else if (strcmp(vhost, cur->vhost))
-      KERR("ERROR %s %s is_add:%d is_ko:%d", vhost, cur->vhost,is_add,is_ko);
+      KERR("ERROR ack tid %d names vhost %s, the request %s (add %d ko %d)",
+           tid, vhost, cur->vhost, is_add, is_ko);
     else if (num != cur->num)
-      KERR("ERROR %d %d is_add:%d is_ko:%d", num, cur->num, is_add, is_ko);
+      KERR("ERROR ack tid %d names eth %d, the request %d (add %d ko %d)",
+           tid, num, cur->num, is_add, is_ko);
     else 
       {
       if (is_add)
@@ -416,9 +449,9 @@ void msg_ack_lan(int tid, int is_ko, int is_add, char *lan)
   if (is_ko)
     {
     if (is_add)
-      KERR("ERROR ADD LAN %s", lan);
-    else 
-      KERR("ERROR DEL LAN %s", lan);
+      KERR("ERROR ovs_drv refused to create lan %s", lan);
+    else
+      KERR("ERROR ovs_drv refused to delete lan %s", lan);
     }
 }
 
@@ -493,165 +526,123 @@ void msg_ack_snf_ethv(int tid, int is_ko, int is_add, char *name, int num,
 static void timer_msg_beat(void *data)
 {
   t_ovsreq *next, *cur = g_head_ovsreq;
-  /* One line every few seconds while the queue is deep: head and its wait. */
-  static int trace_beat;
-  trace_beat += 1;
-  if ((cur) && (g_qty_ovsreq > 20) && ((trace_beat % 50) == 0))
-    KERR("WARNING ovs queue %d deep, head: type %d tid %d %s %s waited %d "
-         "beats", g_qty_ovsreq, cur->type, cur->tid, cur->name, cur->lan,
-         cur->time_count);
   while(cur)
     {
     next = cur->next;
     cur->time_count += 1;
     if (cur->time_count > 100)
       {
+      KERR("ERROR ovs_drv never answered request type %d tid %d for %s %d "
+           "(vhost %s lan %s) in %d beats: taken as KO", cur->type, cur->tid,
+           cur->name, cur->num, cur->vhost, cur->lan, cur->time_count);
       switch(cur->type)
         {
 
         case ovsreq_add_kvm_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           kvm_resp_add_lan(1, cur->name, cur->num,
                            cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_kvm_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           kvm_resp_del_lan(1, cur->name, cur->num,
                            cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_add_cnt_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           cnt_resp_add_lan(1, cur->name, cur->num,
                            cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_cnt_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           cnt_resp_del_lan(1, cur->name, cur->num,
                            cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_vhost_up:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->vhost,
-                                      cur->name, cur->num);
           ovs_snf_resp_msg_vhost_up(1, cur->vhost, cur->name, cur->num);
           ovsreq_free(cur);
         break;
 
         case ovsreq_add_tap:
-          KERR("ERROR TIMEOUT %d %s %s", cur->tid, cur->vhost, cur->name );
           ovs_tap_resp_msg_tap(1, 1, cur->name);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_tap:
-          KERR("ERROR TIMEOUT %d %s %s", cur->tid, cur->vhost, cur->name );
           ovs_tap_resp_msg_tap(1, 0, cur->name);
           ovsreq_free(cur);
         break;
 
         case ovsreq_add_phy:
-          KERR("ERROR TIMEOUT %d %s %s", cur->tid, cur->vhost, cur->name );
           ovs_phy_resp_msg_phy(1, 1, cur->name, cur->num, cur->vhost);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_phy:
-          KERR("ERROR TIMEOUT %d %s %s", cur->tid, cur->vhost, cur->name );
           ovs_phy_resp_msg_phy(1, 0, cur->name, cur->num, cur->vhost);
           ovsreq_free(cur);
         break;
 
         case ovsreq_add_snf_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d %s", cur->tid, cur->vhost,
-                                      cur->name, cur->num, cur->lan);
           ovs_snf_resp_msg_add_lan(1,cur->vhost,cur->name,cur->num,cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_snf_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           ovs_snf_resp_msg_del_lan(1,cur->vhost,cur->name,cur->num,cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_add_tap_lan:
-          KERR("ERROR TIMEOUT %d %s %s %s", cur->tid, cur->vhost,
-                                            cur->name, cur->lan);
           ovs_tap_resp_add_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_tap_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           ovs_tap_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_add_phy_lan:
-          KERR("ERROR TIMEOUT %d %s %s %s", cur->tid, cur->vhost,
-                                            cur->name, cur->lan);
           ovs_phy_resp_add_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_phy_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           ovs_phy_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
        case ovsreq_add_nat_lan:
-          KERR("ERROR TIMEOUT %d %s %s %s", cur->tid, cur->vhost,
-                                            cur->name, cur->lan);
           ovs_nat_main_resp_add_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_nat_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           ovs_nat_main_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
        case ovsreq_add_a2b_lan:
-          KERR("ERROR TIMEOUT %d %s %s %s", cur->tid, cur->vhost,
-                                            cur->name, cur->lan);
           ovs_a2b_resp_add_lan(1, cur->name, cur->num, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_a2b_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           ovs_a2b_resp_del_lan(1, cur->name, cur->num, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
        case ovsreq_add_c2c_lan:
-          KERR("ERROR TIMEOUT %d %s %s %s", cur->tid, cur->vhost,
-                                            cur->name, cur->lan);
           c2c_chainlan_resp_add_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
 
         case ovsreq_del_c2c_lan:
-          KERR("ERROR TIMEOUT %d %s %s %d", cur->tid, cur->lan,
-                                            cur->name, cur->num);
           c2c_chainlan_resp_del_lan(1, cur->name, 0, cur->vhost, cur->lan);
           ovsreq_free(cur);
         break;
@@ -662,6 +653,18 @@ static void timer_msg_beat(void *data)
       }
     cur = next;
     }
+  if (g_qty_ovsreq == 0)
+    g_silent_beats = 0;
+  else if (++g_silent_beats == OVSDRV_SILENT_BEATS)
+    {
+    /* the oldest request is the last: new ones go in at the head */
+    for (cur = g_head_ovsreq; cur->next; cur = cur->next);
+    KERR("WARNING ovs_drv slow: no answer for %d beats of 2 s, %d request(s) "
+         "waiting, the oldest type %d tid %d for %s %d (vhost %s lan %s) for "
+         "%d beats, each taken as KO at 100", OVSDRV_SILENT_BEATS,
+         g_qty_ovsreq, cur->type, cur->tid, cur->name, cur->num, cur->vhost,
+         cur->lan, cur->time_count);
+    }
   clownix_timeout_add(200, timer_msg_beat, NULL, NULL, NULL);
 }
 
@@ -669,10 +672,10 @@ void msg_lan_add_name(char *lan)
 {
   int tid = utils_get_next_tid();
   if (fmt_tx_add_lan(tid, lan))
-    KERR("ERROR %s", lan);
+    KERR("ERROR the add of lan %s was not sent to ovs_drv", lan);
 }
 
-/* rstp: the client is answered on the OK or KO of ovs_drv, never before.  */
+/* rstp: the client is answered on the OK or KO of ovs_drv, never before. */
 typedef struct t_rstp_wait
 {
   int llid;
@@ -759,7 +762,7 @@ void msg_lan_del_name(char *lan)
 {
   int tid = utils_get_next_tid();
   if (fmt_tx_del_lan(tid, lan))
-    KERR("ERROR %s", lan);
+    KERR("ERROR the del of lan %s was not sent to ovs_drv", lan);
 }
 
 int msg_ovsreq_exists_name(char *name)

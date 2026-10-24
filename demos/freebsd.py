@@ -3,8 +3,7 @@
 
     ./freebsd.py [net] [--no-addr]      default net: nemo
 
-Every demo here but the windows one configures linux from linux. This one is
-about the words freebsd uses instead, all of them sent from the host over
+The words freebsd uses where linux has others, all sent from the host over
 "cloonix cli ssh"::
 
       bsd1 ---- lan1 ---- trix1
@@ -13,106 +12,61 @@ about the words freebsd uses instead, all of them sent from the host over
       lan1 ---- trix2
               10.0.0.3
 
+    ifconfig vtnet0 10.0.0.1/24 up          the address
+    ifconfig vtnet0                         read it back
+    netstat -rn                             the routing table
+
+The interface is vtnet0, not eth0: freebsd names an interface after its
+driver and unit. ifconfig does what ip does, the mask on the address with a
+slash and "up" a word of the same command. pf is not enabled in a stock
+image, so an address is all the guest needs before it answers a ping, where
+windows.py needs a fourth command, for its firewall.
+
   ACT 1  the machines, the lan, the containers addressed
   ACT 2  trix1 pings trix2, so the lan is known good before freebsd
-  ACT 3  the freebsd interface found BY ITS MAC, and addressed
+  ACT 3  the freebsd interface found by its mac, and addressed
   ACT 4  the ping both ways
 
-The contrast with the windows demo is the point of having both. Windows needs
-four commands and the fourth is a firewall rule, without which it pings out
-and cannot be pinged. freebsd needs one: pf is not enabled in a stock image,
-so an address is the whole of it and the ping works both ways at once.
-
---no-addr leaves out the address of act 3, which is the state a guest is
-really in when it is first put on a lan. Sniff bsd1 eth0 then and the ARP
-request for 10.0.0.1 is on the capture with nothing behind it.
-
-Needs freebsd.qcow2 in bulk, built by vm_create/cnt_kvm/kvm_freebsd.sh, and
-the trixie container image. Standard library only, like cloonix itself.
+--no-addr leaves out the address of act 3, the state of a guest first put
+on a lan. freebsd.qcow2 is built by vm_create/cnt_kvm/kvm_freebsd.sh.
 
 Image: freebsd.qcow2 in bulk, and trixie for the containers
 Size:  1 kvm, 2 containers, 1 lan
 
 THE PACKET TO CATCH
 -------------------
-  Sniff the freebsd interface and run the demo with the address left out
-  (--no-addr), which is the state a guest is in when it is first put on a
-  lan:
+  The freebsd interface, the demo run with --no-addr:
 
     cloonix cli nemo cnf bsd1 eth0 sniff=on
-    cloonix cli nemo sniff bsd1 eth0 --dump icmp
+    cloonix cli nemo sniff bsd1 eth0 --dump "icmp or arp"
 
-  The packet to catch is the ARP request that goes unanswered. trix1 asks
-  who has 10.0.0.1, the request is on the capture so it crossed the lan
-  and reached the interface, and nothing replies -- because no interface
-  in the guest holds that address yet. The ping then reports "Destination
-  Host Unreachable" from trix1's own kernel, which reads as a broken lan
-  and is not one: nothing ever left for the freebsd guest to drop.
-
-  That is the difference between "the cable is bad" and "the far end has
-  no address", and one capture separates them.
+  The packet to catch is the ARP request left unanswered: trix1 asks who
+  has 10.0.0.1, the request reaches the interface, and nothing replies, no
+  interface of the guest holding the address. The ping reports "Destination
+  Host Unreachable" from the kernel of trix1, and the capture tells a far
+  end with no address from a bad cable.
 
 Important
-  The freebsd guest is the slow one here. A container answers ssh in a
-  second or two; a freebsd guest boots, loads virtio_console, starts
-  qemu-guest-agent, and only then does cloonix write and run the launcher
-  that starts the agent off the disc. The demo waits for the node rather
-  than assuming it.
+  freebsd is the slow guest: it boots, loads virtio_console, starts
+  qemu-guest-agent, then cloonix writes and runs the launcher of the agent;
+  the demo waits for the node. A node that stays red, its Desktop tells why:
 
-  If it never comes, open the Desktop of the node before looking any
-  further: a red circle says the agent has not answered, and it does not
-  say whether the machine underneath is healthy. Three things it can be,
-  and the console tells them apart at a glance:
-
-    a root that will not fsck    CYLINDER GROUP n: INTEGRITY CHECK
-                                 FAILED, then ABORTING BOOT and a single
-                                 user prompt. The image is damaged, not
-                                 the agent. Build it again --
-                                 kvm_freebsd.sh writes nothing to bulk
-                                 unless the install finished, so an image
-                                 that is there should be whole
-    no /dev/vtcon                virtio_console was not loaded, and that
-                                 is the one line of /boot/loader.conf the
-                                 installer writes for exactly this. The
-                                 guest is healthy and has no channel
-    stuck at ping=1 in syslog    the qemu guest agent is running and is
-                                 not on the channel cloonix talks on. No
-                                 error line goes with this one, because no
-                                 reply arrives to be wrong -- so read the
-                                 agent's own log inside the guest:
+    a root that will not fsck    CYLINDER GROUP n: INTEGRITY CHECK FAILED,
+                                 ABORTING BOOT, a single user prompt: the
+                                 image is damaged; build it again,
+                                 kvm_freebsd.sh writing to bulk only a
+                                 finished install
+    no /dev/vtcon                virtio_console not loaded, its line of
+                                 /boot/loader.conf missing
+    stuck at ping=1 in syslog    the guest agent is on another channel;
+                                 in the guest:
                                    cat /var/log/qemu-ga.log
                                    ls -l /dev/vtcon/
-                                 "error opening channel ... No such file"
-                                 means devfs made no alias for the named
-                                 channel, and the device is the raw one it
-                                 would have pointed at, /dev/ttyV0.2
-    an agent that started and    /cloonixmnt/tmp/cloonix-agent.log inside
-    said something               the guest, reached over the Desktop
-
-WHY THIS DEMO EXISTS
---------------------
-Every demo here but the windows one configures linux from linux. This one
-is the reference for the words freebsd uses instead, all of them sent from
-the host over "cloonix cli ssh":
-
-    ifconfig vtnet0 10.0.0.1/24 up          the address
-    ifconfig vtnet0                         read it back
-    netstat -rn                             the routing table
-
-Three differences, and they are the whole demo:
-
-  the interface is vtnet0, not eth0. freebsd names an interface after its
-  driver and its unit, so the virtio net device is vtnet0 whatever cloonix
-  called the port at the other end of the cable.
-
-  ifconfig does what ip does. There is no "ip addr add"; the mask goes on
-  the address with a slash or as a hex netmask, and "up" is a word of the
-  same command rather than a second one.
-
-  the firewall is not in the way. This is where freebsd and windows part
-  company: pf is not enabled in a stock image, so an address is all the
-  guest needs before it answers a ping. The windows demo needs a fourth
-  command for the firewall, and this one has nothing to correspond to it.
+                                 "error opening channel ... No such file":
+                                 no devfs alias, the raw device being
+                                 /dev/ttyV0.2
+    an agent that started        /cloonixmnt/tmp/cloonix-agent.log in the
+                                 guest, read over the Desktop
 """
 import os
 import re
@@ -127,7 +81,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    ACK_FAST, CLOONIX, NET, cli, erase_net, show, step, story)
+    ACK_FAST, CLOONIX, NET, cli, erase_net, show, step, story, unavailable,
+    EXIT_UNAVAILABLE)
 
 WANT_ADDR = "--no-addr" not in sys.argv[1:]
 
@@ -180,7 +135,7 @@ def ssh(node, cmd, check=True, timeout=None):
     return r.stdout
 
 def in_lst(name):
-    """Ask the server what it really has: "dump commands" prints the commands
+    """Ask the server what it has: "dump commands" prints the commands
     that would rebuild the topology, so anything that exists is in it."""
     return name in cli("dump", "commands", quiet=True).stdout.split()
 
@@ -195,7 +150,7 @@ def answers(node, timeout=3):
 
 def check_net():
     if cli("dump", "commands").returncode:
-        sys.exit("no answer from %s\n"
+        unavailable("no answer from %s\n"
                  "  start it:  cloonix start %s" % (NET, NET))
 
 def choose_rootfs():
@@ -213,7 +168,7 @@ def choose_rootfs():
         else:
             said = (r.stdout + r.stderr).strip()
     cli("del", "probe_bsd", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -507,7 +462,7 @@ def main():
         bsd_show(iface)
     else:
         story("  --no-addr: the address is NOT set, which is how a guest")
-        story("  really arrives on a lan")
+        story("  arrives on a lan")
 
     step("ACT 4: the ping, both ways")
     ok_out, out = ping_freebsd(ADDR[CNT[0]])
@@ -548,7 +503,7 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit as stop:
-        if stop.code:
+        if stop.code and stop.code != EXIT_UNAVAILABLE:
             sys.stderr.write("%s\n" % stop.code)
             leftovers()
             raise SystemExit(1)

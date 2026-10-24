@@ -9,18 +9,20 @@ Two machines on one lan::
 
   sen runs Suricata as a passive sensor on its own interface, loaded with a
   tiny rule set: one rule for any ICMP echo, one for an HTTP request carrying
-  a suspicious path. cl is an ordinary client that generates the traffic. The
-  sensor does not block anything here; it watches and records, which is what
-  an IDS does.
+  a suspicious path. sen also runs a web server, python3 -m http.server, so
+  the request crosses the wire. cl is an ordinary client that
+  generates the traffic. The sensor does not block anything here; it watches
+  and records, which is what an IDS does.
 
-  ACT 1  Suricata starts on sen and loads the rules.
+  ACT 1  Suricata starts on sen and loads the rules; the demo waits for its
+         "Engine started", written once eth0 is captured.
   ACT 2  cl pings sen. The ICMP rule fires, and the alert is read back from
          Suricata's log -- the sensor saw and named the traffic.
-  ACT 3  cl makes a web request with a path the second rule watches for. That
-         alert fires too, showing a match on packet CONTENT, not just a
-         protocol.
+  ACT 3  cl asks the web server of sen for a path the second rule watches
+         for. That alert fires too, showing a match on packet CONTENT, not
+         just a protocol.
 
-Image: suricata_trixie (suricata)
+Image: suricata_trixie (suricata, curl, python3)
 Size:  2 containers, 1 lan
 
 THE PACKET TO CATCH
@@ -33,7 +35,8 @@ THE PACKET TO CATCH
 
 Important
   Nothing is baked into the image: Suricata is installed, and the demo writes
-  its rule file and runs it on the interface at run time.
+  its rule file and runs it on the interface at run time. In a rule, a sticky
+  buffer such as http.uri comes BEFORE the content it applies to.
 """
 import os
 import sys
@@ -53,11 +56,8 @@ HISTORY = """\
 Suricata is made by the Open Information Security Foundation, first released
 in 2010. It is a network intrusion detection and prevention engine: it reads
 packets, reassembles flows, and matches them against rules that describe
-known-bad traffic, writing structured alerts. It was written to be
-multi-threaded from the start, its rule language is broadly compatible with
-the older Snort, and it has become one of the standard open sensors run at the
-edge of networks. Here it runs on a couple of rules so the match is easy to
-see.
+known-bad traffic, writing structured alerts. It was multi-threaded from the
+start and its rule language is broadly compatible with the older Snort.
 """
 
 ROOTFS_CHOICES = ("suricata_trixie",)
@@ -74,38 +74,51 @@ GATEWAY = {}
 
 RULES = """\
 alert icmp any any -> any any (msg:"DEMO ICMP echo seen"; itype:8; sid:1000001; rev:1;)
-alert http any any -> any any (msg:"DEMO suspicious path"; content:"/secret"; http.uri; sid:1000002; rev:1;)
+alert http any any -> any any (msg:"DEMO suspicious path"; http.uri; content:"/secret"; sid:1000002; rev:1;)
 """
 
+def suricata_said():
+    """For a failure: the end of what Suricata wrote, and whether it runs."""
+    return ssh(SEN, "tail -n 15 /var/log/suricata/suricata.log; "
+                    "pgrep -x Suricata-Main >/dev/null && echo suricata runs "
+                    "|| echo suricata is not running", check=False)
+
 def suricata_start():
+    """Back once the engine runs, with what Suricata says of the rules."""
     ssh(SEN, "mkdir -p /var/log/suricata /etc/suricata/rules")
     put(SEN, "/etc/suricata/rules/demo.rules", RULES)
-    ssh(SEN, "rm -f /var/log/suricata/fast.log", check=False)
+    ssh(SEN, "rm -f /var/log/suricata/fast.log /var/log/suricata/suricata.log")
     ssh(SEN, "suricata -i eth0 -S /etc/suricata/rules/demo.rules "
              "-l /var/log/suricata -D")
-    # Suricata takes a while to build its detect engine; wait for the log.
-    for _ in range(40):
-        r = ssh(SEN, "grep -c 'engine started' /var/log/suricata/suricata.log"
-                     " 2>/dev/null || echo 0", check=False).strip()
-        if r and r != "0":
-            return
+    # "Engine started" is written once eth0 is captured.
+    for _ in range(60):
+        r = ssh(SEN, "grep -qi 'engine started' /var/log/suricata/suricata.log"
+                     " && echo up || pgrep -x Suricata-Main >/dev/null"
+                     " || echo gone", check=False).strip()
+        if r == "gone":
+            break
+        if r == "up":
+            loaded = ssh(SEN, "grep -o '[0-9]* rules successfully loaded, "
+                              "[0-9]* rules failed' "
+                              "/var/log/suricata/suricata.log",
+                         check=False).strip()
+            if loaded == "%d rules successfully loaded, 0 rules failed" \
+                    % len(RULES.splitlines()):
+                return loaded
+            raise RuntimeError("suricata did not take every rule of "
+                               "demo.rules:\n%s" % suricata_said())
         time.sleep(1)
-    raise RuntimeError("suricata never reported its engine started:\n%s"
-                       % ssh(SEN, "tail -n 20 /var/log/suricata/suricata.log",
-                             check=False))
+    raise RuntimeError("suricata did not start on sen:\n%s" % suricata_said())
 
 def alerts_for(sid, timeout=20):
+    """The fast.log lines of one rule, waited for."""
     end = time.time() + timeout
-    while time.time() < end:
-        r = ssh(SEN, "grep -c '\\[1:%s' /var/log/suricata/fast.log "
-                     "2>/dev/null || echo 0" % sid, check=False).strip()
-        try:
-            if int(r) > 0:
-                return int(r)
-        except ValueError:
-            pass
+    while True:
+        r = ssh(SEN, "grep -F '[1:%d:' /var/log/suricata/fast.log 2>/dev/null"
+                % sid, check=False).strip()
+        if r or time.time() > end:
+            return r.split("\n") if r else []
         time.sleep(2)
-    return 0
 
 LAYOUT = {CL: (-260, 0), LAN: (0, 0), SEN: (260, 0)}
 ETHS = {(CL, "eth0"): 0, (SEN, "eth0"): 180}
@@ -113,8 +126,8 @@ ETHS = {(CL, "eth0"): 0, (SEN, "eth0"): 180}
 CARD = r"""
    cl --- lan1 --- sen  (Suricata, watching eth0)
 
-  Two rules: any ICMP echo, and an HTTP request for /secret. cl makes the
-  traffic; sen sees it and writes the alerts.
+  Two rules: any ICMP echo, and an HTTP request for /secret. cl pings sen
+  and asks its web server for /secret; Suricata on sen writes the alerts.
 """
 
 def main():
@@ -130,13 +143,13 @@ def main():
 
     step("creating and cabling the two machines")
     build(rootfs)
-    tools_present(SEN, "suricata")
+    tools_present(SEN, "suricata", "python3")
     tools_present(CL, "ping", "curl")
 
     step("act 1: the sensor starts and loads its rules")
     story()
-    suricata_start()
-    story("    Suricata is up on sen eth0 with two rules loaded.")
+    loaded = suricata_start()
+    story("    Suricata is up on sen eth0: %s." % loaded)
     hold()
 
     step("act 2: a ping, and the ICMP rule fires")
@@ -146,38 +159,38 @@ def main():
                    settle=3.0)
     if got is not None:
         story("    %d ICMP packet(s) crossed the sensor" % got["count"])
-    n_icmp = alerts_for("1000001")
-    story("    Suricata alerts for the ICMP rule: %d" % n_icmp)
-    for line in ssh(SEN, "grep '1000001' /var/log/suricata/fast.log "
-                         "2>/dev/null | tail -n 1", check=False).strip()\
-            .split("\n"):
-        if line:
-            story("      %s" % line)
-    ok_icmp = n_icmp > 0
+    icmp = alerts_for(1000001)
+    story("    Suricata alerts for the ICMP rule: %d" % len(icmp))
+    if icmp:
+        story("      %s" % icmp[-1])
     story()
 
     step("act 3: a web request, matched on content")
     story()
-    ssh(CL, "curl -s -m 3 http://10.0.0.2/secret >/dev/null 2>&1 || true",
-        check=False)
-    n_http = alerts_for("1000002")
-    story("    Suricata alerts for the content rule: %d" % n_http)
-    for line in ssh(SEN, "grep '1000002' /var/log/suricata/fast.log "
-                         "2>/dev/null | tail -n 1", check=False).strip()\
-            .split("\n"):
-        if line:
-            story("      %s" % line)
+    ssh(SEN, "cd /tmp && python3 -m http.server 80 "
+             "</dev/null >/dev/null 2>&1 &")
+    code = ssh(CL, "curl -s -o /dev/null -w '%{http_code}' -m 3 --retry 5 "
+                   "--retry-connrefused --retry-delay 1 "
+                   "http://10.0.0.2/secret", check=False).strip()
+    story("    cl asked the web server of sen for /secret: HTTP %s"
+          % (code or "no answer"))
+    http = alerts_for(1000002)
+    story("    Suricata alerts for the content rule: %d" % len(http))
+    if http:
+        story("      %s" % http[-1])
     story("    The second rule matched the path inside the request, not just")
     story("    a port or address -- that is deep inspection.")
-    ok_http = n_http > 0
     story()
 
-    if not ok_icmp:
-        sys.exit("a check failed: the ICMP rule never fired (icmp=%s http=%s)"
-                 % (ok_icmp, ok_http))
+    failed = [what for what, alerts in (("the ICMP rule never fired", icmp),
+                                        ("the content rule never fired", http))
+              if not alerts]
+    if failed:
+        sys.exit("a check failed: %s\n%s" % ("; ".join(failed),
+                                             suricata_said()))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the alert log and the rich json events:
     cloonix cli %s ssh sen "cat /var/log/suricata/fast.log"
@@ -185,6 +198,7 @@ the network is left up. Things worth trying:
 
   make more traffic and watch it get named:
     cloonix cli %s ssh cl "ping -c2 10.0.0.2"
-""" % (NET, NET, NET))
+    cloonix cli %s ssh cl "curl -s http://10.0.0.2/secret"
+""" % (NET, NET, NET, NET))
 
 main()

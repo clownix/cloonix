@@ -1,9 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The wifi medium in a process of its own, cloonix-suid-power-air, started
-   by suid-power and asked on two pipes: create on the sync one, answered
-   before crun goes on; delete, air and suidroot on the async one, whose
-   answers come back as resp lines. The containers' commands of suid-power
-   block; the frames of the airs do not wait for them. */
+/* The wifi medium apart, cloonix-suid-power-air: create on the sync pipe,
+   the rest on the async one; frames never wait for crun commands. */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +30,6 @@ static int g_async = -1;
 static int g_async_llid;
 static char g_why[MAX_NAME_LEN];
 
-/*--------------------------------------------------------------------------*/
 int air_lines(int fd, char *buf, int *len, void (*cb)(char *line))
 {
   char *nl, *start;
@@ -88,7 +84,6 @@ void air_line_send(int fd, const char *fmt, ...)
     }
 }
 
-/*--------------------------------------------------------------------------*/
 static void spawn(void);
 
 static void resp_line(char *line)
@@ -175,7 +170,6 @@ static void spawn(void)
     KOUT("ERROR air: the pipe of the air process is not watched");
 }
 
-/*--------------------------------------------------------------------------*/
 static int run(char *cmd)
 {
   FILE *fp;
@@ -217,7 +211,6 @@ static int radio_move(int wiphy, char *nspacecrun, int idx)
   return run(cmd);
 }
 
-/*--------------------------------------------------------------------------*/
 char *vwifi_why_no_radio(void)
 {
   return g_why;

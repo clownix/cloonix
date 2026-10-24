@@ -6,6 +6,7 @@
 #include "io_clownix.h"
 #include "doorways_sock.h"
 #include "rpc_clownix.h"
+#include "json_min.h"
 #include "lib_topo.h"
 #include "cloonix_conf_info.h"
 #include "pthexec.h"
@@ -45,21 +46,21 @@ t_cloonix_conf_info *get_own_cloonix_conf_info(void)
 void rpct_recv_pid_req(int llid, int tid, char *name, int num)
 {
   if (llid != g_ctrl_llid)
-    KERR("rpct_recv_pid_req bad llid %d %d", llid, g_ctrl_llid);
+    KERR("ERROR pid request on llid %d, the control llid is %d", llid, g_ctrl_llid);
   rpct_send_pid_resp(llid, tid, name, num, cloonix_get_pid(), getpid());
   g_watchdog_ok = 1;
 }
 
 void rpct_recv_kil_req(int llid, int tid)
 {
-  KERR("received kil_req — exiting cleanly");
+  KTRC("kill request received, exiting");
   if (g_srv_fd >= 0) close(g_srv_fd);
   exit(0);
 }
 
 static void err_ctrl_cb(int llid, int err, int from)
 {
-  KERR("ctrl-server disconnected (err=%d from=%d) — exiting", err, from);
+  KERR("WARNING the link to the switch closed (err %d from %d), exiting", err, from);
   if (g_srv_fd >= 0) close(g_srv_fd);
   exit(0);
 }
@@ -92,7 +93,7 @@ static void timer_watchdog(void *data)
     count = 0;
   if (count >= 60)
     {
-    KERR("watchdog: no heartbeat for 12s — exiting");
+    KERR("WARNING no heartbeat from the switch for 12 s, exiting");
     if (g_srv_fd >= 0) close(g_srv_fd);
     exit(0);
     }
@@ -185,7 +186,7 @@ int main(int argc, char *argv[])
 
   msg_mngt_loop();
 
-  KERR("msg_mngt_loop returned");
+  KERR("ERROR the event loop returned");
   if (g_srv_fd >= 0) close(g_srv_fd);
   return 0;
 }

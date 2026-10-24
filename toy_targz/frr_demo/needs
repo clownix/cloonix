@@ -1,0 +1,29 @@
+# needs - what the demos of frr_demo take from frr_trixie besides the
+# commands they run, read by lib/special_needs.py: packages taken whole
+# (dpkg names, globs), and "!word" for a word of a configuration that is
+# not a command.
+frr
+# "?<glob>": a file of the packages matching it is taken only when its name
+# (up to its first dot) is a word of a demo: the daemons and modules of frr
+# no demo starts stay out. zebra, mgmtd, staticd and watchfrr are always in.
+?usr/lib/frr/babeld
+?usr/lib/frr/bfdd
+?usr/lib/frr/bgpd
+?usr/lib/frr/eigrpd
+?usr/lib/frr/fabricd
+?usr/lib/frr/isisd
+?usr/lib/frr/ldpd
+?usr/lib/frr/nhrpd
+?usr/lib/frr/ospf6d
+?usr/lib/frr/ospfd
+?usr/lib/frr/pathd
+?usr/lib/frr/pbrd
+?usr/lib/frr/pim6d
+?usr/lib/frr/pimd
+?usr/lib/frr/ripd
+?usr/lib/frr/ripngd
+?usr/lib/frr/sharpd
+?usr/lib/frr/vrrpd
+?usr/lib/*/frr/modules/*.so
+!service
+!import

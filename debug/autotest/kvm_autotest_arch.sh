@@ -1,9 +1,9 @@
 #!/bin/bash
-# kvm_autotest_arch.qcow2: arch.qcow2 made ready for autotest.sh. Common
+# kvm_autotest_arch.qcow2: arch.qcow2 made ready for the autotest. Common
 # part in kvm_autotest_common.sh; the base already names the mirror. Arch
 # has no rsyslog in core/extra: syslog-ng writes /var/log/syslog.
 DISTRO="arch"
-PKGS="python gcc shadow syslog-ng dbus sudo iperf3"
+PKGS="python gcc shadow syslog-ng dbus sudo iperf3 xz"
 . "$(dirname "$0")/kvm_autotest_common.sh"
 
 pkg_install()

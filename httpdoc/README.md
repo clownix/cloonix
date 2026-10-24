@@ -1,13 +1,17 @@
 # httpdoc — the clownix.net pages
 
-Five pages, one stylesheet, six screenshots and the two books. Run `./cmd`, copy the
-directory to the web root and the site is live; the pages themselves have nothing to build.
+Five pages, one stylesheet, six screenshots, the cloonix logos and the two books. Run `./cmd`, copy the
+directory to the web root and the site is live; of the pages, `./cmd` only
+writes the version.
 
     index.html     what cloonix is, and whether it is the tool you want
     learn.html     what there is to learn with it, and in what order
     demos.html     five demos as the browser shows them, one screenshot each,
                    the windows one twice (its lock screen)
-    img/           the screenshots of demos.html, taken from the web canvas
+    img/           the screenshots of demos.html, taken from the web canvas,
+                   and the cloonix images: cloonix64.png is the logo of the nav
+                   of every page, cloonix32.png the favicon,
+                   smile_cloonix_title.png the title of index.html
     start.html     from a tarball to a running network, in five steps
     downloads.html the three tarballs and the four directories of guest images
     style.css      the whole design
@@ -21,6 +25,12 @@ directory to the web root and the site is live; the pages themselves have nothin
 **No javascript, no framework, no webfont, no build step.** Five pages and
 one stylesheet. They render with javascript off and need nothing fetched from a third
 party.
+
+**System fonts, the colours of the canvas.** A serif for the text, a sans
+for the headings, the nav and the tables, a monospace for the commands, all
+taken from the machine of the reader. The colours are those the canvas
+gives its objects: the blue of a cable for the links, the grey of a lan for
+the footer, the green dot of a sniffable interface for the bullets.
 
 **The figures are inline SVG**, styled by the same stylesheet as the text; the six screenshots of demos.html are png, being the browser itself.
 Change a colour in `style.css` and every diagram follows, and no figure
@@ -67,12 +77,12 @@ two build directories are in `.gitignore`.
 `cloonix/cloonix_config.py` and substitutes it wherever the sources say
 `__LAST__`, so no page of the books carries a version number by hand.
 
-The pages here are plain files and get no such substitution, so the version
-is written out in three pages and all three must move at each release:
+The pages are plain files with the version written in two of them, and
+`./cmd` writes the one of `cloonix/cloonix_config.py` there, so the pages and
+the books name the same tarballs:
 
-    index.html     the <p class="ver"> line, the four tarballs of the Downloads band
-    start.html     the tarball name and the cd under it, twice over
-    downloads.html the four tarballs, the two wget blocks under them
+    index.html     the <p class="ver"> line, the two source tarballs of the Install band
+    downloads.html the two source tarballs, the wget block under them
 
 ## The downloads
 
@@ -82,8 +92,12 @@ is written out in three pages and all three must move at each release:
     downloads/cloonix-source-<num>.tar.gz
     downloads/cloonix-targz_store-<num>.tar.gz   the targz_store directory of the
                                               tree the sources were made from
-    downloads/cloonix-bundle-<num>.tar.gz     ./doitall at the root of the tree
-    downloads/cloonix-toy-<num>.tar.gz        toy_targz/create_toy_targz.sh
+    downloads/cloonix-bundle.tar.gz     ./doitall at the root of the tree
+    downloads/cloonix-toy.tar.xz        toy_targz/create_toy_targz.sh
+    downloads/cloonix-frr-toy.tar.xz          toy_targz/create_frr_toy_targz.sh
+    downloads/cloonix-bird-toy.tar.xz         toy_targz/create_bird_toy_targz.sh
+    downloads/cloonix-suricata-toy.tar.xz     toy_targz/create_suricata_toy_targz.sh
+    downloads/cloonix-bind-toy.tar.xz         toy_targz/create_bind_toy_targz.sh
     downloads/cnt_bulk/<image>.tar.gz         the four directories that
     downloads/kvm_bulk/<image>.qcow2.gz       vm_create/allbulk.sh --go
     downloads/cnt_demo_bulk/<image>.tar.gz    leaves in the home: copy them
@@ -95,9 +109,15 @@ also linked by name: the names are those of `./doitall.sh --list` in
 `vm_create/cnt_kvm` and `vm_create/cnt_kvm_demo`, and an image added to or
 removed from those two lists is added to or removed from the page by hand.
 
-## The screenshots
+## The screenshots and the logos
 
-The six png of `img/` are the web canvas as the browser shows it, one per
+The images of `img/` other than the six screenshots are the cloonix logos
+and drawings; the pages use three of them, cloonix64.png (the nav, shown at
+28 pixels), cloonix32.png (the favicon) and smile_cloonix_title.png (the
+title of index.html), and the books get the same nav and favicon from
+`xdoc_theme/layout.html`.
+
+The six screenshot png of `img/` are the web canvas as the browser shows it, one per
 demo of `demos.html`. They are taken again when the canvas changes. Every
 other figure of the site and of the books is an inline or sphinx SVG that
 explains a relationship: the processes, the sockets, the frames.

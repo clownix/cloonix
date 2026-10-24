@@ -66,7 +66,7 @@ static int unplug_elem(t_timeout_elem **head, t_timeout_elem *elem)
   return result;
 }
 
-/* Top callbacks by pending count; walked at most every ten minutes.       */
+/* Top callbacks by pending count; walked at most every ten minutes. */
 void clownix_timer_report_top(char *txt, int txt_len)
 {
   #define NB_TALLY 12
@@ -175,7 +175,7 @@ void *clownix_timeout_del(long long abs_beat, int ref,
     result = 0;
     }
   if (abs_beat && result) 
-    KOUT("%s line:%d    %lld %lld %d %d\n", file, line, 
+    KOUT("%s line:%d    %lld %lld %d %d", file, line, 
          abs_beat, current_beat, ref1, ref2);
   return data;
 }

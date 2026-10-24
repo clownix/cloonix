@@ -68,14 +68,16 @@ no privilege. The cloonix nat is one passt per nat item.
 the dissection engine of wireshark, the capture
 ===============================================
 
-Capturing on an interface is libpcap, written in 1988 at Lawrence Berkeley
-Laboratory by Van Jacobson, Craig Leres and Steven McCanne together with
-tcpdump; the capture filter of *sniff*, *udp port 53*, is the BPF language
-of McCanne and Jacobson from 1992, compiled and run where the packets are.
-Decoding them is Wireshark, begun by Gerald Combs in 1998 under the name
+A capture of cloonix is a pcap stream, the format of libpcap, written in
+1988 at Lawrence Berkeley Laboratory by Van Jacobson, Craig Leres and Steven
+McCanne together with tcpdump. The capture filter of *sniff*, *udp port 53*,
+is written in the language of tcpdump, that of the BPF of McCanne and
+Jacobson from 1992; cloonix reads a subset of it and applies it in its main
+server, *pcap_filter.c*. Decoding the packets is Wireshark, begun by Gerald Combs in 1998 under the name
 Ethereal and renamed in 2006 when Combs changed employer and the old name
-stayed behind. Cloonix compiles its dissectors without the Qt interface;
-webshark and the PcapRec item read the result in the browser.
+stayed behind. Cloonix compiles its dissectors without the Qt interface:
+webshark shows the result in the browser, and PcapRec records the captures
+as pcap files.
 
 
 openssl, the two ports

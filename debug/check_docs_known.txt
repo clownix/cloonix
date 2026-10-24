@@ -11,6 +11,14 @@ cloonix-dtach
 cloonix-crun
 cloonix-qemu-system
 cloonix-patchelf
+# The tarballs of the delivery, downloaded under these names without a
+# version, and the directories they unpack into:
+cloonix-bundle
+cloonix-toy
+cloonix-frr-toy
+cloonix-bird-toy
+cloonix-suricata-toy
+cloonix-bind-toy
 # Build-time helpers, never delivered:
 cloonix-kvm-build
 # A running process is named "cloonix-proxymous-<net>", so the docs show one

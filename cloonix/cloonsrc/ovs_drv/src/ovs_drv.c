@@ -70,8 +70,8 @@ static char *get_net_name(void)
   return g_net_name;
 }
 
-/* One ip command, argv from a NULL terminated list. ip_ns_cmd runs it in   */
-/* the cloonix net namespace. quiet is call_ovs_popen's.                    */
+/* One ip command, argv from a NULL terminated list. ip_ns_cmd runs it in */
+/* the cloonix net namespace. quiet is call_ovs_popen's. */
 static int ip_argv_run(char *ovs_dir, int quiet, const char *fct, int line,
                        int in_ns, va_list ap)
 {
@@ -807,7 +807,7 @@ int main (int argc, char *iargv[])
   memset(sock, 0, sizeof(sock));
   memset(g_ovs_bin, 0, MAX_PATH_LEN);
   memset(g_ovs_dir, 0, MAX_PATH_LEN);
-/* Setuid binary: its arguments are not trusted.                            */
+/* Setuid binary: its arguments are not trusted. */
   if (!name_is_sane(iargv[1]))
     KOUT("ERROR refused net name");
   if (!name_is_sane(iargv[2]))

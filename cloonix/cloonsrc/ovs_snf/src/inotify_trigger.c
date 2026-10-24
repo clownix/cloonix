@@ -81,7 +81,7 @@ static int rx_inot(int llid, int fd)
         KERR("WARNING INOTIFY IN_IGNORE");
         }
       else
-        KERR("ERROR INOTIFY Unknown Mask 0x%.8x\n", event->mask);
+        KERR("ERROR INOTIFY Unknown Mask 0x%.8x", event->mask);
       len -= sizeof(*event) + event->len;
       if (len > 0)
         event = (struct inotify_event *)

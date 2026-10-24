@@ -47,13 +47,21 @@ time unless *--persistent* writes into the bulk file::
 cisco*: each sets what that kind of disk needs; the chapter on the client
 has the options.
 
+An add whose qemu ends at its start is refused with the last line qemu
+wrote; all of it is in */var/lib/cloonix/<net>/dtach/<name>.stderr*. An add
+on the name of a kvm still being deleted waits for it, 6 s at most.
+
 
 cnt
 ===
 
 A crun container: a process tree in a private file-system with its own
 namespaces, the root file-system being a directory of bulk mounted as the
-lower layer of an overlay. The image is never modified unless
+lower layer of an overlay. Its network stack starts with rp_filter 0,
+whatever the host sets. Its eths have no checksum or segmentation offload:
+each frame carries a finished checksum and fits the mtu, as on a cable, so a
+frame copied in user space (an af-packet ips) reaches the far end intact.
+The image is never modified unless
 *--persistent*::
 
     cloonix cli nemo add cnt cnt1 eth=1 trixie
@@ -65,11 +73,11 @@ init is run when asked::
 
     cloonix cli nemo add cnt sysd1 eth=1 trixie_systemd startup_env="CLOONIX_WITH_SYSTEMD=1"
 
-Each systemd costs several inotify instances, counted by the kernel per user
-with a default of 128 shared by every container and every other program of
-the session; past about two dozen, a systemd container dies a second after
-its start with nothing logged. A router has no use for an init, and without
-one the same host carries hundreds of containers. For many systemd
+Each systemd takes inotify instances, counted per user and shared with
+every program of the session: the chapter on the host system gives the
+limit, two dozen such containers by default, and the line that raises it.
+A router has no use for an init, and without one the same host carries
+hundreds of containers. For many systemd
 containers::
 
     sudo sysctl -w fs.inotify.max_user_instances=8192

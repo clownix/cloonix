@@ -1,0 +1,30 @@
+# voice - the narration of frr_demo, one line per demo: a general summary of
+# its goal. Appended to demos/voice by create_frr_toy_targz.sh; the clips are
+# frr_demo/audio/<demo>.ogg, made by frr_demo/audio/make_voice.py.
+
+frr_demo/bgp_conditional_advertisement.py  B G P conditional advertisement. A router announces backup routes only when the default route disappears.
+frr_demo/bgp_communities_example.py        B G P communities. A customer tags its routes, and its provider sets the preference and filters them by these tags.
+frr_demo/bgp_misc_examples.py              A B G P session to an upstream provider. A prefix list lets only one of two networks go out.
+frr_demo/route_server.py                   A route server at an internet exchange. Three networks exchange their routes through it, and it stays invisible.
+frr_demo/bfd_configuration.py              B F D watches the B G P sessions. When a cable is cut, the session falls within a second.
+frr_demo/ospf_sample.py                    O S P F with two areas. The area border router summarises each area, and M D 5 protects the neighbours.
+frr_demo/ospf6_sample.py                   O S P F for I P v 6. A route map decides which static routes enter the protocol.
+frr_demo/isis_examples.py                  I S I S with authenticated hellos. A wrong password brings the adjacency down.
+frr_demo/isis_vrf_examples.py              I S I S inside a V R F. The routes stay in their own table, apart from the main one.
+frr_demo/openfabric_sample.py              Open Fabric, a three router fabric. When a link is cut, the traffic goes around it.
+frr_demo/rip_sample.py                     R I P with a distribute list. A router accepts only the routes it trusts.
+frr_demo/ripng_sample.py                   R I P N G for I P v 6. A distribute list controls what a router announces.
+frr_demo/babel_sample.py                   Babel on a wired interface. Two routers find each other and exchange their networks.
+frr_demo/eigrp_sample.py                   E I G R P between two routers. Each one learns the network of the other.
+frr_demo/ra_example.py                     I P v 6 router advertisements. The hosts build their own address and find their router.
+frr_demo/pbr_sample.py                     Policy based routing. Traffic is sent by its source, not only by its destination.
+frr_demo/pim_sample.py                     Source specific multicast with P I M. A receiver chooses its source, and the stream reaches it.
+frr_demo/vrrp_configuring.py               V R R P. Two routers share one gateway address, and the backup takes over when the master fails.
+frr_demo/evpn_sample.py                    E V P N with V X LAN. One layer 2 network stretches across a routed core.
+frr_demo/ldp_sample.py                     L D P and M P L S. The routers forward the packets by labels instead of addresses.
+frr_demo/isis_sr_examples.py               Segment routing with I S I S. Each router is one label for the whole network, and no L D P is needed.
+frr_demo/pathd_explicit.py                 Traffic engineering with segment routing. The first router writes the path into the packet as a stack of labels.
+frr_demo/pathd_pcep.py                     A controller drives the network. The Pola P C E sends the path to the router over P C E P.
+frr_demo/l3vpn_vrfs.py                     A layer 3 V P N over segment routing. Two customers use the same addresses, and each reaches only its own site.
+frr_demo/l3vpn_srv6.py                     A layer 3 V P N over S R v 6. The core is plain I P v 6, and the far customer is an I P v 6 address.
+frr_demo/nhrp_example.py                   N H R P, a dynamic V P N. The branch routers register with a hub over G R E tunnels.

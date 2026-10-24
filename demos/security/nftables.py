@@ -25,8 +25,6 @@ and there are two inside hosts so a port forward has to pick one.
   ACT 4  that entry is deleted mid-connection and the connection dies.
          Stateful means there is state; this is where it lives.
 
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
 
 Image: nft_trixie
 Size:  4 containers, 2 lans
@@ -65,10 +63,8 @@ THE PACKET TO CATCH
   arrive on eth0 and stop appearing on eth1, then the RST come back.
 
 Important
-  iptables is deliberately NOT in the image; mixing backends is a long
-  explanation with no payoff.
-  The ruleset is per network namespace, so every container has its own and
-  nothing leaks between them.
+  iptables is not in the image: one backend, nftables.
+  The ruleset is per network namespace: every container has its own.
 """
 import os
 import sys
@@ -82,8 +78,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    NET, Tap, answers, check_net, create, erase_net, in_lst, in_parallel,
-    place, put, run, ssh, step, story, wait_exists)
+    NET, Tap, answers, check_net, create, erase_net, in_parallel, place, put,
+    run, ssh, step, story, wait_exists, unavailable, guarded)
 
 ROOTFS_CHOICES = ("nft_trixie",)
 
@@ -91,7 +87,7 @@ HISTORY = """\
 Packet filtering in linux was rewritten three times by the same
 community: ipfwadm, then ipchains by Rusty Russell in 1998, then the
 netfilter framework and iptables, by Rusty Russell and Harald Welte, in
-kernel 2.4 of 2000. nftables is the fourth: Patrick McHardy presented
+kernel 2.4 of 2001. nftables is the fourth: Patrick McHardy presented
 it in 2008 as one virtual machine in the kernel replacing the separate
 ip, ip6, arp and ethernet tables, it was merged in kernel 3.13 in
 January 2014, and Pablo Neira Ayuso leads the netfilter project that
@@ -133,7 +129,7 @@ def choose_rootfs():
         if ok:
             return cand
         said = (r.stdout + r.stderr).strip() or "nothing"
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -155,7 +151,7 @@ def tools_present(node, *tools):
     for t in tools:
         r = run('cloonix cli %s ssh %s "command -v %s"' % (NET, node, t))
         if r.returncode:
-            sys.exit("%s has no %s: this is not the nftables image.\n"
+            unavailable("%s has no %s: this is not the nftables image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -602,7 +598,7 @@ def main():
     story("    (nf_conntrack_tcp_loose was set to 0 at the start. With its")
     story("     default of 1 the kernel adopts a mid-stream packet into a")
     story("     new entry, and deleting one costs the connection nothing --")
-    story("     worth knowing before trusting conntrack -D as a tool.)")
+    story("     to know before using conntrack -D as a tool.)")
     story()
     show_counters("the counters again, at the end of the whole demo:")
 
@@ -630,7 +626,7 @@ def main():
         sys.exit("\n" + "\n".join("  " + b for b in bad))
 
     story("""
-the network is left up, with the full ruleset loaded. Things worth trying:
+the network is left up, with the full ruleset loaded. Things to try:
 
   the whole ruleset, as the kernel holds it:
     cloonix cli %s ssh fw "nft list ruleset"
@@ -638,7 +634,7 @@ the network is left up, with the full ruleset loaded. Things worth trying:
   the counters, live, while you make traffic:
     cloonix cli %s ssh fw "nft list counters table inet fw"
 
-  the state table, which is where the decisions actually live:
+  the state table, where the decisions live:
     cloonix cli %s ssh fw "conntrack -L"
 
   the same packet on both sides of the firewall at once, in two terminals:
@@ -650,16 +646,4 @@ the network is left up, with the full ruleset loaded. Things worth trying:
 """ % (NET, NET, NET, NET, PAGE_PORT, NET, PAGE_PORT, NET))
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit as stop:
-        if stop.code:
-            sys.stderr.write("%s\n" % stop.code)
-            up = [n for n in ALL if in_lst(n)]
-            if up:
-                sys.stderr.write("Still running: %s\n" % ", ".join(up))
-            raise SystemExit(1)
-        raise
-    except RuntimeError as err:
-        sys.stderr.write("%s\n" % err)
-        raise SystemExit(1)
+    guarded(main, ALL)

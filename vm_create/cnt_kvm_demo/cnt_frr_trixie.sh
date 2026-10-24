@@ -1,6 +1,6 @@
 #!/bin/bash
-# frr_trixie: ../cnt_kvm/cnt_trixie.sh with the frr packages added, and
-# nothing else.
+# frr_trixie: ../cnt_kvm/cnt_trixie.sh with the frr packages added, and the
+# Pola PCE.
 HERE=`pwd`
 DISTRO="trixie"
 TRIXIE="/var/lib/cloonix/bulk/frr_trixie"
@@ -70,7 +70,7 @@ chmod 700 ${TRIXIE}/root
 . "$(dirname "$0")/../cnt_kvm/cnt_common.sh"
 cnt_common_config "${TRIXIE}" || exit 1
 
-# Guest userns: uid 0 = the cloonix user, 1..n = subuids. A file owned outside the map is unreachable even by root: claim it for uid 0.
+# Guest userns: files of an unmapped owner are claimed for uid 0.
 # /etc/frr belongs to the frr account: claimed. Runtime dirs left world writable (lab image).
 for i in "/etc/frr" "/var/log/frr" "/var/lib/frr" "/var/tmp/frr" ; do
   if [ -d "${TRIXIE}${i}" ]; then
@@ -83,4 +83,6 @@ for i in "/var/log/frr" "/var/lib/frr" "/var/tmp/frr" ; do
     fct_unshare_all "chmod 1777 ${TRIXIE}${i}"
   fi
 done
+. "$(dirname "$0")/cnt_pola.sh"
+cnt_pola "${TRIXIE}" || exit 1
 cnt_common_pack "${TRIXIE}" || exit 1

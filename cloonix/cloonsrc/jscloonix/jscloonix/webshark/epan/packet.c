@@ -45,7 +45,6 @@
 
 static int proto_malformed;
 static dissector_handle_t frame_handle;
-static dissector_handle_t file_handle;
 static dissector_handle_t data_handle;
 
 /**
@@ -224,9 +223,6 @@ packet_cache_proto_handles(void)
 {
 	frame_handle = find_dissector("frame");
 	ws_assert(frame_handle != NULL);
-
-	file_handle = find_dissector("file");
-	ws_assert(file_handle != NULL);
 
 	data_handle = find_dissector("data");
 	ws_assert(data_handle != NULL);
@@ -656,80 +652,6 @@ dissect_record(epan_dissect_t *edt, int file_type_subtype,
 		proto_tree_add_protocol_format(edt->tree, proto_malformed, edt->tvb, 0, 0,
 					       "[Malformed %s: Packet Length]",
 					       record_type);
-	}
-	ENDTRY;
-	wtap_block_unref(rec->block);
-	rec->block = NULL;
-
-	fd->visited = 1;
-}
-
-/* Creates the top-most tvbuff and calls dissect_file() */
-void
-dissect_file(epan_dissect_t *edt, wtap_rec *rec,
-	       tvbuff_t *tvb, frame_data *fd, column_info *cinfo)
-{
-	file_data_t file_dissector_data;
-
-	if (cinfo != NULL)
-		col_init(cinfo, edt->session);
-	edt->pi.epan = edt->session;
-	/* edt->pi.pool created in epan_dissect_init() */
-	edt->pi.current_proto = "<Missing Filetype Name>";
-	edt->pi.cinfo = cinfo;
-	edt->pi.fd    = fd;
-	edt->pi.rec   = rec;
-	edt->pi.pseudo_header = NULL;
-	clear_address(&edt->pi.dl_src);
-	clear_address(&edt->pi.dl_dst);
-	clear_address(&edt->pi.net_src);
-	clear_address(&edt->pi.net_dst);
-	clear_address(&edt->pi.src);
-	clear_address(&edt->pi.dst);
-	edt->pi.noreassembly_reason = "";
-	edt->pi.ptype = PT_NONE;
-	edt->pi.use_conv_addr_port_endpoints = false;
-	edt->pi.conv_addr_port_endpoints = NULL;
-	edt->pi.conv_elements = NULL;
-	edt->pi.p2p_dir = P2P_DIR_UNKNOWN;
-	edt->pi.link_dir = LINK_DIR_UNKNOWN;
-	edt->pi.layers = wmem_list_new(edt->pi.pool);
-	edt->tvb = tvb;
-
-
-	frame_delta_abs_time(edt->session, fd, fd->frame_ref_num, &edt->pi.rel_ts);
-
-
-	TRY {
-		/*
-		 * If the block has been modified, use the modified block,
-		 * otherwise use the block from the file.
-		 */
-		if (fd->has_modified_block) {
-			file_dissector_data.pkt_block = epan_get_modified_block(edt->session, fd);
-		}
-		else {
-			file_dissector_data.pkt_block = rec->block;
-		}
-		file_dissector_data.color_edt = edt; /* Used strictly for "coloring rules" */
-
-
-		/* Add this tvbuffer into the data_src list */
-		add_new_data_source(&edt->pi, edt->tvb, "File");
-
-		/* Even though dissect_file() catches all the exceptions a
-		 * sub-dissector can throw, dissect_frame() itself may throw
-		 * a ReportedBoundsError in bizarre cases. Thus, we catch the exception
-		 * in this function. */
-		call_dissector_with_data(file_handle, edt->tvb, &edt->pi, edt->tree, &file_dissector_data);
-
-	}
-	CATCH(BoundsError) {
-		ws_assert_not_reached();
-	}
-	CATCH3(FragmentBoundsError, ContainedBoundsError, ReportedBoundsError) {
-		proto_tree_add_protocol_format(edt->tree, proto_malformed, edt->tvb, 0, 0,
-					       "[Malformed Record: Packet Length]");
 	}
 	ENDTRY;
 	wtap_block_unref(rec->block);

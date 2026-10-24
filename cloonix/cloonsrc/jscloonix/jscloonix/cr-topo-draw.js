@@ -6,10 +6,14 @@ function applyTopo(topo, fromServer) {
   if (topo.net) g_net = topo.net;
   // Save real server topo so pending-LAN merges don't lose node data
   if (fromServer) g_last_topo = topo;
+  if (fromServer)
+    g_air_snf = new Set((topo.air || []).filter(a => a.etype === "eths")
+                                        .map(a => a.name));
   if (fromServer && !(topo.kvm||[]).length && !(topo.cnt||[]).length &&
       !(topo.lan||[]).length && !(topo.endp||[]).length) {
     g_has_fitted = false;
     g_fit_anim = null;
+    g_notes = {};          // del all forgets them without a word per item
   }
 
   // Snapshot click position before anything resets it
@@ -188,6 +192,7 @@ function drawNode(nd) {
   }
   const col = spec ? spec
             : (state && VM_COLOR[state]) ? VM_COLOR[state] : VM_COLOR.down;
+  drawItemRing(name, x, y, r + ETH_GAP + (spec ? 14 : 2 * ETH_R));
   ctx.beginPath();
   if (spec && spec.shape === "square") {
     const d = r;
@@ -215,12 +220,14 @@ function drawNode(nd) {
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     const below = (spec.shape === "diamond") ? r * 1.25 : r;
     ctx.fillText(name, x, y + below + 3);
+    drawItemNote(name, x, y + below + 14);
   } else {
     ctx.fillStyle = "#ecf0f1";
     ctx.font = `bold ${type==="kvm"?11:9}px monospace`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     const labelY = (type === "kvm") ? y - 10 : y;
     ctx.fillText(name, x, labelY);
+    drawItemNote(name, x, y + r + 2 * ETH_R + ETH_GAP + 2);
   }
 
   if (!spec && type === "kvm") {
@@ -273,9 +280,11 @@ function drawNode(nd) {
 
     let fill, stroke;
     if (wlan) {
-      // orange family (wlan, on the wifi lan)
+      // orange family (wlan, on the wifi lan), the green ring of a sniffable
+      // eth when its air is captured
+      const air = airOf(nd, i);
       fill   = "#ca6f1e";
-      stroke = "#f5b041";
+      stroke = (air && g_air_snf.has(air)) ? "#54ff54" : "#f5b041";
     } else if (isEthv) {
       // cyan family (veth, non-sniffable)
       fill   = targetable ? "#33ffff" : connected ? "#16a3a3" : "#0e6e6e";
@@ -317,11 +326,15 @@ function drawLan(lan) {
   const { x, y, name } = lan;
   const sel = lan.name === g_selected_lan;
   const air = isAir(lan.name);
+  drawItemRing(name, x, y, LAN_R);
   // Draw as a circle (same style as eth dots but larger)
   ctx.beginPath();
   ctx.arc(x, y, LAN_R, 0, 2*Math.PI);
-  ctx.fillStyle   = air ? "#9c640c" : sel ? "#6c3483" : "#555";
-  ctx.strokeStyle = air ? "#f5b041" : sel ? "#a569bd" : "#888";
+  // an air captured is bright with the green ring of the sniffable eths,
+  // an air not captured dark
+  const snf = air && g_air_snf.has(name);
+  ctx.fillStyle   = snf ? "#e67e22" : air ? "#7e5109" : sel ? "#6c3483" : "#555";
+  ctx.strokeStyle = snf ? "#54ff54" : air ? "#f5b041" : sel ? "#a569bd" : "#888";
   ctx.lineWidth   = sel ? 2.5 : 1.5;
   ctx.fill(); ctx.stroke();
   if (lan._locked) {
@@ -335,6 +348,7 @@ function drawLan(lan) {
   ctx.font = "9px monospace";
   ctx.textAlign = "center"; ctx.textBaseline = "top";
   ctx.fillText(name, x, y + LAN_R + 2);
+  drawItemNote(name, x, y + LAN_R + 13);
 }
 
 function worldToScreen(wx, wy) {

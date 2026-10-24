@@ -1,0 +1,8 @@
+# toy_drop - the demos a toy started by a user cannot play: create_toy_targz.sh
+# leaves them out of the toy, debug/demo_test.py out of its toy runs.
+cloonix/limit.py      a container of a toy has no cgroup to cap
+cloonix/systemd.py    systemd as pid 1 needs a cgroup the toy does not have
+cloonix/phy.py        copies the cloonix installed on the host into its kvm
+cloonix/realnet.py    copies the cloonix installed on the host into its kvm
+security/ebpf.py      an XDP program needs a net started by root
+cisco.py              drives the console with the dtach of an installed cloonix

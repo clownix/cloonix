@@ -1,7 +1,7 @@
 # The nets of this cloonix: doorways address, password, web port, c2c udp.
 
 CONFIG = r"""
-CLOONIX_VERSION=100
+CLOONIX_VERSION=101
 # cloonix_web: https port of the web gui (net name + cloonix_passwd), optional, headless without.
 
 CLOONIX_NET: nemo {

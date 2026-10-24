@@ -19,25 +19,12 @@ the download at clownix.net.
     /var/lib/cloonix/bulk/<name>.tar.gz     a cnt guest too, when the directory is absent
     /var/lib/cloonix/bulk/<name>_targz/     what cloonix extracted from it, never to be modified
 
-Two ways to fill it: download, or build with *vm_create*.
-
-
-Downloading
-===========
-
-::
-
-    mkdir -p /var/lib/cloonix/bulk
-    cd /var/lib/cloonix/bulk
-    wget https://clownix.net/downloads/kvm_bulk/trixie.qcow2.gz
-    gunzip trixie.qcow2.gz
-    wget https://clownix.net/downloads/cnt_bulk/trixie.tar.gz
-
-The tar.gz is used as it is: with no *trixie* directory beside it, the
-first *add cnt* on *trixie* extracts it into *trixie_targz* for every net of
-the machine. Unpacked by hand, with *tar xvf*, the directory comes first and
-takes *--persistent*. Either way a container sees the image with its owner's
-ids translated into those of the user who started the net.
+Two ways to fill it: download, the section *Guest images* of the chapter
+*Instructions for installation*, or build with *vm_create*, this chapter. A
+downloaded tar.gz is used as it is; unpacked by hand, with *tar xvf*, the
+directory comes first and takes *--persistent*. Either way a container sees
+the image with its owner's ids translated into those of the user who started
+the net.
 
 
 The _targz trees
@@ -87,7 +74,8 @@ What vm_create contains
     vm_create/get_distro     mirrors a distribution onto a local disk
     vm_create/cnt_kvm        the distributions: one cnt and one kvm per distro, the desktops
     vm_create/cnt_kvm_demo   the demo images: trixie plus one piece of software, and
-                             the kvm images a demo needs beyond the distributions
+                             the kvm images a demo needs beyond the distributions;
+                             26 of the 28 cnt_<n>_trixie.sh share demo_common.sh
     vm_create/cisco          the Catalyst 8000V image, from a cisco iso
 
 Nothing in them uses sudo except *check_www_links.sh*. Every builder runs
@@ -106,8 +94,7 @@ internet. freebsd has no mirror, so *doitall.sh* does not build it:
 *kvm_freebsd.sh* is run by hand. One
 script per distribution in *get_distro*: *get_trixie.sh*, *get_rocky.sh*,
 *get_fedora.sh*, *get_alpine.sh*, *get_arch.sh*, *get_opensuse.sh*,
-*get_resolute.sh*, *get_noble.sh*. The paths at their top point at the
-author's disk::
+*get_resolute.sh*. The paths at their top point at the author's disk::
 
     hote="ftp.fr.debian.org"
     cible="/media/perrier/T7Shield2/distros/trixie"

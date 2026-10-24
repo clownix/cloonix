@@ -143,7 +143,7 @@ list
     +------------------------------------------------------------------------+
     | net   ip               cli_port  https  resp_time  status               |
     | ---------------------------------------------------------------------- |
-    | cucu  10.7.7.1         45217     4474   > 5s       timeout              |
+    | cucu  172.16.5.1       45217     4474   > 5s       timeout              |
     | fido  127.0.0.1        45213     4464   0.000s     error Connection refused |
     | mito  127.0.0.1        45212     4454   0.017s     version __LAST__     |
     | nemo  127.0.0.1        45211     4444   0.014s     version __LAST__     |
@@ -372,7 +372,8 @@ a mirror port then made for it, and *cnf <n> eth<i> sniff=off* undoes it. No
 *eth=* gives a machine with no interface. *wlan=<n>* gives it n radios, on
 an air not captured either: *cnf <air> sniff=on* captures it. Options::
 
-    ram=<n>                    megabytes, or 2G, 512M
+    ram=<n>                    megabytes, or 2G, 512M, the host's ram and swap at most
+    cpu=<n>                    1 to the cpus of the host
     --persistent               the writes go into the bulk file, no overlay
     --no_qemu_ga               the guest has no qemu-guest-agent
     --fullvirt                 rootfs on the ide bus
@@ -444,7 +445,8 @@ case. Any other variable is for the image: the same one started twice with
 a different value plays two roles. A mount is the host directory itself,
 read and write, and outlives the container; several go in one *vmount=*
 separated by a space, and a source that is not a directory the server sees
-is refused before anything is created. The demo *cloonix/mount.py* plays
+is refused before anything is created; the server of a toy sees of the
+host its bulk only, as */root/bulk_host*. The demo *cloonix/mount.py* plays
 both. *wlan=* needs *mac80211_hwsim* loaded on the host, and *hostapd* and
 *wpa_supplicant* in the image.
 
@@ -510,13 +512,13 @@ kinds sharing one. *sniff=* means "make sure it is on" or "off": asking for
 the state an interface is in is not an error.
 
 *cpu= ram=* caps a running container: *cpu* in percent of one core, *ram* in
-megabytes, 0 for no cap, a cap not named left as it is. The answer is ok once the server has read the cap
-back from the cgroup of the container, so an ok is a cap in force; a
-privileged container has no cgroup and is refused, which is every container
-of the toy, and so is every
-container when the host has no systemd bus, since crun then cannot hand
-a cgroup to a user. Inside the container */sys/fs/cgroup/cpu.max* and
-*memory.max* show it; the demo *cloonix/limit.py* measures it.
+megabytes, 0 for no cap, a cap not named kept. The answer is ok once the
+server has read the cap back from the cgroup of the container, so an ok is a
+cap in force. A container with no cgroup of its own is refused: a privileged
+one, which is every container of the toy, and every container of a host with
+no systemd bus, crun then having no cgroup to hand to a user. Inside the
+container */sys/fs/cgroup/cpu.max* and *memory.max* show the cap; the demo
+*cloonix/limit.py* measures it.
 
 ::
 
@@ -526,6 +528,20 @@ a cgroup to a user. Inside the container */sys/fs/cgroup/cpu.max* and
 
 The server keeps both, so they survive a reload and reach a browser opened
 later.
+
+::
+
+    cloonix cli nemo cnf cnt1 note="gateway, eth0 1.1.1.1/24"   a comment under cnt1 on the canvas
+    cloonix cli nemo cnf lan1 note="the backbone"               any item or lan takes one
+    cloonix cli nemo cnf cnt1 note=                             the note removed
+
+A note is one line of text, 100 bytes at most, everything after *note=*:
+the quotes only keep the shell from splitting it, so *note=* comes alone,
+right after the name. The server keeps it like a place: every browser draws
+it whole under the item, in lines of 28 characters, and *dump commands*
+gives it back as a *cnf ... note='...'* line. A note longer than *dump
+commands* can write is refused, as is a note on an item that does not exist;
+deleting the item forgets its note.
 
 ::
 
@@ -605,9 +621,15 @@ A subset of the tcpdump capture grammar, applied to bytes as they arrive::
     ip  ip6  arp                  ethertype
     tcp  udp                      over ipv4 or ipv6
     icmp  icmp6                   ipv4 only, ipv6 only
+    igmp                          ipv4
+    ip proto 89   ip6 proto 89    the protocol number, the next header in ipv6
+    mpls  mpls 16400              ethertype 0x8847 or 0x8848; with a label, the
+                                  label of that depth: each mpls word of a filter
+                                  reads one label deeper, the first the outer one
     host 10.0.0.1                 either end; also the arp for that address
     src host   dst host           one end
     net 10.1.0.0/16               either end inside; src net, dst net
+    host 2001:db8::1   net 2001:db8:3:3::/64   the same in ipv6, prefixes up to 128
     port 5060                     either port, tcp or udp; src port, dst port
     portrange 5060-5070           src portrange, dst portrange
     less 100   greater 300        frame length, headers included
@@ -617,7 +639,7 @@ Two terms side by side mean *and*; *and* binds tighter than *or*; a
 protocol word qualifies the term after it, so ``not udp portrange
 10000-10100`` is *not (udp and portrange ...)*. Addresses are ipv4 only. A
 fragment other than the first matches no port term. Not there: byte
-offsets, *vlan*, *mpls*, *ether host*, ipv6 addresses, anything stateful.
+offsets, *vlan*, *ether host*, ipv6 extension headers, anything stateful.
 On an air the filter reads ethernet only and passes every 802.11 frame;
 the display filters of webshark select the frames of an air.
 

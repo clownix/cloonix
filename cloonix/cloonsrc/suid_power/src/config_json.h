@@ -16,13 +16,13 @@
 "  \"destination\": \"/var\",\n"\
 "  \"type\": \"tmpfs\",\n"\
 "  \"source\": \"tmpfs\",\n"\
-"  \"options\": [\"rw\",\"mode=06777\"]\n"\
+"  \"options\": [\"rw\",\"mode=0755\"]\n"\
 "},\n"\
 "{\n"\
-"  \"destination\": \"/etc\",\n"\
-"  \"type\": \"tmpfs\",\n"\
-"  \"source\": \"tmpfs\",\n"\
-"  \"options\": [\"rw\",\"mode=06777\"]\n"\
+"  \"destination\": \"/etc/cloonix.cfg\",\n"\
+"  \"type\": \"none\",\n"\
+"  \"source\": \"/dev/null\",\n"\
+"  \"options\": [\"bind\",\"ro\"]\n"\
 "},\n"
 
 #define CONFIG_JSON_MOUNT "\n"\
@@ -197,7 +197,9 @@
 "        },\n"
 
 /* Order of the %s: uid, gid, args, env, the five capability vectors, rootfs
-   path, uid/gid mappings, namespaces, resources, mounts. */
+   path, uid/gid mappings, namespaces, resources, mounts. rp_filter 0: a new
+   network namespace takes the host's, which drops what enters through an
+   interface without address, a VRF device. */
 #define CONFIG_MAIN_JSON "{\"ociVersion\": \"1.0.2\",\n"\
 "    \"process\": {\n"\
 "        \"terminal\": false,\n"\
@@ -236,6 +238,10 @@
 "    \"hostname\": \"crun\",\n"\
 "    \"linux\": {\n"\
 "        %s \n"\
+"        \"sysctl\": {\n"\
+"            \"net.ipv4.conf.all.rp_filter\": \"0\",\n"\
+"            \"net.ipv4.conf.default.rp_filter\": \"0\"\n"\
+"        },\n"\
 "        \"rootfsPropagation\": \"private\",\n"\
 "        %s    \n"\
 "        %s\n"\

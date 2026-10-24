@@ -1,5 +1,5 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* Frames of the agent pipe reassembled from a byte stream, both ends.     */
+/* Frames of the agent pipe reassembled from a byte stream, both ends. */
 #include <stdio.h>
 #include <string.h>
 #include "glob_common.h"

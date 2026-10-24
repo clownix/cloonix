@@ -1,11 +1,12 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* A small tcpdump-syntax capture filter: a recursive descent parser to a  */
-/* tree, walked per packet. No libpcap.                                     */
+/* A small tcpdump-syntax capture filter: a recursive descent parser to a */
+/* tree, walked per packet. No libpcap. */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <arpa/inet.h>
 
 #include "pcap_filter.h"
 
@@ -13,12 +14,15 @@
 #define MAX_TOKENS      128
 #define MAX_TOKEN_LEN   64
 #define MAX_NODES       128
+#define MAX_MPLS_LABELS 8
 
 enum {
   OP_OR = 1, OP_AND, OP_NOT,
   OP_PROTO_IP, OP_PROTO_IP6, OP_PROTO_ARP,
   OP_PROTO_TCP, OP_PROTO_UDP, OP_PROTO_ICMP, OP_PROTO_ICMP6,
-  OP_HOST, OP_NET, OP_PORT, OP_PORTRANGE, OP_LESS, OP_GREATER
+  OP_PROTO_IGMP, OP_PROTO_MPLS, OP_IP_PROTO, OP_IP6_PROTO,
+  OP_HOST, OP_NET, OP_HOST6, OP_NET6, OP_PORT, OP_PORTRANGE, OP_LESS,
+  OP_GREATER
 };
 
 enum { DIR_EITHER = 0, DIR_SRC, DIR_DST };
@@ -29,6 +33,8 @@ typedef struct t_node
   int dir;
   uint32_t addr;          /* host and net, in host order */
   uint32_t mask;
+  uint8_t a6[16];         /* host and net in ipv6, plen6 bits kept */
+  int plen6;
   int lo, hi;             /* port, portrange, less, greater */
   struct t_node *left;
   struct t_node *right;
@@ -49,6 +55,7 @@ typedef struct t_parse
   int pos;
   char *err;
   int errlen;
+  int mpls_depth;         /* the next mpls word reads the label under */
   t_pcap_filter *flt;
 } t_parse;
 
@@ -157,20 +164,69 @@ static int parse_ipv4(const char *s, uint32_t *out)
   return 0;
 }
 
-static int parse_num(const char *s, int *out)
+static int parse_uint(const char *s, long max, int *out)
 {
   char *end;
   long v;
   if (!s || !*s)
     return -1;
   v = strtol(s, &end, 10);
-  if (*end || v < 0 || v > 65535)
+  if (*end || v < 0 || v > max)
     return -1;
   *out = (int) v;
   return 0;
 }
 
+static int parse_num(const char *s, int *out)
+{
+  return parse_uint(s, 65535, out);
+}
+
 static t_node *parse_expr(t_parse *p);
+
+/* host or net of an ipv6 address, buf the token, slash its '/' if any */
+static t_node *parse_addr6(t_parse *p, char *buf, char *slash, int is_net,
+                           int dir)
+{
+  t_node *n;
+  int v = 128, i;
+  uint8_t a[16];
+  if (slash)
+    {
+    *slash = 0;
+    if (parse_num(slash + 1, &v) || v > 128)
+      {
+      fail(p, "'%s' is not a prefix length between 0 and 128", slash + 1);
+      return NULL;
+      }
+    }
+  if (inet_pton(AF_INET6, buf, a) != 1)
+    {
+    fail(p, "'%s' is not an ipv6 address", buf);
+    return NULL;
+    }
+  n = node_new(p, is_net ? OP_NET6 : OP_HOST6);
+  if (!n)
+    return NULL;
+  n->dir = dir;
+  n->plen6 = v;
+  for (i = 0; i < 16; i++)
+    {
+    int bits = v - 8 * i;
+    n->a6[i] = (bits >= 8) ? a[i] : (bits <= 0) ? 0 :
+               (uint8_t) (a[i] & (0xff << (8 - bits)));
+    }
+  return n;
+}
+
+/* the first plen bits of a are those of the prefix p */
+static int in_prefix6(const uint8_t *a, const uint8_t *p, int plen)
+{
+  int full = plen / 8, rest = plen % 8;
+  if (memcmp(a, p, full))
+    return 0;
+  return !rest || !((a[full] ^ p[full]) & (0xff << (8 - rest)) & 0xff);
+}
 
 static t_node *parse_primitive(t_parse *p)
 {
@@ -217,6 +273,8 @@ static t_node *parse_primitive(t_parse *p)
     p->pos++;
     snprintf(buf, sizeof(buf), "%s", t);
     slash = strchr(buf, '/');
+    if (strchr(buf, ':'))
+      return parse_addr6(p, buf, slash, is_net, dir);
     if (slash)
       {
       *slash = 0;
@@ -325,10 +383,52 @@ static t_node *parse_primitive(t_parse *p)
   else if (!strcmp(t, "udp"))    proto_op = OP_PROTO_UDP;
   else if (!strcmp(t, "icmp"))   proto_op = OP_PROTO_ICMP;
   else if (!strcmp(t, "icmp6"))  proto_op = OP_PROTO_ICMP6;
+  else if (!strcmp(t, "igmp"))   proto_op = OP_PROTO_IGMP;
+  else if (!strcmp(t, "mpls"))   proto_op = OP_PROTO_MPLS;
   if (proto_op)
     {
     t_node *proto, *rest, *both;
     p->pos++;
+    /* mpls [label]: as in tcpdump, each mpls word of a filter reads one
+       label deeper, the first the outer one */
+    if (proto_op == OP_PROTO_MPLS)
+      {
+      proto = node_new(p, OP_PROTO_MPLS);
+      if (!proto)
+        return NULL;
+      proto->hi = p->mpls_depth++;
+      proto->lo = -1;
+      t = peek(p);
+      if (t && isdigit((unsigned char) t[0]))
+        {
+        if (parse_uint(t, 1048575, &v))
+          {
+          fail(p, "'%s' is not an mpls label, 0 to 1048575", t);
+          return NULL;
+          }
+        proto->lo = v;
+        p->pos++;
+        }
+      return proto;
+      }
+    /* ip proto <n>, ip6 proto <n>: the protocol number, next header for ip6 */
+    if (((proto_op == OP_PROTO_IP) || (proto_op == OP_PROTO_IP6)) &&
+        (eat(p, "proto")))
+      {
+      t = peek(p);
+      if (!t || parse_num(t, &v) || (v > 255))
+        {
+        fail(p, "'%s' is not a protocol number, 0 to 255",
+             t ? t : "(nothing)");
+        return NULL;
+        }
+      p->pos++;
+      proto = node_new(p, (proto_op == OP_PROTO_IP) ? OP_IP_PROTO :
+                                                      OP_IP6_PROTO);
+      if (proto)
+        proto->lo = v;
+      return proto;
+      }
     proto = node_new(p, proto_op);
     if (!proto)
       return NULL;
@@ -509,6 +609,9 @@ typedef struct t_pkt
   int proto;                    /* ip protocol number, 0 if not ip */
   uint32_t src, dst;            /* ipv4 only */
   int sport, dport;             /* tcp and udp only, -1 otherwise */
+  uint8_t src6[16], dst6[16];   /* ipv6 only */
+  int nlab;                     /* mpls labels read, outer first */
+  int lab[MAX_MPLS_LABELS];
 } t_pkt;
 
 static void dissect(const uint8_t *d, int len, t_pkt *k)
@@ -520,6 +623,16 @@ static void dissect(const uint8_t *d, int len, t_pkt *k)
   if (len < 14)
     return;
   k->ethertype = (d[12] << 8) | d[13];
+  if ((k->ethertype == 0x8847) || (k->ethertype == 0x8848))
+    {
+    for (off = 14; (k->nlab < MAX_MPLS_LABELS) && (len >= off + 4); off += 4)
+      {
+      k->lab[k->nlab++] = (d[off] << 12) | (d[off + 1] << 4) | (d[off + 2] >> 4);
+      if (d[off + 2] & 0x01)
+        break;
+      }
+    return;
+    }
   if (k->ethertype == 0x0806)
     {
     k->is_arp = 1;
@@ -534,7 +647,11 @@ static void dissect(const uint8_t *d, int len, t_pkt *k)
     {
     k->is_ip6 = 1;
     if (len >= 54)
+      {
       k->proto = d[20];         /* next header, with no extension chasing */
+      memcpy(k->src6, d + 22, 16);
+      memcpy(k->dst6, d + 38, 16);
+      }
     return;
     }
   if (k->ethertype != 0x0800)
@@ -585,6 +702,14 @@ static int match_node(t_node *n, t_pkt *k)
       return k->is_ip4 && k->proto == 1;
     case OP_PROTO_ICMP6:
       return k->is_ip6 && k->proto == 58;
+    case OP_PROTO_IGMP:
+      return k->is_ip4 && k->proto == 2;
+    case OP_PROTO_MPLS:
+      return (k->nlab > n->hi) && ((n->lo < 0) || (k->lab[n->hi] == n->lo));
+    case OP_IP_PROTO:
+      return k->is_ip4 && k->proto == n->lo;
+    case OP_IP6_PROTO:
+      return k->is_ip6 && k->proto == n->lo;
     case OP_HOST:
     case OP_NET:
       if (!k->is_ip4 && !k->is_arp)
@@ -595,6 +720,16 @@ static int match_node(t_node *n, t_pkt *k)
         return (k->dst & n->mask) == n->addr;
       return ((k->src & n->mask) == n->addr) ||
              ((k->dst & n->mask) == n->addr);
+    case OP_HOST6:
+    case OP_NET6:
+      if (!k->is_ip6)
+        return 0;
+      if (n->dir == DIR_SRC)
+        return in_prefix6(k->src6, n->a6, n->plen6);
+      if (n->dir == DIR_DST)
+        return in_prefix6(k->dst6, n->a6, n->plen6);
+      return in_prefix6(k->src6, n->a6, n->plen6) ||
+             in_prefix6(k->dst6, n->a6, n->plen6);
     case OP_PORT:
     case OP_PORTRANGE:
       if (k->sport < 0)

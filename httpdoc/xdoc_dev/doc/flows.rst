@@ -66,7 +66,8 @@ A command from the client
    bulk, the eth list is valid. A refusal is answered at once, *ko* with
    its reason.
 4. suid-power makes the container, one request per step, each answered:
-   *create_alloc*, *create_net_eth*, *create_config_json*, *create_overlay*,
+   *create_tar_img* for an image given as a tar.gz, *create_net*,
+   *create_eth*, *create_config_json*, *create_overlay*,
    *create_crun_start*. A failed step stops the chain at that step.
 5. ovs-drv puts each eth in the switch: the port brought up in the
    namespace, then plugged into the bridge of its lan.
@@ -168,7 +169,7 @@ datagram socket *UNIX_KERR_SOCK* (*cxp_wire.h*). Doorways passes at most
 ten lines per ten seconds per guest, control bytes replaced, as the event
 *agent_kerr*, and the main server writes each in the syslog of the net::
 
-    KERR: nemo guest k1: action.c line:280 WARNING byte pipe 41 refused: ...
+    KERR: nemo guest k1: action.c:helper_rx_virtio_noctx line:311 WARNING byte pipe 41 refused: ...
 
 A line the port cannot take is counted and the next line says how many
 were lost. The windows agent sends its faults the same way; the windows
@@ -197,15 +198,22 @@ starts one *cloonix-ovs-snf* on it; *cloonix-dumpcap* beside it serves
     the doors connection. Past *msg_tx_queue_high()* (8 MB, *msg_layer.c*)
     waiting towards one client, its packets are dropped and counted, so a
     client that does not read slows nothing but itself.
-  * **the canvas**: the */rec* websocket of the gui server starts a thread
-    per eth that copies the stream into a *.pcap* file; webshark reads it
-    in the browser.
+  * **the canvas**: a *cloonix-webshark* of the gui server is a subscriber
+    of that socket and sends the dissected rows to the browser; the */rec*
+    websocket of PcapRec starts a thread per eth that copies the stream of
+    its own subscription into a *.pcap* file.
+
+Each subscriber gets the pcap file header first, then whole records, so one
+that joins late or comes back reads a valid stream. A webshark replaced or
+closed is gone and reaped before the gui server answers (*webshark_stop* of
+*web_ctl.c*): the one that follows binds the same socket path, which the
+dying one unlinks.
 
 The capture is a copy of the port: a frame not read by anyone costs the
 bridge the mirror only.
 
-An snf that goes on its own comes back by itself while its eth is still
-capturable:
+An snf that goes on its own comes back by itself while its machine is there,
+not being deleted, and its eth still capturable:
 
 .. image:: /svg/flow_snf_restart.svg
    :align: center
@@ -215,10 +223,13 @@ The dumpcap reads the end of its fifo and ends with status 0; its snf pid
 being gone, that is written in the history and nothing more. The heartbeat
 of *ovs_snf.c* (500 ms) sees the channel closed: *free_snf()* writes the
 history of the capture once, one WARNING, and *timer_snf_defer()* starts a
-new snf 200 ms later on the same eth, mirrored again on the same lan. The
-new one finds the socket of the old one, erased, and its fifo, kept for a
-reader that may be waiting on it (*ctrl_link.c*). A dumpcap that dies with
-its snf alive is started again 300 ms later, five times at most.
+new snf 200 ms later on the same eth, mirrored again on the same lan.
+*ovs_dyn_snf_start_process()* checks the machine and the eth again when it
+starts: a machine whose delete began in those 200 ms gets no snf, as nothing
+would ever stop it. The new one finds the socket of the old one, erased, and
+its fifo, kept for a reader that may be waiting on it (*ctrl_link.c*). A
+dumpcap that dies with its snf alive is started again 300 ms later, five
+times at most.
 
 
 The nat
@@ -320,7 +331,7 @@ the medium of that netgroup (*HWSIM_CMD_REGISTER*)::
                                         its receiver
        the frame, radiotap pcap:        snf/<air>_0
     cloonix-dumpcap -i snf/<air>_0      started by the main server (wifi_air.c)
-       <air>_0_pcap_sock, _pcap_fifo    sniff <air>, webshark
+       <air>_0_pcap_sock                sniff <air>, webshark
 
 A frame or an address change from a radio deleted less than 10 s ago was
 queued before the delete and is dropped without a word; from any other radio
@@ -413,7 +424,8 @@ drop there is a frame lost after its ack.
 *plug <guest> wlan<i> <air>* is the air of a radio, any air for any
 radio: *cloonsuid_air_cnt* for a cnt, *cloonsuid_air_kvm* for a kvm,
 answered ok once suid-power has moved it, a ko after 3 s without the answer
-for a kvm. *dump json* carries the airs as *vwif_air*, *dump commands* replays
+for a kvm. *dump json* carries the airs as *vwif_air* and the capture of
+each as *vwif_endp*, the endp_type of an eth (14 eths, 15 ethv), *dump commands* replays
 those off the default air of the radio, *cntwifi* or *kvmwifi*.
 
 The interface of *plug*, *unplug*, *cnf* and *sniff* is an

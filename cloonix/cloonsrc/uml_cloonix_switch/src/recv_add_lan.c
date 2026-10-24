@@ -133,8 +133,8 @@ static void shadown_lan_free(t_shadown_lan *cur)
   free(cur);
 }
 
-/* The shadow of a c2c goes with the c2c: kept across its restarts, freed  */
-/* with its record, or the next c2c of that name is cabled to an old lan.  */
+/* The shadow of a c2c goes with the c2c: kept across its restarts, freed */
+/* with its record, or the next c2c of that name is cabled to an old lan. */
 void shadown_lan_del_name(char *name)
 {
   t_shadown_lan *next, *cur = g_head_shadown_lan;
@@ -418,9 +418,8 @@ static void timer_endp(void *data)
         char use[MAX_PATH_LEN];
         int known = cfg_name_is_in_use(0, te->name, use);
         g_wait_expired += 1;
-        /* a name the config no longer has was deleted meanwhile: the
-           client's own doing, a warning; a known name that never came
-           is an error */
+        /* a name gone from the config was deleted meanwhile (warning); a known
+                   name that never came is an error */
         KERR("%s %s %d %s: no endpoint of that name after %d tries and "
              "it is not a c2c, so this cable can never exist. The config "
              "says: %s. REFUSED rather than answered ok. Of the waits like "
@@ -456,6 +455,15 @@ static int endpoint_is_there(char *name, int num)
           (ovs_a2b_exists(name) != NULL));
 }
 
+/* Every add answers ok once its item exists: a name nothing has at the plug
+   does not come later. */
+static int nothing_has_name(char *name, int num)
+{
+  char use[MAX_PATH_LEN];
+  return ((!endpoint_is_there(name, num)) && (!kvm_eth_present(name, num)) &&
+          (!ovs_c2c_exists(name)) && (!cfg_name_is_in_use(0, name, use)));
+}
+
 static void timer_endp_init(int llid, int tid, char *name, int num, char *lan)
 {       
   t_timer_endp *te = timer_find(name, num);
@@ -464,6 +472,11 @@ static void timer_endp_init(int llid, int tid, char *name, int num, char *lan)
     send_status_ko(llid, tid, "endpoint already waiting");
     KERR("WARNING %s %d %s refused: a plug on that eth is still "
          "waiting for its endpoint", name, num, lan);
+    }
+  else if (nothing_has_name(name, num))
+    {
+    KERR("WARNING %s %d %s refused: nothing has that name", name, num, lan);
+    send_status_ko(llid, tid, "nothing has that name");
     }
   else
     {
@@ -546,7 +559,8 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
   if (get_inhib_new_clients())
     {
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
-    KERR("ERROR %s %d %s: refused, the net is going down", name, num, lan);
+    KERR("ERROR plug %s%s %s refused: the net is stopping", name,
+         wifi_air_iface(name, num), lan);
     }
   else if (cfg_name_is_in_use(1, lan, info))
     {
@@ -611,7 +625,7 @@ static void local_add_lan(int llid, int tid, char *name, int num, char *lan)
 void recv_add_lan_endp(int llid, int tid, char *name, int wire_num,
                        char *lan)
 {
-  char info[MAX_PATH_LEN];
+  char info[MAX_PATH_LEN], use[MAX_PATH_LEN];
   int idx, num = wifi_air_num(name, wire_num);
   t_shadown_lan *cur = shadown_lan_find(name, num, lan);
   t_ovs_c2c *c2c_exists = ovs_c2c_exists(name);
@@ -631,7 +645,8 @@ void recv_add_lan_endp(int llid, int tid, char *name, int wire_num,
   if (get_inhib_new_clients())
     {
     send_status_ko(llid, tid, "AUTODESTRUCT_ON");
-    KERR("ERROR AUTODESTRUCT_ON");
+    KERR("ERROR plug %s%s %s refused: the net is stopping", name,
+         wifi_air_iface(name, num), lan);
     }
   else if (num < 0)
     {
@@ -651,10 +666,12 @@ void recv_add_lan_endp(int llid, int tid, char *name, int wire_num,
     KERR("ERROR %s", info);
     send_status_ko(llid, tid, info);
     }
-  else if (cfg_name_is_in_use(1, lan, info))
+  else if (cfg_name_is_in_use(1, lan, use))
     {
-    send_status_ko(llid, tid, info);
+    snprintf(info, MAX_PATH_LEN-1, "plug %s%s%s%s refused: %s", name,
+             wifi_air_iface(name, num), lan[0] ? " " : "", lan, use);
     KERR("ERROR %s", info);
+    send_status_ko(llid, tid, info);
     }
   else if ((!strlen(name)) || (!strlen(lan)))
     {
@@ -729,6 +746,14 @@ static void timer_del_retry(void *data)
     KERR("WARNING %s %d %s: the eth was busy, the delete is going through "
          "now after %d tries", dr->name, dr->num, dr->lan, dr->count);
     recv_del_lan_endp(dr->llid, dr->tid, dr->name, dr->num, dr->lan);
+    clownix_free(dr, __FUNCTION__);
+    }
+  else if (!cnt_name_exists(dr->name, &nb_eth))
+    {
+    KERR("WARNING %s %d %s: the container went while the unplug waited, "
+         "its cable went with it", dr->name, dr->num, dr->lan);
+    if (dr->llid)
+      send_status_ok(dr->llid, dr->tid, "OK");
     clownix_free(dr, __FUNCTION__);
     }
   else if (dr->count >= 20)
@@ -852,8 +877,9 @@ void recv_del_lan_endp(int llid, int tid, char *name, int wire_num,
     else
       {
       /* Neither an endpoint nor a lan of that name: unknown to the config. */
-      KERR("ERROR unplug %s: %s %d is not an endpoint of any kind and no "
-           "lan of that name is known", lan, name, num);
+      KERR("ERROR unplug %s%s %s refused: %s is not an endpoint of any kind "
+           "and no lan of that name is known", name, wifi_air_iface(name, num),
+           lan, name);
       snprintf(info, sizeof(info), "unplug %s%s %s failed", name,
                wifi_air_iface(name, num), lan);
       send_status_ko(llid, tid, info);

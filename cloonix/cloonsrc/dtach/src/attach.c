@@ -14,18 +14,16 @@ static struct termios cur_term;
 /* 1 if the window size changed */
 static int win_changed;
 
-/* Restores the original terminal settings. */
 static void
 restore_term(void)
 {
 	tcsetattr(0, TCSADRAIN, &orig_term);
 
-	/* Make cursor visible. Assumes VT100. */
+	/* cursor visible, VT100 */
 	printf("\033[?25h");
 	fflush(stdout);
 }
 
-/* Connects to a unix domain socket */
 static int
 connect_socket(char *name)
 {
@@ -47,8 +45,7 @@ connect_socket(char *name)
 	{
 		close(s);
 
-		/* ECONNREFUSED is also returned for regular files, so make
-		** sure we are trying to connect to a socket. */
+		/* ECONNREFUSED for a regular file too: check it is a socket */
 		if (errno == ECONNREFUSED)
 		{
 			struct stat st;
@@ -63,11 +60,9 @@ connect_socket(char *name)
 	return s;
 }
 
-/* Signal */
 static void
 die(int sig)
 {
-	/* Print a nice pretty message for some things. */
 	if (sig == SIGHUP || sig == SIGINT)
 		printf(EOS "\r\n[detached]\r\n");
 	else
@@ -75,7 +70,6 @@ die(int sig)
 	exit(1);
 }
 
-/* Window size change. */
 static void
 win_change()
 {
@@ -83,45 +77,36 @@ win_change()
 	win_changed = 1;
 }
 
-/* Handles input from the keyboard. */
 static void
 process_kbd(int s, struct packet *pkt)
 {
-	/* Suspend? */
 	if (!no_suspend && (pkt->u.buf[0] == cur_term.c_cc[VSUSP]))
 	{
-		/* Tell the master that we are suspending. */
 		pkt->type = MSG_DETACH;
 		write(s, pkt, sizeof(struct packet));
 
-		/* And suspend... */
 		tcsetattr(0, TCSADRAIN, &orig_term);
 		printf(EOS "\r\n");
 		kill(getpid(), SIGTSTP);
 		tcsetattr(0, TCSADRAIN, &cur_term);
 
-		/* Tell the master that we are returning. */
 		pkt->type = MSG_ATTACH;
 		write(s, pkt, sizeof(struct packet));
 
-		/* We would like a redraw, too. */
 		pkt->type = MSG_REDRAW;
 		pkt->len = REDRAW_CTRL_L;
 		ioctl(0, TIOCGWINSZ, &pkt->u.ws);
 		write(s, pkt, sizeof(struct packet));
 		return;
 	}
-	/* Detach char? */
 	else if (pkt->u.buf[0] == detach_char)
 	{
 		printf(EOS "\r\n[detached]\r\n");
 		exit(0);
 	}
-	/* Just in case something pukes out. */
 	else if (pkt->u.buf[0] == '\f')
 		win_changed = 1;
 
-	/* Push it out */
 	write(s, pkt, sizeof(struct packet));
 }
 
@@ -133,14 +118,13 @@ attach_main(void)
 	fd_set readfds;
 	int s;
 
-	/* Attempt to open the socket. Don't display an error if noerror is 
-	** set. */
+	/* no error shown when noerror */
 	s = connect_socket(sockname);
 	if (s < 0 && errno == ENAMETOOLONG)
 	{
 		char *slash = strrchr(sockname, '/');
 
-		/* Try to shorten the socket's path name by using chdir. */
+		/* a long socket path shortened by chdir */
 		if (slash)
 		{
 			int dirfd = open(".", O_RDONLY);
@@ -164,14 +148,11 @@ attach_main(void)
 		return 1;
 	}
 
-	/* The current terminal settings are equal to the original terminal
-	** settings at this point. */
+	/* current settings = original here */
 	cur_term = orig_term;
 
-	/* Set a trap to restore the terminal when we die. */
 	atexit(restore_term);
 
-	/* Set some signals. */
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGXFSZ, SIG_IGN);
 	signal(SIGHUP, die);
@@ -180,7 +161,6 @@ attach_main(void)
 	signal(SIGQUIT, die);
 	signal(SIGWINCH, win_change);
 
-	/* Set raw mode. */
 	cur_term.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL);
 	cur_term.c_iflag &= ~(IXON|IXOFF);
 	cur_term.c_oflag &= ~(OPOST);
@@ -192,21 +172,18 @@ attach_main(void)
 	cur_term.c_cc[VTIME] = 0;
 	tcsetattr(0, TCSADRAIN, &cur_term);
 
-	/* Clear the screen. This assumes VT100. */
+	/* clear screen, VT100 */
 	write(1, "\33[H\33[J", 6);
 
-	/* Tell the master that we want to attach. */
 	memset(&pkt, 0, sizeof(struct packet));
 	pkt.type = MSG_ATTACH;
 	write(s, &pkt, sizeof(struct packet));
 
-	/* We would like a redraw, too. */
 	pkt.type = MSG_REDRAW;
 	pkt.len = REDRAW_CTRL_L;
 	ioctl(0, TIOCGWINSZ, &pkt.u.ws);
 	write(s, &pkt, sizeof(struct packet));
 
-	/* Wait for things to happen */
 	while (1)
 	{
 		int n;
@@ -221,7 +198,6 @@ attach_main(void)
 			exit(1);
 		}
 
-		/* Pty activity */
 		if (n > 0 && FD_ISSET(s, &readfds))
 		{
 			ssize_t len = read(s, buf, sizeof(buf));
@@ -237,11 +213,9 @@ attach_main(void)
 				printf(EOS "\r\n[read returned an error]\r\n");
 				exit(1);
 			}
-			/* Send the data to the terminal. */
 			write(1, buf, len);
 			n--;
 		}
-		/* stdin activity */
 		if (n > 0 && FD_ISSET(0, &readfds))
 		{
 			ssize_t len;
@@ -258,7 +232,6 @@ attach_main(void)
 			n--;
 		}
 
-		/* Window size changed? */
 		if (win_changed)
 		{
 			win_changed = 0;

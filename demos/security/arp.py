@@ -3,43 +3,40 @@ r"""arp - the address protocol with no security, and the poisoning it allows.
 
     ./arp.py [net]                 the net defaults to nemo
 
-Three machines on one lan: a victim, its gateway, and an attacker::
+Three machines on one lan, a victim, its gateway, an attacker::
 
            victim -- lan1 -- gateway
    10.0.0.10  |                 10.0.0.1
               |
            attacker 10.0.0.66
 
-  arp maps an IP to a mac on a lan, and believes any answer it hears. The
-  attacker uses that to put itself between the victim and its gateway.
+arp maps an IP to a mac on a lan and believes any answer it hears: the
+attacker uses that to put itself between the victim and its gateway.
 
-  ACT 1  the victim resolves the gateway honestly; its arp table holds the
-         real mac of the gateway.
-  ACT 2  the attacker sends the victim a forged arp: "10.0.0.1 is at my
-         mac". The victim's table now points the gateway's IP at the
-         attacker; traffic for the gateway goes through the attacker, who
-         forwards it, a machine in the middle.
-  ACT 3  the victim's table is cleaned and a static entry pins the gateway
-         to its real mac; the same forgery no longer moves it.
+  ACT 1  the victim resolves the gateway: its arp table holds the real mac.
+  ACT 2  the attacker sends the victim a forged arp, "10.0.0.1 is at my
+         mac": the traffic of the victim for its gateway goes through the
+         attacker, which forwards it, a machine in the middle.
+  ACT 3  the table cleaned and a static entry pinning the gateway to its
+         real mac: the same forgery no longer moves it.
 
 Image: arp_trixie (dsniff for arpspoof, iputils-arping)
 Size:  3 containers, 1 lan
 
 THE PACKET TO CATCH
 -------------------
-  arp has its own ethertype, not IP; the filter has the word:
+  arp has its own ethertype, and the filter has the word:
 
     cloonix cli nemo cnf victim eth0 sniff=on
     cloonix cli nemo sniff victim eth0 --dump arp
 
-  The packet worth catching is the attacker's reply in ACT 2: an arp for
-  10.0.0.1 carrying the attacker's mac, sent to the victim which asked
+  The packet to catch is the reply of the attacker in ACT 2: an arp for
+  10.0.0.1 with the mac of the attacker, sent to a victim that asked
   nobody.
 
 Important
-  Nothing is baked into the image: the forwarding and the spoof are set at
-  run time. This is the technique shown so it can be recognised and
-  stopped, on a lan of your own.
+  The forwarding and the spoof are set at run time. The technique is shown
+  to be recognised and stopped, on a lan of your own.
 """
 import os
 import sys
@@ -59,16 +56,16 @@ HISTORY = """\
 ARP was written by David Plummer in 1982, RFC 826, one page: a machine that
 needs the mac behind an IP shouts the question on the wire, the owner
 answers. It has no notion of who may answer, and a host takes the newest
-reply, so a machine on the lan can claim any address by saying so.
-The attack was folklore for years; Dug Song made it a command in 1999 with
+reply, so a machine on the lan can claim any address by saying so. The
+attack was folklore for years; Dug Song made it a command in 1999 with
 dsniff, whose arpspoof is used here. The defence, dynamic ARP inspection on
 the switch, checking arp against the DHCP leases, came much later and lives
 in the switch, not in the protocol.
 
 Today: arp is unchanged and still trusted on every IPv4 lan; the poisoning
 is a standard step of a man-in-the-middle on a local network, and the reason
-a careful network pins its gateway and inspects arp at the switch. IPv6
-replaces arp with neighbour discovery, protected by SEND, rarely deployed.
+a network pins its gateway and inspects arp at the switch. IPv6 replaces arp
+with neighbour discovery, protected by SEND, rarely deployed.
 """
 
 ROOTFS_CHOICES = ("arp_trixie",)
@@ -194,7 +191,7 @@ def main():
                  % (ok_honest, ok_poisoned, ok_pinned))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   watch the forged replies arrive, two a second:
     cloonix cli %s sniff victim eth0 --dump arp

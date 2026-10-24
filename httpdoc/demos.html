@@ -6,12 +6,13 @@
 <title>Cloonix &mdash; five demos on the canvas</title>
 <meta name="description" content="Five cloonix demos as they appear in the browser: sixty OSPF routers, an OSPF and BGP core, a wireguard tunnel captured on both sides, a windows guest, a shaped cable.">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/png" href="img/cloonix32.png">
 </head>
 <body>
 
 <header>
   <nav>
-    <a class="brand" href="index.html">CLOONIX</a>
+    <a class="brand" href="index.html"><img src="img/cloonix64.png" width="28" height="28" alt="">cloonix</a>
     <a href="index.html">Overview</a>
     <a href="learn.html">Learn</a>
     <a href="demos.html" class="on">Demos</a>
@@ -31,8 +32,8 @@ network it built stays up, and every window on the canvas is one click on an
 item.</p>
 
 <h2>routing/frrspider.py &mdash; sixty OSPF routers</h2>
-<img class="fig" src="img/demo_frrspider.png" alt="the cloonix canvas holding sixty routers and forty-five lans laid out as a spider web">
-<p>Sixty <code>frr_trixie</code> containers and forty-five lans, in rings: a
+<img class="fig" src="img/demo_frrspider.png" alt="the cloonix canvas holding sixty routers and thirty-five lans laid out as a spider web">
+<p>Sixty <code>frr_trixie</code> containers and thirty-five lans, in rings: a
 core of five, a ring of cod and nod routers, an outer ring of lod and sod
 leaves. The shape is two tables in the script and the rest is loops; the
 routers are configured in parallel, and the whole web is up in about a
@@ -101,8 +102,9 @@ settings are one line from the command line.</p>
 <pre>cloonix cli nemo demo cloonix/a2b.py
 cloonix cli nemo cnf cable A2B delay=100
 cloonix cli nemo cnf cable A2B loss=100</pre>
-<p>The script measures a tcp transfer at each setting, so what tcp does about
-a delayed, lossy or capped line is read off the numbers.</p>
+<p>The script times the delay of each direction on the two wires, names the
+sequence numbers the loss took, and counts the udp datagrams a 100 kB/s cap
+lets through, so what each setting does is read off the numbers.</p>
 
 <p><a class="btn" href="start.html">Get started</a>
    <a class="btn ghost" href="learn.html">What you can learn</a></p>

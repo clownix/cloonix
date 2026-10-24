@@ -1,13 +1,13 @@
 #!/bin/bash
-# tst_max.sh on the toys: testitalltoy.sh makes and starts them, its env
+# tst_max.sh on the toys: top_testitalltoy.sh makes and starts them, its env
 # points soak.py at their client, work zones and syslogs. Every step is
 # checked.
-if ! ./testitalltoy.sh start; then
+if ! ./top_testitalltoy.sh start; then
   echo
   echo "the toys did not start, so nothing below can be trusted."
   exit 1
 fi
-eval $(./testitalltoy.sh env)
+eval $(./top_testitalltoy.sh env)
 
 # The sizes are those of the development host; the environment overrides
 # them (the autotest gives its 4 GB kvm smaller ones).

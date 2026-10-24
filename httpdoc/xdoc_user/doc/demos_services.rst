@@ -251,6 +251,6 @@ socat)::
 A baseline over one lan, then a routing hop, then delay, loss and a rate cap
 on the cable, then two flows sharing the bottleneck::
 
-    cloonix cli nemo ssh h2 "iperf3 -s -D"
-    cloonix cli nemo ssh h1 "iperf3 -c 10.2.0.10 -t 5"
-    cloonix cli nemo ssh h1 "mtr -r -c 5 10.2.0.10"
+    cloonix cli nemo ssh receiver "iperf3 -s -D"
+    cloonix cli nemo ssh sender "iperf3 -c 10.0.2.10 -t 5"
+    cloonix cli nemo ssh sender "mtr -r -c 5 10.0.2.10"

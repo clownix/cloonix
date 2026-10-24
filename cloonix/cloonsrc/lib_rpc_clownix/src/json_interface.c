@@ -55,6 +55,7 @@ enum {
   /* Appended, never moved: from 76 on, a wire value may only be added. */
   bnd_trace_sub, bnd_trace,
   bnd_cnt_cnf, bnd_images_req, bnd_images_resp,
+  bnd_item_note,
   bnd_max,
 };
 
@@ -118,12 +119,9 @@ static void parse_eth_table(char *pp, int nb, t_eth_table *eth)
   char *p = strchr(pp, '[');
   if (!p) KOUT("%s", pp);
   /* The count comes from the wire and the table has MAX_ETH_VM slots: the
-     caller keeps and refuses the count asked, the parse stays in bounds. */
+     caller keeps the count asked and refuses it, the parse stays in bounds. */
   if (nb > MAX_ETH_VM)
-    {
-    KERR("WARNING %d eth asked, the table holds %d", nb, MAX_ETH_VM);
     nb = MAX_ETH_VM;
-    }
   for (i = 0; i < nb; i++) {
     char *obj = strchr(p, '{');
     if (!obj) KOUT("eth_table parse error nb=%d i=%d", nb, i);
@@ -211,6 +209,7 @@ void doors_io_basic_json_init(t_llid_tx llid_tx)
   SB(bnd_cnt_cnf,              "cnt_cnf");
   SB(bnd_images_req,           "images_req");
   SB(bnd_images_resp,          "images_resp");
+  SB(bnd_item_note,            "item_note");
 #undef SB
 }
 
@@ -252,6 +251,14 @@ void send_item_pos(int llid,int tid,char *name,int x,int y)
   {SEND("{\"fctident\":\"item_pos\",\"tid\":%d,\"name\":\"%s\",\"x\":%d,\"y\":%d}",tid,name,x,y);}
 void send_item_poseth(int llid,int tid,char *name,int num,int deg)
   {SEND("{\"fctident\":\"item_poseth\",\"tid\":%d,\"name\":\"%s\",\"num\":%d,\"deg\":%d}",tid,name,num,deg);}
+void send_item_note(int llid,int tid,char *name,char *txt)
+{
+  int len=sprintf(sndbuf,"{\"fctident\":\"item_note\",\"tid\":%d,"
+                  "\"name\":\"%s\",\"txt\":\"",tid,name);
+  len+=json_escape(sndbuf+len,txt?txt:"",MAX_SIZE_BIGGEST_MSG-len);
+  len+=sprintf(sndbuf+len,"\"}");
+  my_msg_mngt_tx(llid,len,sndbuf);
+}
 void send_status_ok(int llid,int tid,char *txt)
 {
   int len=sprintf(sndbuf,"{\"fctident\":\"status_ok\",\"tid\":%d,\"txt\":\"",tid);
@@ -567,6 +574,36 @@ static void parse_vwif_air(char *obj, char *name, int nb,
          name, nb, all);
 }
 
+/* the capture of the air of each radio, as the endp_type of an eth:
+   "14,15", 0 for a radio on no air */
+static int emit_vwif_endp(char *dst, int nb, int *endp)
+{
+  int i, len = 0;
+  len += sprintf(dst+len, ",\"vwif_endp\":\"");
+  for (i = 0; (i < nb) && (i < MAX_VWIF); i++)
+    len += sprintf(dst+len, "%s%d", i ? "," : "", endp[i]);
+  len += sprintf(dst+len, "\"");
+  return len;
+}
+
+static void parse_vwif_endp(char *obj, int nb, int *endp)
+{
+  char all[MAX_VWIF * 12];
+  char *p;
+  int i;
+  memset(endp, 0, MAX_VWIF * sizeof(int));
+  memset(all, 0, sizeof(all));
+  json_get_str(obj, "vwif_endp", all, sizeof(all));
+  p = all;
+  for (i = 0; (i < nb) && (i < MAX_VWIF) && p && *p; i++)
+    {
+    endp[i] = atoi(p);
+    p = strchr(p, ',');
+    if (p)
+      p++;
+    }
+}
+
 void send_cnt_add(int llid,int tid,t_topo_cnt *cnt)
 {
   int len;
@@ -644,6 +681,7 @@ void send_event_topo(int llid,int tid,t_topo_info *topo)
       c->ping_ok,c->nb_tot_nb_vwif,c->nb_tot_eth);
     len+=emit_eth_table(sndbuf+len,c->eth_table,c->nb_tot_eth);
     len+=emit_vwif_air(sndbuf+len,c->nb_tot_nb_vwif,c->vwif_air);
+    len+=emit_vwif_endp(sndbuf+len,c->nb_tot_nb_vwif,c->vwif_endp_type);
     len+=sprintf(sndbuf+len,",\"startup_env\":\"%s\",\"vmount\":\"%s\"}",
                  c->startup_env,c->vmount);
   }
@@ -667,6 +705,7 @@ void send_event_topo(int llid,int tid,t_topo_info *topo)
       k->ping_ok,k->nb_tot_nb_vwif,k->nb_tot_eth);
     len+=emit_eth_table(sndbuf+len,k->eth_table,k->nb_tot_eth);
     len+=emit_vwif_air(sndbuf+len,k->nb_tot_nb_vwif,k->vwif_air);
+    len+=emit_vwif_endp(sndbuf+len,k->nb_tot_nb_vwif,k->vwif_endp_type);
     len+=sprintf(sndbuf+len,"}");
   }
   len+=sprintf(sndbuf+len,"],");
@@ -913,6 +952,10 @@ static void decode_simple_msgs(int llid, int tid, int bnd, char *buf)
     json_get_int(buf,"deg",&deg);
     recv_item_poseth(llid,tid,name,num,deg); break;
   }
+  case bnd_item_note:
+    json_get_str(buf,"name",name,MAX_NAME_LEN);
+    json_get_str(buf,"txt",txt,MAX_PRINT_LEN);
+    recv_item_note(llid,tid,name,txt); break;
   case bnd_a2b_cnf:
     json_get_str(buf,"name",name,MAX_NAME_LEN);
     json_get_str(buf,"cmd",txt,MAX_PRINT_LEN);
@@ -1241,6 +1284,7 @@ static void decode_event_topo(int llid, int tid, char *buf)
       json_get_int(obj,"ping_ok",&c->ping_ok);
       json_get_int(obj,"nb_tot_nb_vwif",&c->nb_tot_nb_vwif);
       parse_vwif_air(obj,c->name,c->nb_tot_nb_vwif,c->vwif_air);
+      parse_vwif_endp(obj,c->nb_tot_nb_vwif,c->vwif_endp_type);
       json_get_int(obj,"nb_tot_eth",&nb_eth);
       c->nb_tot_eth=nb_eth;
       ep=strstr(obj,"\"eth_table\"");
@@ -1279,6 +1323,7 @@ static void decode_event_topo(int llid, int tid, char *buf)
       ep=strstr(obj,"\"eth_table\"");
       if(ep) parse_eth_table(ep,nb_eth,k->eth_table);
       parse_vwif_air(obj,k->name,k->nb_tot_nb_vwif,k->vwif_air);
+      parse_vwif_endp(obj,k->nb_tot_nb_vwif,k->vwif_endp_type);
       if(ep){char*eq=strchr(ep,']');p=eq?eq:obj;}
       else p=obj;
       char *nx=strchr(p,'}'); if(!nx) KOUT("%s",buf); p=nx;
@@ -1466,11 +1511,11 @@ static int doors_io_basic_decoder_one(int llid, int len, char *buf)
     KOUT("ERROR %d %s", len, buf);
   if (buf[0] != '{')
     {
-    KERR("TOLOOK: %s", buf);
+    KERR("ERROR not a json message: %.200s", buf);
     return -1;
     }
   if (buf[len-1] != '}')
-    KOUT("ERROR JSONbad len=%d last=%c: %.80s\n", len, buf[len-1], buf);
+    KOUT("ERROR JSONbad len=%d last=%c: %.80s", len, buf[len-1], buf);
   json_fctident(buf, bound);
   bnd = get_bnd_event(bound);
   json_get_int(buf, "tid", &tid);
@@ -1487,7 +1532,7 @@ static int doors_io_basic_decoder_one(int llid, int len, char *buf)
   case bnd_event_topo_sub:
   case bnd_del_name: case bnd_nat_add: case bnd_tap_add: case bnd_a2b_add:
   case bnd_phy_add: case bnd_snf_add:
-  case bnd_item_pos: case bnd_item_poseth:
+  case bnd_item_pos: case bnd_item_poseth: case bnd_item_note:
   case bnd_pcap_open: case bnd_pcap_close:
   case bnd_a2b_cnf: case bnd_nat_cnf: case bnd_lan_cnf: case bnd_c2c_cnf:
   case bnd_cnt_cnf:
@@ -1534,6 +1579,8 @@ static int doors_io_basic_decoder_one(int llid, int len, char *buf)
     decode_c2c_msgs(llid, tid, bnd, buf); break;
 
   default:
+    /* Not of this layer: the caller tries its next decoder, and reports a
+       message none of them knows. */
     return -1;
   }
   return 0;
@@ -1598,7 +1645,7 @@ int doors_io_basic_decoder(int llid, int len, char *buf)
   return result;
 }
 
-/* Weak default for a receiver the linking process does not define.        */
+/* Weak default for a receiver the linking process does not define. */
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #define RECV_DEFAULT(name, args) \
 __attribute__((weak)) void name args \
@@ -1627,6 +1674,7 @@ RECV_DEFAULT(recv_eventfull, (int llid, int tid, int nb_endp, t_eventfull_endp *
 RECV_DEFAULT(recv_eventfull_sub, (int llid, int tid))
 RECV_DEFAULT(recv_item_pos, (int llid, int tid, char *name, int x, int y))
 RECV_DEFAULT(recv_item_poseth, (int llid, int tid, char *name, int num, int deg))
+RECV_DEFAULT(recv_item_note, (int llid, int tid, char *name, char *txt))
 RECV_DEFAULT(recv_kill_uml_clownix, (int llid, int tid))
 RECV_DEFAULT(recv_cnt_cnf, (int llid, int tid, char *name, char *cmd))
 RECV_DEFAULT(recv_images_req, (int llid, int tid))

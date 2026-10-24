@@ -1,8 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The kvm radios: their agents are asked for them here, and their frames
-   relayed on the air link to suid_power, the medium of every air. The
-   peers suid_power tells a radio are kept, and told the agent again when
-   it comes back. */
+/* kvm radios: asked of their agents, frames relayed to suid_power (medium);
+   peers of a radio told again to an agent that comes back. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

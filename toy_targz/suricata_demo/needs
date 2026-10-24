@@ -1,0 +1,17 @@
+# needs - what the demos of suricata_demo take from suricata_trixie besides the
+# commands they run, read by lib/special_needs.py: packages taken whole
+# (dpkg names, globs), and "!word" for a word of a configuration that is
+# not a command.
+suricata
+# the database of libmagic: without it suricata stops at the start of its
+# workers ("magic_load failed", then "failed to set up file thread data")
+libmagic-mgc
+# @python: only the modules the scripts written into the containers import;
+# @python:<module> for one they import at run time only.
+@python
+# python3 -m http.server, the web server of the demos: the module and what it
+# imports as it starts.
+@python:http.server
+@python:argparse
+@python:contextlib
+@python:locale

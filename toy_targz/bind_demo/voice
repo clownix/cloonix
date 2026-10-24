@@ -1,0 +1,16 @@
+# voice - the narration of bind_demo, one line per demo: a general summary of
+# its goal. Appended to demos/voice by create_bind_toy_targz.sh; the clips
+# are bind_demo/audio/<demo>.ogg, made by bind_demo/audio/make_voice.py.
+
+bind_demo/primary_authoritative.py    A primary name server. It answers for its zone with authority, and refuses everything else.
+bind_demo/secondary_authoritative.py  A secondary name server. It copies the zone of its primary, obeys the serial number, and answers alone.
+bind_demo/resolver.py                 A caching resolver. It finds a name from the root servers down, then answers it from its cache.
+bind_demo/forwarding_resolver.py      A forwarding resolver. It sends every question to a full resolver, and keeps the answers.
+bind_demo/selective_forwarding.py     Selective forwarding. One domain goes to chosen resolvers, every other name is found from the root.
+bind_demo/load_balancing.py           Load balancing with the D N S. One name, three addresses, and each client takes the first.
+bind_demo/dnssec.py                   D N S sec. A zone is signed, its parent vouches for its key, and the resolver checks the answer.
+bind_demo/dynamic_update.py           Dynamic update. A record is added by a message, kept in a journal, then folded into the zone file.
+bind_demo/notify_ixfr.py              Notify and incremental transfer. A change on the primary reaches its secondaries in seconds.
+bind_demo/catalog_zones.py            Catalog zones. A secondary serves every zone a catalog lists, and follows its changes.
+bind_demo/rpz.py                      A D N S firewall. Response policy zones make dangerous names vanish for the users of a resolver.
+bind_demo/tsig.py                     T sig. Two servers share a secret key, and sign every message between them.

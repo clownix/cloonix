@@ -72,7 +72,7 @@ static void topo_ws_add(int fd)
     if (g_topo_ws_n < MAX_TOPO_WS_CLIENTS) {
         g_topo_ws_fds[g_topo_ws_n++] = fd;
     } else {
-        KERR("topo_ws: WARNING max clients reached fd=%d", fd);
+        KERR("WARNING topo websocket: the maximum of clients is reached, fd %d not served", fd);
     }
     pthread_mutex_unlock(&g_topo_ws_mtx);
 }

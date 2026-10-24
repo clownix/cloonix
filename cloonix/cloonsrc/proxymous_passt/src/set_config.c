@@ -176,7 +176,7 @@ static void tls_out_cipher(void *user, int len, char *buf)
   proxy_traf_tcp_tx(cur->llid_tcp_front, len, buf);
 }
 
-/* First byte: 0x16 is a tls client hello, 0xCA a clear cloonix frame.     */
+/* First byte: 0x16 is a tls client hello, 0xCA a clear cloonix frame. */
 static int sniff_front(t_peer_llid *cur, int len, char *buf)
 {
   cur->sniffed = 1;
@@ -228,8 +228,8 @@ static void connect_from_pmain_tcp_client(int llid_listen, int llid_tcp_front)
   int llid_unix_back = proxy_traf_unix_client(g_pmain_unix, err_cb, rx_cb);
   if (llid_unix_back == 0)
     {
-    KERR("ERROR %s cannot connect to doorways on %s, dropping the client",
-         g_net, g_pmain_unix);
+    KERR("ERROR cannot connect to doorways on %s, dropping the client",
+         g_pmain_unix);
     msg_delete_channel(llid_tcp_front);
     }
   else

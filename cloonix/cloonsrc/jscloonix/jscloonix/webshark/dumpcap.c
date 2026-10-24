@@ -75,10 +75,10 @@
 char *get_cloonix_pipe_name(void);
 char *get_cloonix_pipe_title(void);
 
-/* Cloonix fan-out. Both names are fixed and derived from the snf given with
- * -i, so nothing has to agree on a path over a command line: the switch, the
- * gui server and webshark each build the same two names from the one they
- * already have. See cloonix_fanout_names(). */
+/* Cloonix fan-out. The socket name is fixed and derived from the snf given
+ * with -i, so nothing has to agree on a path over a command line: the switch,
+ * the gui server and webshark each build it from the one they already have.
+ * See cloonix_fanout_names(). */
 static const char *cloonix_snf = NULL;
 
 static GAsyncQueue *pcap_queue;
@@ -308,6 +308,14 @@ static ssize_t cap_pipe_read(int pipe_fd, char *buf, size_t sz, bool from_socket
     return ws_read(pipe_fd, buf, sz);
 }
 
+/* select said readable and there is nothing yet: the snf closed its end
+   and opened it again for this reader, its header comes next. */
+static bool read_again(ssize_t b)
+{
+    return (b < 0) &&
+           ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == EINTR));
+}
+
 static int cap_pipe_select(int pipe_fd)
 {
     fd_set      rfds;
@@ -350,6 +358,8 @@ static ssize_t cap_pipe_read_data_bytes(capture_src *pcap_src, char *errmsg, siz
         } else if (sel_ret > 0) {
             b = cap_pipe_read(fd, pcap_src->cap_pipe_databuf+pcap_src->cap_pipe_bytes_read+bytes_read,
                               sz-bytes_read, pcap_src->from_cap_socket);
+            if (read_again(b))
+                continue;
             if (b <= 0) {
                 if (b == 0) {
                     snprintf(errmsg, errmsgl,
@@ -443,6 +453,8 @@ static void cap_pipe_open_live(char *cloonix_pipename,
             b = cap_pipe_read(fd, ((char *)&magic)+bytes_read,
                               sizeof magic-bytes_read,
                               pcap_src->from_cap_socket);
+            if (read_again(b))
+                continue;
             if (b <= 0) {
                 if (b == 0)
                     snprintf(errmsg, errmsgl,
@@ -506,6 +518,8 @@ static void pcap_pipe_open_live(int fd,
             b = cap_pipe_read(fd, ((char *)hdr)+bytes_read,
                               sizeof(struct pcap_hdr) - bytes_read,
                               pcap_src->from_cap_socket);
+            if (read_again(b))
+                continue;
             if (b <= 0) {
                 if (b == 0)
                     snprintf(errmsg, errmsgl,
@@ -685,6 +699,8 @@ static int pcap_pipe_dispatch(loop_data *ld, capture_src *pcap_src, char *errmsg
         {
             b = cap_pipe_read(pcap_src->cap_pipe_fd, ((char *)&pcap_info->rechdr)+pcap_src->cap_pipe_bytes_read,
                  pcap_src->cap_pipe_bytes_to_read - pcap_src->cap_pipe_bytes_read, pcap_src->from_cap_socket);
+            if (read_again(b))
+                return 0;
             if (b <= 0) {
                 if (b == 0)
                     result = PD_PIPE_EOF;
@@ -711,6 +727,8 @@ static int pcap_pipe_dispatch(loop_data *ld, capture_src *pcap_src, char *errmsg
                               pcap_src->cap_pipe_databuf+pcap_src->cap_pipe_bytes_read,
                               pcap_src->cap_pipe_bytes_to_read - pcap_src->cap_pipe_bytes_read,
                               pcap_src->from_cap_socket);
+            if (read_again(b))
+                return 0;
             if (b <= 0) {
                 if (b == 0)
                     result = PD_PIPE_EOF;
@@ -834,14 +852,8 @@ static bool capture_loop_open_input(capture_options *capture_opts, loop_data *ld
             pipe_err = true;
         }
         if (pipe_err) {
-            /* errmsg is what cap_pipe_open_live filled in and this threw
-               away: nine of these in a four hour soak, and only one of
-               them had said anything anywhere else. The one that did
-               named "Error on pipe magic during open: Resource
-               temporarily unavailable" -- EAGAIN on a fifo nobody had
-               written to yet. The other eight said nothing at all. */
-            /* "no reason given" was the fifo not being there at all, the
-               one case the open code does not describe. */
+            /* errmsg is what cap_pipe_open_live filled in, empty when the
+               fifo is not there at all. */
             if (!g_stop_asked)
                 ws_info("KO the capture pipe %s could not be opened: %s\n",
                         get_cloonix_pipe_name(),
@@ -1779,7 +1791,7 @@ int main(int argc, char *argv[])
      *
      * This has to happen after the options above and before the capture loop:
      * it replaces fd 1 with a pipe of its own, and the capture loop takes fd 1
-     * as it finds it. The two names it serves are fixed and built from the snf
+     * as it finds it. The socket it serves is fixed and built from the snf
      * given with -i, so there is nothing to ask for on the command line.
      * stdout is kept as one of the receivers, so a dumpcap started by hand
      * still writes its pcap where it always did. */

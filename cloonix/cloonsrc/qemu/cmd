@@ -73,10 +73,8 @@ mkdir -p ${HERE}/pc-bios
 cp pc-bios/bios-256k.bin      ${HERE}/pc-bios
 cp pc-bios/kvmvapic.bin       ${HERE}/pc-bios
 cp pc-bios/vgabios-stdvga.bin ${HERE}/pc-bios
-# UEFI firmware for a gpt disk with an efi loader (every prebuilt microsoft image;
-# seabios cannot start those). The vars template (edk2-i386-vars.fd, older trees)
-# is copied per vm as the second pflash unit; trees since 2025 ship none and the
-# server starts with the code alone. The names below are what the server looks for.
+# UEFI firmware for efi gpt disks (prebuilt microsoft images); the vars
+# template, when the tree has one, is copied per vm as the second pflash.
 uefi_get() {
   want=$1
   shift

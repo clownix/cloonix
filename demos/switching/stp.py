@@ -10,68 +10,48 @@ Two containers, two wires between them::
   10.0.0.1  ===========================  10.0.0.2
                  ======= lan_y =======
 
-Each one runs a kernel bridge with eth0 and eth1 in it, so the two lans
-together are a loop. A broadcast entering either bridge leaves by the other
-port, comes back round the far bridge, and is flooded again.
+Each runs a kernel bridge holding eth0 and eth1, so the two lans make a
+loop: a broadcast entering a bridge leaves by its other port, comes back
+round the far bridge, and is flooded again.
 
-  ACT 1  one wire only. It works, and it is boring.
-  ACT 2  the second wire, spanning tree OFF. One arp, and three seconds of
-         counting what comes back. Then a port is taken down by hand,
-         because nothing else is going to stop it.
-  ACT 3  spanning tree ON: a root is elected, one port goes to blocking,
-         read out of the kernel. The same arp, and a count of a handful.
-  ACT 4  the forwarding wire cut with a ping running, and the seconds
-         counted until the blocked port takes over. That number is why
-         RSTP was written.
+  ACT 1  one wire only: it works.
+  ACT 2  the second wire, spanning tree off: one arp, three seconds of
+         counting what comes back, then a port taken down by hand.
+  ACT 3  spanning tree on: a root is elected and one port goes to blocking,
+         read out of the kernel; the same arp arrives a handful of times.
+  ACT 4  the forwarding wire cut under a ping, the seconds counted until the
+         blocked port takes over: the delay RSTP was written to shorten.
 
-Runs on the plain trixie image: iproute2 and ping and nothing else.
-
-ACT 2 makes a real storm for three seconds. It is ended by taking a port
-down, not by a timer, so if this is killed in those three seconds:
-  cloonix cli <net> ssh br2 "ip link set dev eth1 down"
-
-Needs cloonix on the PATH and nothing else. Standard library only.
-
-Image: trixie            (the plain one -- no demo image to build)
+Image: trixie            (the plain one: iproute2 and ping)
 Size:  2 containers, 2 lans
 
 THE PACKET TO CATCH
 -------------------
-  BPDUs are not IP. They are 802.3 frames -- bytes 12 and 13 are a
-  LENGTH, not an ethertype -- addressed to 01:80:c2:00:00:00, carrying
-  LLC 0x42 0x42 0x03 and then the config message. The filter grammar
-  knows ip, ip6, arp, tcp, udp, icmp and addresses, and has no word for
-  any of that, so the capture that shows the protocol is unfiltered:
+  BPDUs are not IP: 802.3 frames, bytes 12 and 13 a length and not an
+  ethertype, to 01:80:c2:00:00:00, LLC 0x42 0x42 0x03 then the config
+  message. The filter grammar has no word for them, so the capture of the
+  protocol is unfiltered, one frame every two seconds from the root, the
+  hello timer:
 
     cloonix cli nemo cnf br1 eth0 sniff=on
     cloonix cli nemo sniff br1 eth0 --dump
 
-  One every two seconds from the root, which is the hello timer.
-
-  The packet to catch is the arp of ACT 2, and the point is the count.
-  The same single request, sent twice:
+  The packet to catch is the arp of ACT 2, counted: with no spanning tree
+  it arrives thousands of times and does not stop, with it once or twice:
 
     cloonix cli nemo sniff br1 eth1 --dump arp
 
-  With no spanning tree it arrives thousands of times and does not stop.
-  With spanning tree it arrives once or twice and stops. Nothing inside
-  either guest has to be believed: the number comes off the wire.
-
-  ACT 4 is worth watching in a second terminal:
+  During ACT 4 the icmp goes quiet when the other wire is cut and resumes
+  about thirty seconds later, the blocked port having listened and learned:
+  that gap is 802.1D, measured.
 
     cloonix cli nemo sniff br1 eth1 --dump icmp
 
-  Cut the other wire and this subscription goes quiet, then resumes
-  about thirty seconds later when the blocked port has finished
-  listening and learning. That gap is 802.1D, measured.
-
 Important
-  It runs on the plain trixie container image. There is no image to build,
-  which makes this and switching/vlan the two demos that work on a fresh
-  install.
-  ACT 2 makes a real broadcast storm on two cloonix lans for three seconds.
-  It is bounded by taking a port down and not by any timer, so if the demo
-  is killed with ctrl-C during those three seconds, break it by hand:
+  ACT 2 makes a broadcast storm on two lans for three seconds, ended by
+  taking a port down, not by a timer: a demo killed in those seconds leaves
+  it running, and this ends it:
+
     cloonix cli nemo ssh br2 "ip link set dev eth1 down"
 """
 import os
@@ -89,24 +69,24 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
     NET, CLOONIX, answers, capturable, check_net, erase_net, in_lst,
-    parse_bytes_line, place, run, show, ssh, step, story, wait_exists)
+    parse_bytes_line, place, run, show, ssh, step, story, wait_exists,
+    unavailable,
+    EXIT_UNAVAILABLE)
 
 ROOTFS_CHOICES = ("trixie", "trixie_systemd")
 
 HISTORY = """\
-Spanning tree was written by Radia Perlman at Digital Equipment
-Corporation in 1985, in one afternoon by her own account, with a poem
-in the paper that states the algorithm in verse. Bridges elect a root,
-each keeps its cheapest path to it and blocks every other port, so a
-loop of wires becomes a tree without anybody drawing one. IEEE 802.1D
-adopted it in 1990; the rapid version, 802.1w, came in 2001 and is what
-the kernel runs today. The bridge under study is the one of the linux
-kernel, written by Lennert Buytenhek in 2000 for the 2.4 series, driven
-here with the bridge command of iproute2.
+Spanning tree was written by Radia Perlman at Digital Equipment Corporation
+in 1985, in one afternoon by her own account, with a poem in the paper that
+states the algorithm in verse. Bridges elect a root, each keeps its cheapest
+path to it and blocks every other port, so a loop of wires becomes a tree
+without anybody drawing one. IEEE 802.1D adopted it in 1990; the rapid
+version, 802.1w, came in 2001 and is what the kernel runs today. The bridge
+under study is the one of the linux kernel, written by Lennert Buytenhek for
+the 2.4 series, driven here with the bridge command of iproute2.
 
-Today: every managed switch ships with spanning tree enabled, in its rapid
-form 802.1w since 2001; a second cable plugged between two office switches is
-the loop it silently removes.
+Today: every managed switch ships with spanning tree enabled; a second cable
+plugged between two office switches is the loop it removes.
 """
 
 B1, B2 = "br1", "br2"
@@ -131,7 +111,7 @@ def choose_rootfs():
         if ok:
             return cand
         said = (r.stdout + r.stderr).strip() or "nothing"
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -542,7 +522,7 @@ def main():
         bad.append("the two bridges never reached each other on one wire")
     if storm < 20:
         bad.append("the unprotected loop produced only %d frames, which is"
-                   " not a storm -- check that both lans really join the two"
+                   " not a storm -- check that both lans join the two"
                    " bridges" % storm)
     if quiet >= storm:
         bad.append("spanning tree changed nothing: %d frames before, %d"
@@ -551,7 +531,7 @@ def main():
         sys.exit("\n" + "\n".join("  " + b for b in bad))
 
     story("""
-the network is left up, with spanning tree on. Things worth trying:
+the network is left up, with spanning tree on. Things to try:
 
   the BPDUs, live -- unfiltered, because nothing names them:
     cloonix cli %s sniff br1 eth0 --dump
@@ -573,7 +553,7 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit as stop:
-        if stop.code:
+        if stop.code and stop.code != EXIT_UNAVAILABLE:
             emergency()
             sys.stderr.write("%s\n" % stop.code)
             up = [n for n in ALL if in_lst(n)]

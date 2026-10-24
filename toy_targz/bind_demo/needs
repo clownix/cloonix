@@ -1,0 +1,32 @@
+# needs - what the demos of bind_demo take from dns_trixie besides the
+# commands they run, read by lib/special_needs.py: packages taken whole
+# (dpkg names, globs), and "!word" for a word of a configuration that is
+# not a command. named and its tools are commands of the demos.
+# address/dns.py runs ospf: frr, as in frr_demo/needs, with only the daemons
+# a demo names (zebra, mgmtd, staticd and watchfrr are always in).
+frr
+?usr/lib/frr/babeld
+?usr/lib/frr/bfdd
+?usr/lib/frr/bgpd
+?usr/lib/frr/eigrpd
+?usr/lib/frr/fabricd
+?usr/lib/frr/isisd
+?usr/lib/frr/ldpd
+?usr/lib/frr/nhrpd
+?usr/lib/frr/ospf6d
+?usr/lib/frr/ospfd
+?usr/lib/frr/pathd
+?usr/lib/frr/pbrd
+?usr/lib/frr/pim6d
+?usr/lib/frr/pimd
+?usr/lib/frr/ripd
+?usr/lib/frr/ripngd
+?usr/lib/frr/sharpd
+?usr/lib/frr/vrrpd
+?usr/lib/*/frr/modules/*.so
+# words of frr.conf, named.conf, zone files, rndc and filters, not commands
+!service
+!file
+!expiry
+!sync
+!host

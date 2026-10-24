@@ -20,8 +20,6 @@
 #include <linux/if.h>
 #endif
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <syslog.h>
 #include <string.h>
 
@@ -61,10 +59,10 @@ unsigned long cloonix_now_ms(void);
   ((get_cloonix_name && get_cloonix_name() && get_cloonix_name()[0]) \
    ? get_cloonix_name() : "-")
 
-/* syslog(3) blocks while the log daemon does not read /dev/log, and these  */
-/* are event loops: the line goes on a non-blocking socket, a full socket   */
-/* drops it, and the first line that passes says how many were lost. KOUT   */
-/* waits a second for its last word. Weak: one instance per process.        */
+/* syslog(3) blocks while the log daemon does not read /dev/log, and these */
+/* are event loops: the line goes on a non-blocking socket, a full socket */
+/* drops it, and the first line that passes says how many were lost. KOUT */
+/* waits a second for its last word. Weak: one instance per process. */
 void cloonix_log(int wait_ms, const char *fmt, ...)
      __attribute__((weak, format(printf, 2, 3)));
 /* Defined by a guest agent only: the line, as written locally, also sent
@@ -179,50 +177,50 @@ void cloonix_log(int wait_ms, const char *fmt, ...)
     static t_kerr_gate _kerr_g;                          \
     char _kerr_n[64];                                    \
     if (kerr_gate(&_kerr_g, _kerr_n, sizeof(_kerr_n)))   \
-      cloonix_log(0, "KERR: %s %s"                       \
+      cloonix_log(0, "KERR: %s %s:%s"                    \
       " line:%d " format "%s\n",                         \
       CLOONIX_NET_NAME,                                  \
       (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
-       __LINE__, ## a, _kerr_n);                         \
+       __func__, __LINE__, ## a, _kerr_n);                         \
     } while (0)
 
-/* A block of lines told as one: its head passes the gate of its site or  */
-/* not, in passed; the lines after it, KERR_MORE, follow that verdict.     */
+/* A block of lines told as one: its head passes the gate of its site or */
+/* not, in passed; the lines after it, KERR_MORE, follow that verdict. */
 #define KERR_HEAD(passed, format, a...)                  \
  do {                                                    \
     static t_kerr_gate _kerr_g;                          \
     char _kerr_n[64];                                    \
     passed = kerr_gate(&_kerr_g, _kerr_n, sizeof(_kerr_n)); \
     if (passed)                                          \
-      cloonix_log(0, "KERR: %s %s"                       \
+      cloonix_log(0, "KERR: %s %s:%s"                    \
       " line:%d " format "%s\n",                         \
       CLOONIX_NET_NAME,                                  \
       (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
-       __LINE__, ## a, _kerr_n);                         \
+       __func__, __LINE__, ## a, _kerr_n);                         \
     } while (0)
 
 #define KERR_MORE(passed, format, a...)                  \
  do {                                                    \
     if (passed)                                          \
-      cloonix_log(0, "KERR: %s %s"                       \
+      cloonix_log(0, "KERR: %s %s:%s"                    \
       " line:%d " format "\n",                           \
       CLOONIX_NET_NAME,                                  \
       (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
-       __LINE__, ## a);                                  \
+       __func__, __LINE__, ## a);                        \
     } while (0)
 
 #define KOUT(format, a...)                               \
  do {                                                    \
-    cloonix_log(1000, "KERR KILL %s %s"                  \
-    " line:%d   " format "\n\n",  \
+    cloonix_log(1000, "KERR KILL %s %s:%s"               \
+    " line:%d " format "\n",                             \
     CLOONIX_NET_NAME,                                    \
     (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__), \
-     __LINE__, ## a);                                    \
+     __func__, __LINE__, ## a);                                    \
     exit(-1);                                            \
     } while (0)
 
-/* KERR: a fault, always logged. KOUT: cannot continue. KTRC: trace, off   */
-/* unless CLOONIX_TRACE. KTRC_ON: trace behind a per-subject flag.          */
+/* "KERR: <net> <file>:<function> line:<n> <text>". KERR fault, repeats gated;
+   KOUT fatal, exits; KTRC trace if CLOONIX_TRACE; KTRC_ON trace behind a flag. */
 #define CLOONIX_TRACE 0
 
 #if CLOONIX_TRACE
@@ -356,6 +354,8 @@ typedef void (*t_fd_connect)(int llid, int llid_new);
 #define HALF_SEC_BEAT      50 
 
 #define MAX_LIST_COMMANDS_LEN     256
+/* a note on an item of the canvas, its end zero included */
+#define MAX_NOTE_LEN              101
 #define MAX_LIST_COMMANDS_QTY     5000
 
 #define OVS_BRIDGE_PORT "_k_"
@@ -411,6 +411,7 @@ typedef struct t_topo_kvm
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
   char vwif_air[MAX_VWIF][MAX_NAME_LEN];
+  int  vwif_endp_type[MAX_VWIF];   /* eths when its air is captured, ethv not */
   int  vm_id;
   int  color;
   char rootfs_input[MAX_PATH_LEN];
@@ -435,6 +436,7 @@ typedef struct t_topo_cnt
   int  nb_tot_eth;
   t_eth_table eth_table[MAX_ETH_VM];
   char vwif_air[MAX_VWIF][MAX_NAME_LEN];
+  int  vwif_endp_type[MAX_VWIF];   /* eths when its air is captured, ethv not */
   char image[MAX_PATH_LEN];
   char startup_env[MAX_PATH_LEN];
   char vmount[MAX_SIZE_VMOUNT];

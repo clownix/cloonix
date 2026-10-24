@@ -158,34 +158,12 @@ static void udp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
     {
     swap_ip_dst(ipv4, new_ip, buf_len, buf);
     utils_fill_udp_csum(ipv4, len);
-    KERR("UDP LEN: %d swap dst %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
-          buf_len, 
-          ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
-          ((dip >> 8)  & 0xFF), (dip & 0xFF),
-          ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
-          ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
     }
   else if ((!dest) && (sip == targ_ip))
     {
     swap_ip_src(ipv4, new_ip, buf_len, buf);
     utils_fill_udp_csum(ipv4, len);
-    KERR("UDP LEN: %d swap src %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
-          buf_len, 
-          ((sip >> 24) & 0xFF), ((sip >> 16) & 0xFF),
-          ((sip >> 8)  & 0xFF), (sip & 0xFF),
-          ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
-          ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
     }
-  else
-    KERR("UDPP NO SWAP dest=%d targ=%hhu.%hhu.%hhu.%hhu "
-         " sip=%hhu.%hhu.%hhu.%hhu dip=%hhu.%hhu.%hhu.%hhu",
-          dest,
-          ((targ_ip >> 24) & 0xFF), ((targ_ip >> 16) & 0xFF),
-          ((targ_ip >> 8)  & 0xFF), (targ_ip & 0xFF),
-          ((sip >> 24) & 0xFF), ((sip >> 16) & 0xFF),
-          ((sip >> 8)  & 0xFF), (sip & 0xFF),
-          ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
-          ((dip >> 8)  & 0xFF), (dip & 0xFF));
 }
 
 static void tcp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
@@ -198,34 +176,12 @@ static void tcp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
     {
     swap_ip_dst(ipv4, new_ip, buf_len, buf);
     utils_tcp_checksum(buf_len, buf, tcp_hdr_len);
-    KERR("TCP %d swap dst %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
-          buf_len,
-          ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
-          ((dip >> 8)  & 0xFF), (dip & 0xFF),
-          ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
-          ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
     }
   else if ((!dest) && (sip == targ_ip))
     {
     swap_ip_src(ipv4, new_ip, buf_len, buf);
     utils_tcp_checksum(buf_len, buf, tcp_hdr_len);
-    KERR("TCP %d swap src %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
-          buf_len,
-          ((sip >> 24) & 0xFF), ((sip >> 16) & 0xFF),
-          ((sip >> 8)  & 0xFF), (sip & 0xFF),
-          ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
-          ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
     }
-  else
-    KERR("TCP NO SWAP dest=%d targ=%hhu.%hhu.%hhu.%hhu "
-         " sip=%hhu.%hhu.%hhu.%hhu dip=%hhu.%hhu.%hhu.%hhu",
-          dest,
-          ((targ_ip >> 24) & 0xFF), ((targ_ip >> 16) & 0xFF),
-          ((targ_ip >> 8)  & 0xFF), (targ_ip & 0xFF),
-          ((sip >> 24) & 0xFF), ((sip >> 16) & 0xFF),
-          ((sip >> 8)  & 0xFF), (sip & 0xFF),
-          ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
-          ((dip >> 8)  & 0xFF), (dip & 0xFF));
 }
 
 static void icmp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
@@ -234,33 +190,9 @@ static void icmp_input(int dest, uint32_t targ_ip, uint32_t new_ip,
                        int buf_len, uint8_t *buf)
 {
   if ((dest) && (dip == targ_ip))
-    {
     swap_ip_dst(ipv4, new_ip, buf_len, buf);
-    KERR("ICMP swap dst %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
-          ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
-          ((dip >> 8)  & 0xFF), (dip & 0xFF),
-          ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
-          ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
-    }
   else if ((!dest) && (sip == targ_ip))
-    {
     swap_ip_src(ipv4, new_ip, buf_len, buf);
-    KERR("ICMP swap src %hhu.%hhu.%hhu.%hhu with %hhu.%hhu.%hhu.%hhu",
-          ((sip >> 24) & 0xFF), ((sip >> 16) & 0xFF),
-          ((sip >> 8)  & 0xFF), (sip & 0xFF),
-          ((new_ip >> 24) & 0xFF), ((new_ip >> 16) & 0xFF),
-          ((new_ip >> 8)  & 0xFF), (new_ip & 0xFF));
-    }
-  else
-    KERR("ICMP NO SWAP dest=%d targ=%hhu.%hhu.%hhu.%hhu "
-         " sip=%hhu.%hhu.%hhu.%hhu dip=%hhu.%hhu.%hhu.%hhu",
-          dest,
-          ((targ_ip >> 24) & 0xFF), ((targ_ip >> 16) & 0xFF),
-          ((targ_ip >> 8)  & 0xFF), (targ_ip & 0xFF),
-          ((sip >> 24) & 0xFF), ((sip >> 16) & 0xFF),
-          ((sip >> 8)  & 0xFF), (sip & 0xFF),
-          ((dip >> 24) & 0xFF), ((dip >> 16) & 0xFF),
-          ((dip >> 8)  & 0xFF), (dip & 0xFF));
 }
 
 static void packet_rx(int len, uint8_t *buf,
@@ -279,14 +211,14 @@ static void packet_rx(int len, uint8_t *buf,
 
   if (len <= ETHERNET_HEADER_LEN)
     {
-    KERR("ERROR HEADER LEN %d", len);
+    KERR("WARNING a2b replace: a frame of %d bytes, no ethernet header", len);
     return;
     }
   if ((buf[12] == 0x08) && (buf[13] == 0x06))
     {
     if (len < ETHERNET_HEADER_LEN + ARP_HEADER_LEN)
       {
-      KERR("ERROR ARP LEN %d", len);
+      KERR("WARNING a2b replace: an arp frame of %d bytes, too short", len);
       return;
       }
     }
@@ -294,7 +226,7 @@ static void packet_rx(int len, uint8_t *buf,
     {
     if (len <= ETHERNET_HEADER_LEN + IPV4_HEADER_LEN)
       {
-      KERR("ERROR IP LEN %d", len);
+      KERR("WARNING a2b replace: an ipv4 frame of %d bytes, too short", len);
       return;
       }
     ipv4 = &(buf[ETHERNET_HEADER_LEN]);
@@ -303,7 +235,7 @@ static void packet_rx(int len, uint8_t *buf,
       {
       if (len <= ETHERNET_HEADER_LEN + IPV4_HEADER_LEN + ICMP_HEADER_LEN)
         {
-        KERR("ERROR %d", len);
+        KERR("WARNING a2b replace: an icmp frame of %d bytes, too short", len);
         return;
         }
       sip = (ipv4[12]<<24)+(ipv4[13]<<16)+(ipv4[14]<<8)+ipv4[15];
@@ -315,7 +247,7 @@ static void packet_rx(int len, uint8_t *buf,
       {
       if (len <= ETHERNET_HEADER_LEN + IPV4_HEADER_LEN + UDP_HEADER_LEN)
         {
-        KERR("ERROR %d", len);
+        KERR("WARNING a2b replace: a udp frame of %d bytes, too short", len);
         return;
         }
       sip = (ipv4[12]<<24)+(ipv4[13]<<16)+(ipv4[14]<<8)+ipv4[15];
@@ -332,7 +264,7 @@ static void packet_rx(int len, uint8_t *buf,
       {
       if (len < ETHERNET_HEADER_LEN + IPV4_HEADER_LEN + TCP_HEADER_LEN)
         {
-        KERR("ERROR %d", len);
+        KERR("WARNING a2b replace: a tcp frame of %d bytes, too short", len);
         return;
         }
       sip = (ipv4[12]<<24)+(ipv4[13]<<16)+(ipv4[14]<<8)+ipv4[15];
@@ -342,24 +274,18 @@ static void packet_rx(int len, uint8_t *buf,
       dst_port = (tcp[2]<<8) + tcp[3];
       tcp_hdr_len = ((tcp[12] & 0xf0) >> 2);
       if (tcp_hdr_len < TCP_HEADER_LEN)
-        KERR("%d %d", tcp_hdr_len, TCP_HEADER_LEN);
+        KERR("WARNING a2b replace: a tcp header of %d bytes, %d at least",
+             tcp_hdr_len, TCP_HEADER_LEN);
       else
         {
         ln = ETHERNET_HEADER_LEN + IPV4_HEADER_LEN + tcp_hdr_len;
         if (len < ln)
-          KERR("ERROR %d %d %d", len, tcp_hdr_len, ln);
+          KERR("WARNING a2b replace: a tcp frame of %d bytes, its header "
+               "ends at %d", len, ln);
         else
           tcp_input(dest, targ_ip, new_ip, smac, dmac, ipv4,
                     sip, dip, src_port, dst_port, len, buf, tcp_hdr_len);
         }
-      }
-    else if (proto == IPPROTO_IGMP)
-      {
-      KERR("PROTO IGMP %X len: %d", proto, len);
-      }
-    else
-      {
-      KERR("PROTO NOT MANAGED %X len: %d", proto, len);
       }
     }
 }

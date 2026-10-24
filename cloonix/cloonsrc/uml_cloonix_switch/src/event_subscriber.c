@@ -23,7 +23,7 @@ static void subscribing_llid_send(int sub_evt, void *info)
   if (llid_get_event2llid(sub_evt, 0, &llid, &tid))
     {
     if (!msg_exist_channel(llid))
-      KOUT("%d\n", sub_evt);
+      KOUT("%d", sub_evt);
     do
       {
       switch (sub_evt)

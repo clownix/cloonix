@@ -1,56 +1,31 @@
 #!/usr/bin/env python3
 """frrspider_bgp - the same web of sixty routers, speaking bgp.
 
-Same topology as frrspider.py, different protocol. Where the ospf version
-puts every link in one area and lets the routers flood, this one gives each
-router an autonomous system of its own and peers it with its direct
-neighbours over the shared /24 -- the way a data centre fabric is built, and
-the way frr is most often deployed.
-
-The peerings are not written down anywhere. Everything on a lan shares a
-/24, so who peers with whom falls out of the two tables below.
-
     ./frrspider_bgp.py [net]       the net defaults to nemo
 
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+The topology of frrspider.py with another protocol: each router an
+autonomous system of its own, peering with its direct neighbours over the
+shared /24, the way a data centre fabric is built. The peerings are written
+nowhere: everything on a lan shares a /24, so who peers with whom follows
+from the two tables of the script.
 
 Image: frr_trixie
-Size:  60 containers and 45 lans (spider) / 16 containers (mix)
+Size:  60 containers, 35 lans
 
 THE PACKET TO CATCH
 -------------------
-  Sixty routers make a lot of traffic and the filter is what keeps a
-  capture readable.
-
-  ospf, which is IP protocol 89 and so is reached by exclusion:
+  bgp is tcp 179:
 
     cloonix cli nemo cnf cod1 eth0 sniff=on
-    cloonix cli nemo sniff cod1 eth0 --dump ip and not udp and not tcp
+    cloonix cli nemo sniff cod1 eth0 --dump tcp port 179
 
-  The packet to catch is one LSA flooding outwards after a link is taken
-  down: the same LSA arrives on several interfaces of the same router,
-  which is the mechanism people describe as "flooding" and rarely see.
-
-  bgp, in frrspider_bgp.py and frrmix.py, is tcp 179:
-
-    cloonix cli nemo sniff b11 eth0 --dump tcp port 179
-
-  In frrmix.py the packet to catch is on the ibgp session, because of
-  where it is addressed: between two loopbacks, over a wire whose own
-  addresses appear nowhere in it.
-
-    cloonix cli nemo sniff i11 eth0 --dump host 10.1.0.1
-
-  That is the demo's whole argument in one filter -- the session
-  survives a link failure because it was never bound to the link, and
-  the capture shows the packets riding whichever wire ospf chose.
+  The packet to catch is an UPDATE after a link is taken down: the
+  withdrawn prefixes travel from neighbour to neighbour, each router
+  telling the next what it can no longer reach.
 
 Important
-  No configuration is baked into the image: frr is installed and everything
-  else is written at run time. The cloonix rootfs itself carries no routing
-  daemon -- frr is one piece of software to test with cloonix among many.
-  The bird and babel demos are the deliberate counterweight.
+  No configuration is in the image: frr is installed, everything else is
+  written at run time.
 """
 import concurrent.futures
 import math
@@ -66,25 +41,23 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    CLOONIX, NET, erase_net, show, story)
+    CLOONIX, NET, erase_net, show, story, unavailable)
 
 # frr_trixie only.
 ROOTFS_CHOICES = ("frr_trixie",)
 
 HISTORY = """\
-BGP was sketched by Kirk Lougheed of Cisco and Yakov Rekhter of IBM at
-an IETF meeting in January 1989, on napkins by legend, and published as
-RFC 1105 the same year; BGP-4 of 1994 still runs the internet. Every
-network is an autonomous system, and a router tells its neighbours which
-prefixes it can reach and through which systems the path goes. Using it
-between the switches of one data centre, one AS per switch, was
-described by Petr Lapukhov in RFC 7938 in 2016. FRRouting descends from
-GNU Zebra, begun by Kunihiro Ishiguro in 1996, Quagga from 2002, forked
-as FRR in 2017; the bgpd of this demo is its oldest daemon.
+BGP was sketched by Kirk Lougheed of Cisco and Yakov Rekhter of IBM at an
+IETF meeting in January 1989, on napkins by legend, and published as RFC
+1105 the same year; BGP-4 of 1994 still runs the internet. Every network is
+an autonomous system, and a router tells its neighbours which prefixes it
+can reach and through which systems the path goes. Using it between the
+switches of one data centre, one AS per switch, was described by Petr
+Lapukhov in RFC 7938 in 2016.
 
 Today: BGP holds the internet together, close to a million IPv4 prefixes
-exchanged between some seventy-five thousand autonomous systems, and the same
-protocol runs inside data centres between racks.
+exchanged between some seventy-five thousand autonomous systems, and the
+same protocol runs inside data centres between racks.
 """
 
 # Private range, one per router.
@@ -207,7 +180,7 @@ for _n, _i, _l in LANS:
 # Where the debian package puts it.
 FRRINIT = "/usr/lib/frr/frrinit.sh"
 
-VTYSH_CONF = "service integrated-vtysh-config"
+VTYSH_CONF = "service integrated-vtysh-config\\nusername root nopassword"
 
 # The daemons are told to stay root, and root is put in the vty group.
 DAEMON_OPTS = ('zebra_options="-A 127.0.0.1 -u root -g root"\\n'
@@ -232,15 +205,25 @@ def frr_setup(node, daemons, conf, expect):
     ssh(node, "%s start </dev/null >/dev/null 2>&1" % FRRINIT)
     ssh(node, "for i in $(seq 1 20); do pgrep -x %s >/dev/null && exit 0; "
               "sleep 1; done; "
-              "echo '%s did not start, see /var/log/frr'; exit 1"
+              "echo '%s did not start, see /var/log/syslog'; exit 1"
               % (expect, expect))
+    # frr.conf applied and checked: under load the daemons can come up after
+    # frrinit has run vtysh -b, and watchfrr restarts them empty.
+    marker = next((l.strip() for l in conf.split("\n")
+                   if l.startswith("router ")), None)
+    if marker:
+        ssh(node, "for i in $(seq 1 30); do vtysh -b >/dev/null 2>&1; "
+                  "vtysh -c 'show running-config' 2>/dev/null | "
+                  "grep -qF '%s' && exit 0; sleep 1; done; "
+                  "echo 'frr.conf not applied, see /var/log/syslog'; exit 1"
+                  % marker)
 
 def frr_present(node):
     """Fail early and clearly rather than at the first missing file."""
     r = subprocess.run(CLOONIX + ["cli", NET, "ssh", node, "test -x " + FRRINIT],
                        capture_output=True, stdin=subprocess.DEVNULL)
     if r.returncode:
-        sys.exit("%s has no %s: the image carries no frr.\n"
+        unavailable("%s has no %s: the image carries no frr.\n"
                  "  fetch it:\n"
                  "    cd /var/lib/cloonix/bulk\n"
                  "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -264,7 +247,7 @@ def cli(*args, **kw):
                           capture_output=True, text=True)
 
 def verify_created(names):
-    """Count what the server actually has, and name anything missing.
+    """Count what the server has, and name anything missing.
 
     create_cnt catches a refusal, and a refusal is not the only way to lose
     a container: a request the server drops without answering looks exactly
@@ -335,7 +318,7 @@ def choose_rootfs():
         if cli("add", "cnt", "probe_rootfs", "eth=1", cand, ack=240).returncode == 0:
             cli("del", "probe_rootfs")
             return cand
-    sys.exit("%s is not in /var/lib/cloonix/bulk\n"
+    unavailable("%s is not in /var/lib/cloonix/bulk\n"
              "  build it:   cd vm_create/cnt_kvm_demo && ./cnt_frr_trixie.sh\n"
              "  or fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -361,7 +344,7 @@ def peers_of(name):
     """(interface, my ip, peer ip, peer asn) for every direct neighbour.
 
     Derived, not tabulated: the members of a lan all sit on the same /24, so
-    a router's neighbours are simply the other members of the lans it is on.
+    a router's neighbours are the other members of the lans it is on.
     """
     out = []
     for lan in LANS_OF[name]:

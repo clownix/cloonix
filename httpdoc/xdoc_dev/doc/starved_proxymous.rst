@@ -3,7 +3,7 @@ A starved proxymous: trixie passes, rocky does not
 =====================================================
 
 This chapter is the record of one investigation, 17 and 18 september 2026.
-*autotest.sh trixie* passed; *autotest.sh rocky* failed in the toy, always
+*slow_autotest.sh trixie* passed; *slow_autotest.sh rocky* failed in the toy, always
 in the same phase of *testbigflows.py*, *everything at once, 600s*. It keeps
 what was seen, what each run ruled out, the cause, the change made, and the
 instruments that stay in the code for the next time.
@@ -273,7 +273,7 @@ KERR says when lines were lost::
     WARNING 2989 line(s) before this one were dropped: the log daemon did
     not read /dev/log for 5005 ms
 
-*testitalltoy.sh* prints at its start the cgroup of each proxymous and of
+*top_testitalltoy.sh* prints at its start the cgroup of each proxymous and of
 each main server, with the kernel version; a failed autotest trace ends
 with the last 200 lines of *kerr1_outputs.log*, *free*, the swap and fault
 counters, the pressure files, *df -T* and the dmesg lines about stalls.

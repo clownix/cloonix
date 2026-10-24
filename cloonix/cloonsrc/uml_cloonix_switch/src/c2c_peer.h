@@ -23,6 +23,8 @@ status_peer_ping_zero = 0,
 status_peer_ping_one,
 status_peer_ping_two,
 status_peer_ping_error = -1,
+/* the master deleted by its client: the slave lets its lan go */
+status_peer_ping_deleted = -2,
 };
 
 enum {

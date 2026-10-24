@@ -4,8 +4,10 @@ typedef void (*t_fct_cb)(char *name, int num, char *vhost);
 int ovs_snf_send_add_snf_lan(char *name, int num, char *vhost, char *lan);
 int ovs_snf_send_del_snf_lan(char *name, int num, char *vhost, char *lan);
 
-void ovs_dyn_snf_start_process(char *name, int num, int item_type,
-                               char *vhost, t_fct_cb cb);
+/* -1: none started, the eth unsniffed or its machine being deleted, or an
+   item that cannot be sniffed */
+int ovs_dyn_snf_start_process(char *name, int num, int item_type,
+                              char *vhost, t_fct_cb cb);
 void ovs_dyn_snf_stop_process(char *tap);
 
 int ovs_snf_collect_snf(t_eventfull_endp *eventfull);

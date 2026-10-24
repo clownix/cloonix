@@ -3,45 +3,42 @@ r"""bird - the other routing daemon: OSPF the same, in a different program.
 
     ./bird.py [net]                the net defaults to nemo
 
-Four routers in a line, each pair joined by its own lan, a host hanging off
-each end::
+Three routers in a line, each pair on its own lan, a host at each end::
 
   hA -- l1 -- r1 -- l2 -- r2 -- l3 -- r3 -- l4 -- hB
        .10   .1 .1      .2 .2      .3 .3     .10
               10.0.1     10.0.2     10.0.3
 
   hA 10.0.1.10          hB 10.0.4.10
-  every rN runs BIRD, speaking OSPF on its router-to-router links, so hA
-  reaches hB across three hops none of them was told about by hand.
 
-  ACT 1  the routers are up and addressed, but no routing daemon runs.
-         hA cannot reach hB: the middle routers have no route to the far
-         lans. This is the blank sheet OSPF fills in.
-  ACT 2  bird starts on all three. Within a few seconds the OSPF adjacencies
-         form, the link-state database converges, and every router has a
-         route to every lan. hA pings hB.
-  ACT 3  the middle link r2--r3 is cut. OSPF notices, floods the change,
-         and there is no second path, so the far side goes away -- proving
-         the route was OSPF's and not a static line. The link is restored
-         and the route comes back on its own.
+Every rN runs BIRD speaking OSPF on its links between routers, so hA
+reaches hB across three hops none was told of by hand.
+
+  ACT 1  the routers up and addressed, no routing daemon: hA does not reach
+         hB, the middle routers having no route to the far lans.
+  ACT 2  bird starts on all three: the adjacencies form, the link-state
+         database converges, every router has a route to every lan, and hA
+         pings hB.
+  ACT 3  the middle link r2--r3 cut: OSPF floods the change and, with no
+         second path, the far side goes away; restored, the route comes
+         back on its own.
 
 Image: bird_trixie (bird2)
 Size:  7 containers, 4 lans
 
 THE PACKET TO CATCH
 -------------------
-  OSPF is IP protocol 89, below tcp and udp, so it is reached by exclusion:
+  OSPF is IP protocol 89, reached by exclusion:
 
     cloonix cli nemo cnf r2 eth0 sniff=on
     cloonix cli nemo sniff r2 eth0 --dump ip and not udp and not tcp
 
-  Hellos go by every few seconds; the packet worth catching is the LSA
-  flooded the instant a link changes in ACT 3.
+  Hellos every few seconds; the packet to catch is the LSA flooded the
+  instant a link changes, in ACT 3.
 
 Important
-  Nothing is baked into the image: bird is installed, its configuration is
-  written at run time. frr, in the routing area too, runs the same OSPF a
-  different way -- the two demos are the deliberate comparison.
+  bird is installed, its configuration written at run time. The frr demos
+  of the routing area run the same OSPF in another program.
 """
 import os
 import sys
@@ -59,14 +56,13 @@ from demolib import (
     tools_present)
 
 HISTORY = """\
-BIRD -- the BIRD Internet Routing Daemon -- has been developed at CZ.NIC,
-the Czech domain registry, since 1998, the project led for many years by
-Ondrej Filip and Martin Mares. It is one of the two open routing daemons
+BIRD, the BIRD Internet Routing Daemon, began in 1998 as a student project
+at the Faculty of Mathematics and Physics of Charles University in Prague,
+by Martin Mares, Pavel Machek and Ondrej Filip; CZ.NIC, the Czech domain
+registry, maintains it since 2009. It is one of the two open routing daemons
 carrying real internet routes at scale: many route servers at internet
-exchanges run BIRD. Where frr descends from Zebra and mimics a hardware
-vendor's command line, BIRD has a configuration language of its own and a
-single daemon for every protocol. Here it speaks OSPF, the same protocol
-frr speaks in the routing/frr demos.
+exchanges run BIRD. Where frr descends from Zebra and mimics a vendor's
+command line, BIRD has a configuration language of its own.
 
 Today: BIRD is the route server of most large internet exchange points, DE-
 CIX, AMS-IX and LINX among them, where one daemon holds hundreds of BGP
@@ -245,7 +241,7 @@ def main():
                  % (ok_before, ok_after, ok_broken))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the OSPF neighbours bird sees, and the link-state database:
     cloonix cli %s ssh r2 "birdc show ospf neighbors"

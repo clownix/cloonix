@@ -67,6 +67,15 @@ static void ethv_alloc(char *name, int num, int endp_type, char *vhost)
     }
 }
 
+/* the plug of an eth whose kvm is deleted while that plug is in flight */
+static void refuse_plug_of_deleted(t_ethv_cnx *cur, char *lan)
+{
+  KERR("WARNING %s eth%d: deleted while its plug to lan %s was in flight, "
+       "the plug is refused", cur->name, cur->num, lan);
+  utils_send_status_ko(&(cur->llid), &(cur->tid),
+                       "the kvm was deleted while the plug was in flight");
+}
+
 static void ethv_free(char *name, int num)
 {
   t_ethv_cnx *cur  = ethv_find(name, num);
@@ -74,9 +83,15 @@ static void ethv_free(char *name, int num)
     KERR("ERROR %s %d", name, num);
   else
     {
+    /* nothing else answers a client still waiting on this eth */
+    if (cur->waiting_ack_add_lan)
+      refuse_plug_of_deleted(cur, cur->lan);
+    else if (cur->waiting_ack_del_lan)
+      utils_send_status_ok(&(cur->llid), &(cur->tid));
     if (strlen(cur->lan_added))
       {
-      KERR("ERROR %s %d %s", name, num, cur->lan_added);
+      KERR("ERROR %s eth%d released still holding lan %s", name, num,
+           cur->lan_added);
       mactopo_del_req(item_kvm, name, num, cur->lan_added);
       lan_del_name(cur->lan_added, item_kvm, name, num);
       }
@@ -349,17 +364,24 @@ void kvm_resp_add_lan(int is_ko, char *name, int num, char *vhost, char *lan)
   t_ethv_cnx *cur = ethv_find(name, num);
   if (!cur)
     {
+    /* its client was answered when the eth was released */
     mactopo_add_resp(0, item_kvm, name, num, lan);
-    KERR("ERROR ovs answered the add of %s %d to lan %s (ko=%d) after the "
-         "eth was released: the kvm went while the add was in flight",
-         name, num, lan, is_ko);
+    KTRC("%s eth%d: the add of lan %s (ko=%d) was answered after the eth "
+         "was released", name, num, lan, is_ko);
     }
   else
     {
-    if (is_ko)
+    if (!strlen(cur->lan_added))
+      {
+      /* kvm_del took the lan while the add was in flight */
+      mactopo_add_resp(0, item_kvm, name, num, lan);
+      refuse_plug_of_deleted(cur, lan);
+      memset(cur->lan, 0, MAX_NAME_LEN);
+      }
+    else if (is_ko)
       {
       mactopo_add_resp(0, item_kvm, name, num, lan);
-      KTRC("%s %d: the add of lan %s was refused", name, num, lan);
+      KERR("ERROR %s %d: the add of lan %s was refused", name, num, lan);
       utils_send_status_ko(&(cur->llid), &(cur->tid), "KO");
       }
     else

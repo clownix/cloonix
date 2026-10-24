@@ -4,14 +4,15 @@ Cloonix configuration
 
 One machine runs several nets at once, each with a name, an ip and ports.
 The server and the client share one text, *cloonix/cloonix_config.py* in the
-source tree, installed twice::
+source tree, installed as one file::
 
     /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg       read as text by the daemons
-    /usr/bin/cloonix_config.py                         imported by the client
-    <toy>/rootfs/cloonix/cloonfs/etc/cloonix.cfg       the toy
+    /usr/bin/cloonix_config.py                         a link to it, imported by the client
+    <toy>/rootfs/cloonix/cloonfs/etc/cloonix.cfg       the toy, linked as <toy>/bin/cloonix_config.py
 
-Editing an installed cloonix is editing both, or editing the source and
-reinstalling; *cloonix list* names the nets on which they disagree.
+Editing an installed cloonix is editing that file. A client copied elsewhere
+keeps its own *cloonix_config.py*; *cloonix list* names the nets on which
+that copy and the installed file disagree.
 
 .. image:: /svg/net_ports.svg
    :align: center

@@ -151,7 +151,7 @@ void action_req_ovs_switch(char *bin, char *db, char *net, char *respb)
     pid = ovs_execv_ovs_vswitchd(net, bin, db);
     if (pid <= 0)
       {
-      KERR("BAD START OVS");
+      KERR("ERROR ovs-vswitchd did not start");
       snprintf(respb, MAX_PATH_LEN-1, "ovs_resp_ovs_ko");
       }
     else
@@ -161,7 +161,7 @@ void action_req_ovs_switch(char *bin, char *db, char *net, char *respb)
     }
   else
     {
-    KERR("OVS LAUNCH ALREADY TRIED");
+    KERR("ERROR ovs-vswitchd launch asked twice");
     snprintf(respb, MAX_PATH_LEN-1, "ovs_resp_ovs_ko");
     }
   usleep(10000);

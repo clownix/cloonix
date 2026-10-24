@@ -1,8 +1,8 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* One warning site, one gate: KERR_BURST lines at most in KERR_WINDOW_MS,  */
-/* the others counted and announced by the next line that passes. KERR     */
+/* One warning site, one gate: KERR_BURST lines at most in KERR_WINDOW_MS, */
+/* the others counted and announced by the next line that passes. KERR */
 /* keeps a gate per call site; the loggers of the guest agents keep one per */
-/* format string, kerr_gate_of_fmt.                                         */
+/* format string, kerr_gate_of_fmt. */
 #ifndef KERR_GATE_H
 #define KERR_GATE_H
 

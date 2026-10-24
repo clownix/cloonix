@@ -33,14 +33,13 @@
 /* The two fixed names, built from the snf path. Hardcoded on purpose: a path */
 /* passed on a command line is a path two programs can spell differently.     */
 #define FANOUT_SOCK_SUFFIX  "_pcap_sock"
-#define FANOUT_FIFO_SUFFIX  "_pcap_fifo"
 #define FANOUT_LOG_SUFFIX   "_pcap_log"
 
-/* One receiver: a tcp client or the duplicate fifo. Growable buffer drained from the front. */
+/* One receiver: a subscriber of the socket, or the real stdout. Growable
+   buffer drained from the front. */
 typedef struct t_rcv
 {
   int            fd;
-  int            is_fifo;
   char          *q;
   int            q_len;
   int            q_off;
@@ -69,7 +68,6 @@ static int           g_nb_rcv;
 static int           g_listen_fd = -1;
 static int           g_pipe_rd   = -1;
 static int           g_stdout_fd = -1;
-static char          g_fifo_path[512];
 static char          g_sock_path[512];
 static unsigned char g_file_hdr[FANOUT_HDR_LEN];
 static int           g_file_hdr_ok;
@@ -185,11 +183,8 @@ static void rcv_flush(t_rcv *r)
       }
     if ((n < 0) && ((errno == EAGAIN) || (errno == EINTR)))
       return;
-    /* EPIPE on the fifo only means webshark went away; the fifo itself is
-     * kept, so the next webshark finds it there and simply reconnects. */
-    FLOG("receiver fd %d (%s) went away: %s, %lu sent, %lu dropped",
-         r->fd, r->is_fifo ? "fifo" : "socket",
-         (n < 0) ? strerror(errno) : "closed", r->sent, r->dropped);
+    FLOG("receiver fd %d went away: %s, %lu sent, %lu dropped",
+         r->fd, (n < 0) ? strerror(errno) : "closed", r->sent, r->dropped);
     rcv_close(r);
     return;
     }
@@ -197,7 +192,7 @@ static void rcv_flush(t_rcv *r)
   r->q_len = 0;
 }
 
-static void rcv_add(int fd, int is_fifo)
+static void rcv_add(int fd)
 {
   int i;
   if (g_nb_rcv >= FANOUT_MAX_RCV)
@@ -222,11 +217,9 @@ static void rcv_add(int fd, int is_fifo)
   set_nonblock(fd);
   memset(&(g_rcv[i]), 0, sizeof(t_rcv));
   g_rcv[i].fd      = fd;
-  g_rcv[i].is_fifo = is_fifo;
   g_rcv[i].q_max   = FANOUT_QUEUE_MAX;
   g_nb_rcv++;
-  FLOG("receiver %d added on fd %d (%s), %d now attached",
-       i, fd, is_fifo ? "fifo" : "socket", g_nb_rcv);
+  FLOG("receiver %d added on fd %d, %d now attached", i, fd, g_nb_rcv);
   /* A receiver that arrives mid-capture needs a file header of its own
    * before any record, or everything downstream reads nonsense. */
   if (g_file_hdr_ok)
@@ -236,41 +229,6 @@ static void rcv_add(int fd, int is_fifo)
     }
   else
     FLOG("receiver %d waits, no pcap file header seen yet", i);
-}
-
-/* The duplicate fifo, opened O_WRONLY|O_NONBLOCK: ENXIO while no webshark
-   reads, EPIPE when the reader leaves. Each open is a fresh receiver with its
-   own file header (O_RDWR never saw readers come and go). */
-static int fifo_open(const char *path)
-{
-  int fd = open(path, O_WRONLY | O_NONBLOCK);
-  if ((fd < 0) && (errno != ENXIO))
-    FERR("open %s: %s", path, strerror(errno));
-  return fd;
-}
-
-static int fifo_attached(void)
-{
-  int i;
-  for (i = 0; i < FANOUT_MAX_RCV; i++)
-    {
-    if ((g_rcv[i].fd >= 0) && (g_rcv[i].is_fifo))
-      return 1;
-    }
-  return 0;
-}
-
-static void fifo_try_attach(void)
-{
-  int fd;
-  if ((!g_fifo_path[0]) || fifo_attached())
-    return;
-  fd = fifo_open(g_fifo_path);
-  if (fd >= 0)
-    {
-    FLOG("a reader opened the fifo %s", g_fifo_path);
-    rcv_add(fd, 1);
-    }
 }
 
 /* The subscriber socket: unix, never a port. The switch connects and relays
@@ -328,7 +286,6 @@ static void poll_once(int timeout_ms)
   int idx[FANOUT_MAX_RCV + 1];
   int i, nb = 0, cli;
 
-  fifo_try_attach();
   if (g_listen_fd >= 0)
     {
     pfd[nb].fd = g_listen_fd;
@@ -365,7 +322,7 @@ static void poll_once(int timeout_ms)
         else
           {
           FLOG("a subscriber connected on the pcap socket");
-          rcv_add(cli, 0);
+          rcv_add(cli);
           }
         }
       }
@@ -492,15 +449,12 @@ char *cloonix_fanout_stats(void)
   return txt;
 }
 
-int cloonix_fanout_names(const char *snf_path, char *sock, int sock_len,
-                         char *fifo, int fifo_len)
+int cloonix_fanout_names(const char *snf_path, char *sock, int sock_len)
 {
   if ((!snf_path) || (!snf_path[0]))
     return -1;
   if (sock)
     snprintf(sock, sock_len, "%s%s", snf_path, FANOUT_SOCK_SUFFIX);
-  if (fifo)
-    snprintf(fifo, fifo_len, "%s%s", snf_path, FANOUT_FIFO_SUFFIX);
   return 0;
 }
 
@@ -544,14 +498,12 @@ static void ensure_std_fds(void)
 int cloonix_fanout_start(const char *snf_path, int keep_stdout)
 {
   char sock_path[512];
-  char fifo_path[512];
   int pfd[2], i;
 
   ensure_std_fds();
   redirect_stderr(snf_path);
 
-  if (cloonix_fanout_names(snf_path, sock_path, sizeof(sock_path),
-                                     fifo_path, sizeof(fifo_path)))
+  if (cloonix_fanout_names(snf_path, sock_path, sizeof(sock_path)))
     {
     FERR("no snf path given, nothing can be served");
     return -1;
@@ -572,20 +524,7 @@ int cloonix_fanout_start(const char *snf_path, int keep_stdout)
     {
     g_stdout_fd = dup(1);
     if (g_stdout_fd >= 0)
-      rcv_add(g_stdout_fd, 0);
-    }
-
-  if (fifo_path[0])
-    {
-    snprintf(g_fifo_path, sizeof(g_fifo_path), "%s", fifo_path);
-    unlink(g_fifo_path);
-    if (mkfifo(g_fifo_path, 0666))
-      {
-      FERR("mkfifo %s: %s", g_fifo_path, strerror(errno));
-      g_fifo_path[0] = 0;
-      }
-    else
-      FLOG("fifo %s made, opened when a reader comes", g_fifo_path);
+      rcv_add(g_stdout_fd);
     }
 
   if (sock_path[0])
@@ -597,10 +536,10 @@ int cloonix_fanout_start(const char *snf_path, int keep_stdout)
            g_sock_path);
     }
 
-  if ((!g_fifo_path[0]) && (g_listen_fd < 0))
+  if (g_listen_fd < 0)
     {
-    FERR("neither the fifo nor the socket could be made, leaving stdout "
-         "alone and serving nobody");
+    FERR("the socket could not be made, leaving stdout alone and serving "
+         "nobody");
     return -1;
     }
 
@@ -635,8 +574,6 @@ int cloonix_fanout_start(const char *snf_path, int keep_stdout)
     return -1;
     }
   pthread_attr_destroy(&attr);
-  FLOG("serving fifo=%s sock=%s, waiting for the capture to start",
-       g_fifo_path[0] ? g_fifo_path : "none",
-       g_sock_path[0] ? g_sock_path : "none");
+  FLOG("serving %s, waiting for the capture to start", g_sock_path);
   return 0;
 }

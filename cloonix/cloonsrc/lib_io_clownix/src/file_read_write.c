@@ -136,7 +136,7 @@ int write_whole_file(char *file_name, char *buf, int len, char *err)
   return result;
 }
 
-/* 1 when /proc/cpuinfo carries vmx or svm, the flag kvm needs.             */
+/* 1 when /proc/cpuinfo carries vmx or svm, the flag kvm needs. */
 int machine_is_kvm_able(void)
 {
   char line[500];
@@ -156,8 +156,8 @@ int machine_is_kvm_able(void)
   return found;
 }
 
-/* 0 when dev_file can be opened read-write, else -1 and why says which of  */
-/* the three steps failed.                                                  */
+/* 0 when dev_file can be opened read-write, else -1 and why says which of */
+/* the three steps failed. */
 int dev_file_rw_ko(char *dev_file, char *why)
 {
   int fd;

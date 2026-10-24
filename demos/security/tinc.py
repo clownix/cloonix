@@ -8,39 +8,36 @@ Two nodes on one underlay lan::
   na --- lan1 --- nb
   10.0.0.1       10.0.0.2
 
-  tinc joins them into a VPN called vpn, each with a tun interface on a
-  private 10.9.0.0/24. Every node has a host file describing itself, with its
-  public key in it; the nodes exchange those files and connect. Add a third
-  node and it meshes with both, which is tinc's character -- but two is enough
-  to show the mechanism.
+tinc joins them into a VPN named vpn, each with a tun interface on a private
+10.9.0.0/24. Every node has a host file describing itself, its public key
+in it; the nodes exchange those files and connect. A third node would mesh
+with both.
 
-  ACT 1  each node generates its key pair, the host files are exchanged, and
-         both start. The tun interfaces come up: na is 10.9.0.1, nb 10.9.0.2.
-  ACT 2  na pings nb over the VPN. It works, and on the underlay the traffic
-         is a tinc flow on UDP 655, not readable ICMP.
-  ACT 3  the two counts are shown: UDP/655 present, cleartext ICMP absent.
+  ACT 1  each node makes its key pair, the host files are exchanged, both
+         start: the tun interfaces come up, na 10.9.0.1, nb 10.9.0.2.
+  ACT 2  na pings nb over the VPN; on the underlay the traffic is a tinc
+         flow on UDP 655, not readable ICMP.
+  ACT 3  the two counts: UDP/655 present, ICMP in clear absent.
 
 Image: tinc_trixie (tinc)
 Size:  2 containers, 1 lan
 
 THE PACKET TO CATCH
 -------------------
-  tinc's data and metadata are UDP and TCP on port 655; the ping inside is
-  not visible in clear:
+  The data and metadata of tinc are UDP and TCP port 655, the ping inside
+  not visible:
 
     cloonix cli nemo cnf na eth0 sniff=on
     cloonix cli nemo sniff na eth0 --dump port 655
     cloonix cli nemo sniff na eth0 --dump icmp
 
 Important
-  tinc needs a tun device. The container is given /dev/net/tun whenever the
-  host has it, so on the host, once per boot, load the module as yourself:
+  tinc needs a tun device, given to the container when the host has it: on
+  the host, once per boot, then the demo as a user:
 
     sudo modprobe tun
 
-  then run this demo as your normal user -- no need to run the net as root.
-  Nothing else is baked in: the keys, host files and configuration are all
-  made at run time.
+  Keys, host files and configuration are made at run time.
 """
 import os
 import sys
@@ -54,20 +51,18 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
     NET, build, check_net, choose_rootfs, count_on, erase_net, in_parallel,
-    place, put, reached, run, ssh, step, story, tools_present)
+    place, put, reached, run, ssh, step, story, tools_present, unavailable)
 
 HISTORY = """\
 tinc was started by Guus Sliepen and Ivo Timmermans in the late 1990s. Its
-distinctive idea is the automatic full mesh: you tell each node how to reach
-one or two others, and tinc works out direct paths between every pair,
-routing around a node that goes down. It predates and prefigures a lot of
-what later mesh and overlay VPNs do. It is small, has run on many platforms,
-and remains a clean example of a peer-to-peer VPN rather than the
-hub-and-spoke shape a classic OpenVPN server has.
+distinctive idea is the automatic full mesh: tell each node how to reach one
+or two others and tinc works out direct paths between every pair, routing
+around a node that goes down: a peer-to-peer VPN, where a classic OpenVPN
+server is a hub with spokes.
 
-Today: tinc links small fleets of servers and home networks where no node can
-be the hub; its mesh idea is the one later tools such as ZeroTier, Nebula and
-Tailscale built products on.
+Today: tinc links small fleets of servers and home networks where no node
+can be the hub; its mesh idea is the one later tools such as ZeroTier,
+Nebula and Tailscale built products on.
 """
 
 ROOTFS_CHOICES = ("tinc_trixie",)
@@ -129,7 +124,7 @@ def tunnel_ready(timeout=45):
 def ensure_tun(node):
     r = ssh(node, "test -c /dev/net/tun && echo yes || echo no", check=False)
     if "yes" not in r:
-        sys.exit("%s has no /dev/net/tun.\n"
+        unavailable("%s has no /dev/net/tun.\n"
                  "  the container is given this node whenever the host has it.\n"
                  "  On the host, once per boot, load the module as yourself:\n"
                  "    sudo modprobe tun\n"
@@ -187,7 +182,7 @@ def main():
     ok_ping = reached(r)
     story()
 
-    step("act 3: what the underlay actually carried")
+    step("act 3: what the underlay carried")
     story()
     p655 = count_on(NA, 0, "port 655",
                     lambda: ssh(NA, "ping -c 5 10.9.0.2", check=False),
@@ -210,7 +205,7 @@ def main():
                  % (ok_ping, ok_tinc, ok_hidden))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the tunnel interface and a ping over it:
     cloonix cli %s ssh na "ip addr show tun0"

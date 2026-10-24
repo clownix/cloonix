@@ -241,6 +241,7 @@ static void proxy_to_unix(int browser_fd,
     }
 
     if (ufd < 0) {
+        KERR("ERROR vnc: no connection to the vnc socket in 10 s");
         char msg[256];
         int mlen = snprintf(msg, sizeof(msg),
             "HTTP/1.1 502 Bad Gateway\r\n"

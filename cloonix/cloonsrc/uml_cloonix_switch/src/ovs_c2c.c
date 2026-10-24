@@ -37,7 +37,7 @@ static char g_bin_c2c[MAX_PATH_LEN];
 static t_ovs_c2c *g_head_c2c;
 static int g_nb_c2c;
 
-/* Restart tally per c2c: a pair that cannot agree is stopped.              */
+/* Restart tally per c2c: a pair that cannot agree is stopped. */
 #define C2C_PEER_SILENCE_MS 20000
 #define NB_RESTART_TALLY 32
 #define MAX_RESTART_IN_A_ROW 5
@@ -181,7 +181,7 @@ void shadown_lan_del_name(char *name);
 
 static void free_c2c(t_ovs_c2c *cur)
 {
-  t_ovs_c2c *ncur;
+  int restart = 0;
   cfg_free_obj_id(cur->c2c_id);
   if (cur->ovs_llid)
     {
@@ -195,13 +195,31 @@ static void free_c2c(t_ovs_c2c *cur)
   if (cur == g_head_c2c)
     g_head_c2c = cur->next;
   g_nb_c2c -= 1;
+  /* Tell proxymous, restart or not: it has no other way of knowing, its peer
+     entry is never released, and its link to the peer blocks the connection
+     of a restarted master. */
+  proxycrun_transmit_c2c_del(cur->name);
+  c2c_chainlan_partial_del(cur);
   if ((cur->must_restart) && (!cur->recv_delete_req_from_client))
+    {
+    int *tally = restart_tally(cur->name);
+    *tally += 1;
+    if (*tally > MAX_RESTART_IN_A_ROW)
+      KERR("ERROR %s restarted %d times without settling, leaving it "
+           "deleted. Check that only ONE side ran 'add c2c' -- the master "
+           "creates the slave itself, and two masters cannot agree",
+           cur->name, *tally);
+    else
+      restart = 1;
+    }
+  if (restart)
     {
     /* Only name, dist_cloon and dist_passwd are strings; the addresses and
        ports are integers and copy by value. */
     char r_name[MAX_NAME_LEN];
     char r_dist_cloon[MAX_NAME_LEN];
-    char r_dist_passwd[MSG_DIGEST_LEN];    uint32_t r_loc_udp_ip  = cur->topo.loc_udp_ip;
+    char r_dist_passwd[MSG_DIGEST_LEN];
+    uint32_t r_loc_udp_ip  = cur->topo.loc_udp_ip;
     uint32_t r_dist_tcp_ip = cur->topo.dist_tcp_ip;
     uint32_t r_dist_udp_ip = cur->topo.dist_udp_ip;
     uint16_t r_dist_tcp_port = cur->topo.dist_tcp_port;
@@ -213,45 +231,24 @@ static void free_c2c(t_ovs_c2c *cur)
     strncpy(r_name, cur->name, MAX_NAME_LEN-1);
     strncpy(r_dist_cloon, cur->topo.dist_cloon, MAX_NAME_LEN-1);
     strncpy(r_dist_passwd, cur->dist_passwd, MSG_DIGEST_LEN-1);
-
-    c2c_chainlan_partial_del(cur);
     free(cur);
-    cur = NULL;
-
-    {
-    int *tally = restart_tally(r_name);
-    *tally += 1;
-    if (*tally > MAX_RESTART_IN_A_ROW)
-      {
-      KERR("ERROR %s restarted %d times without settling, leaving it "
-           "deleted. Check that only ONE side ran 'add c2c' -- the master "
-           "creates the slave itself, and two masters cannot agree",
-           r_name, *tally);
-      cfg_hysteresis_send_topo_info();
-      return;
-      }
-    }
 
     KERR("WARNING RESTARTING %s (nobody asked for it to be deleted, so "
          "the master goes back to waiting for its peer)", r_name);
     ovs_c2c_add(0, 0, r_name, r_loc_udp_ip, r_dist_cloon,
                 r_dist_tcp_ip, r_dist_tcp_port,
                 r_dist_passwd, r_dist_udp_ip, r_udp_low);
-    ncur = find_c2c(r_name);
-    if (!ncur)
+    if (!find_c2c(r_name))
       KERR("ERROR %s: the restart did not produce a new entry", r_name);
-    else
-      ncur->born_from_restart = 1;
     cfg_hysteresis_send_topo_info();
     return;
     }
-  c2c_chainlan_partial_del(cur);
+  /* A slave whose master was not deleted keeps its shadow lan: the master
+     that comes back makes it again, and it goes back on its lan. */
   if (cur->topo.local_is_master == 1)
     c2c_chainlan_del(cur);
-  shadown_lan_del_name(cur->name);
-  /* Tell proxymous: it has no other way of knowing, and without this its peer
-     entries are never released. */
-  proxycrun_transmit_c2c_del(cur->name);
+  if ((cur->topo.local_is_master == 1) || (cur->recv_delete_req_from_client))
+    shadown_lan_del_name(cur->name);
   free(cur);
   cfg_hysteresis_send_topo_info();
 }
@@ -333,8 +330,8 @@ static void alloc_c2c_master(char *name, char *dist_name,
   ip_string_to_int(&localhost, "127.0.0.1");
   if ((dist_ip != localhost) && (loc_udp_ip == localhost))
     {
-    KERR("WARNING: distant c2c has the local 127.0.0.1");
-    KERR("WARNING: distant c2c probably will not be able to reach us");
+    KERR("WARNING c2c %s: its local udp ip is 127.0.0.1 and its peer net is "
+         "elsewhere, the peer will not reach it", name);
     }
 }
 
@@ -357,12 +354,7 @@ static void carefull_free_c2c(char *name)
     KERR("ERROR %s: asked to free a c2c that is already gone, ignoring", name);
     return;
     }
-  if ((cur->destroy_c2c_req != 0) ||
-      (cur->free_c2c_req != 0))
-    KERR("ERROR %s %d %d", name, cur->destroy_c2c_req,
-                              cur->free_c2c_req);
-  else
-    free_c2c(cur);
+  free_c2c(cur);
 }
 
 #define C2C_KILL_TRACE 0
@@ -371,26 +363,24 @@ static int try_connect(char *sock, char *name);
 
 void carefull_destroy_c2c(t_ovs_c2c *cur)
 {
-  char *locnet = cfg_get_cloonix_name();
   KTRC_ON(C2C_KILL_TRACE,
-          "%s %s destroy: ovs_llid=%d (channel %s) pid=%d state_up=%d -- %s",
-          locnet, cur->name, cur->ovs_llid,
+          "%s destroy: ovs_llid=%d (channel %s) pid=%d state_up=%d -- %s",
+          cur->name, cur->ovs_llid,
           (cur->ovs_llid && msg_exist_channel(cur->ovs_llid)) ? "open"
                                                              : "gone",
           cur->pid, cur->state_up,
           (cur->ovs_llid && msg_exist_channel(cur->ovs_llid)) ?
           "a kil can be sent" :
           "NOTHING can be sent, the process must stop itself");
-  if ((cur->destroy_c2c_req != 0) ||
-      (cur->free_c2c_req != 0))
-    KTRC("%s: destroy asked again while one is already under way "
-         "(destroy_req=%d free_req=%d)", cur->name,
-         cur->destroy_c2c_req, cur->free_c2c_req);
-  else if (cur->destroy_c2c_done == 0)
+  if (cur->destroy_c2c_done)
+    KTRC("%s: destroy asked again while one is already under way",
+         cur->name);
+  else
     {
     cur->destroy_c2c_done = 1;
 
-    wrap_send_c2c_peer_ping(cur, status_peer_ping_error);
+    wrap_send_c2c_peer_ping(cur, cur->recv_delete_req_from_client ?
+                            status_peer_ping_deleted : status_peer_ping_error);
     if ((cur->ovs_llid) && msg_exist_channel(cur->ovs_llid))
       rpct_send_kil_req(cur->ovs_llid, type_hop_c2c);
     else
@@ -414,7 +404,6 @@ void carefull_destroy_c2c(t_ovs_c2c *cur)
       }
     }
   if ((!cur->recv_delete_req_from_client) &&
-      (!cur->give_up_no_restart) &&
       (cur->topo.local_is_master == 1))
     cur->must_restart = 1;
 }
@@ -458,7 +447,8 @@ static void connect_ovs_c2c_attempt(t_ovs_c2c *cur)
     cur->count += 1;
     if (cur->count == 20)
       {
-      KERR("ERROR %s %s", cur->socket, cur->name);
+      KERR("ERROR c2c %s: no connection to its process on %s in 20 tries, "
+           "freed", cur->name, cur->socket);
       free_c2c(cur);
       }
     }
@@ -474,7 +464,8 @@ static void send_c2c_suidroot_attempt(t_ovs_c2c *cur)
     cur->count += 1;
     if (cur->count == 20)
       {
-      KERR("ERROR %s %s", cur->socket, cur->name);
+      KERR("ERROR c2c %s: its process did not become root in 20 tries, "
+           "freed", cur->name);
       free_c2c(cur);
       }
     else
@@ -505,14 +496,14 @@ static void timer_heartbeat(void *data)
       cur->closed_count -= 1;
       if (cur->closed_count == 0)
         {
-        KERR("WARNING FREE %s", cur->name);
+        KERR("WARNING c2c %s: the channel to its process broke, destroying "
+             "this side", cur->name);
         carefull_destroy_c2c(cur);
         }
       }
 
-    /* The tunnel goes through proxymous: no verdict on the peer while
-       proxymous itself is not answering. Silence on the wall clock, the
-       limit of ctrl_link: the peer's proxymous can be as late as this one. */
+    /* No verdict on the peer while proxymous itself is silent (wall clock,
+           the ctrl_link limit). */
     now = stall_now_ms();
     elapsed = (cur->watch_ms) ? (int) (now - cur->watch_ms) : 0;
     cur->watch_ms = now;
@@ -639,27 +630,17 @@ static void timer_heartbeat(void *data)
             carefull_destroy_c2c(cur);
         break;
         case state_master_try_connect_to_peer:
-          /* Fresh master waits for its peer for ever; a master reborn from a
-             restart gets a bounded wait, its peer's link died with the old process. */
+          /* A master waits for its peer for ever, restarted or not. */
           cur->count_state_master_try_connect_to_peer += 1;
-          if ((cur->born_from_restart) &&
-              (cur->count_state_master_try_connect_to_peer > MAX_REPEAT2))
-            {
-            /* said once: the destroy takes a beat more to land */
-            if (!cur->give_up_no_restart)
-              KERR("ERROR %s: restarted, and its peer did not come back; "
-                   "destroying it for good rather than waiting for ever", name);
-            cur->give_up_no_restart = 1;
-            carefull_destroy_c2c(cur);
-            }
-          else if (cur->count_state_master_try_connect_to_peer > MAX_REPEAT2)
+          if (cur->count_state_master_try_connect_to_peer > MAX_REPEAT2)
             {
             {
             static unsigned long nb_connect;
             nb_connect += 1;
             if ((nb_connect % 50) == 1)
-              KERR("WARNING CONNECT PEER %s %s (try %lu)",
-                   name, label, nb_connect);
+              KERR("WARNING c2c %s: its peer net does not answer, the master "
+                   "keeps trying (%lu tries of all c2c so far, one in 50 "
+                   "said)", name, nb_connect);
             }
             cur->count_state_master_try_connect_to_peer = 0;
             }
@@ -758,7 +739,8 @@ static void c2c_receive_probe_udp(char *name, uint8_t probe_idx)
   char msg[MAX_PATH_LEN];
   char dist_udp_ip_string[MAX_NAME_LEN];
   if (!cur)
-    KERR("ERROR %s %hhu", name, probe_idx);
+    KERR("WARNING c2c %s: udp probe %hhu for a c2c gone here, ignored",
+         name, probe_idx);
   else
     {
     cur->probe_silence_ms = 0;
@@ -771,7 +753,8 @@ static void c2c_receive_probe_udp(char *name, uint8_t probe_idx)
                name, dist_udp_ip_string, cur->topo.dist_udp_port, probe_idx);
       if (!msg_exist_channel(cur->ovs_llid))
         {
-        KERR("ERROR %s %hhu", cur->name, probe_idx);
+        KERR("ERROR c2c %s: no channel to its c2c process to answer udp probe "
+             "%hhu, taken as broken", cur->name, probe_idx);
         ovs_llid_to_tap_process_broken(cur);
         }
       else
@@ -786,7 +769,8 @@ static void c2c_receive_probe_udp(char *name, uint8_t probe_idx)
                "c2c_enter_traffic_udp %s probe_idx %hhu", name, probe_idx);
       if (!msg_exist_channel(cur->ovs_llid))
         {
-        KERR("ERROR %s %hhu", cur->name, probe_idx);
+        KERR("ERROR c2c %s: no channel to its c2c process to enter the udp "
+             "traffic (probe %hhu), taken as broken", cur->name, probe_idx);
         ovs_llid_to_tap_process_broken(cur);
         }
       else
@@ -801,7 +785,8 @@ static void c2c_dist_udp_ip_port_done(char *name)
 {
   t_ovs_c2c *cur = find_c2c(name);
   if (!cur)
-    KERR("ERROR %s", name);
+    KERR("WARNING c2c %s: its udp peer set after it was deleted here, "
+         "ignored", name);
   else
     {
     cur->udp_connection_tx_configured = 1;
@@ -828,19 +813,15 @@ void ovs_c2c_peer_add(int llid, int tid, char *name, char *dist,
 {
   char *locnet = cfg_get_cloonix_name();
   t_ovs_c2c *cur = find_c2c(name);
-  /* Only when an entry already exists, which is the case the branch below
-     handles. */
-  if (cur)
-    KERR("WARNING ovs_c2c_peer_add llid=%d tid=%d name=%s dist=%s loc=%s: an "
-         "entry already exists, destroying the stale one",
-         llid, tid, name, dist, loc);
   if (cur)
     {
-    KERR("WARNING STALE PEER ENTRY %s — destroying for retry", name);
+    KERR("WARNING c2c %s: a peer create of %s came while it exists here, "
+         "the stale one destroyed for the retry", name, dist);
     carefull_destroy_c2c(cur);
     }
   else if (strcmp(loc, locnet))
-    KERR("ERROR %s %s %s", name, dist, loc);
+    KERR("ERROR c2c %s: a peer create of %s for the net %s, not this one, "
+         "refused", name, dist, loc);
   else
     {
     cur = alloc_c2c_peer(llid, tid, name, dist, c2c_udp_port_low);
@@ -854,19 +835,17 @@ void ovs_c2c_peer_add_ack(int llid, int tid, char *name,
 {
   char *locnet = cfg_get_cloonix_name();
   t_ovs_c2c *cur = find_c2c(name);
-  /* Only when tid and ref_tid disagree: the mismatch is the fault. */
-  if ((cur) && (tid != cur->ref_tid))
-    KERR("WARNING ovs_c2c_peer_add_ack llid=%d tid=%d name=%s dist=%s loc=%s "
-         "ack=%d ref_tid=%d MISMATCH",
-         llid, tid, name, dist, loc, ack, cur->ref_tid);
   if (!cur)
-    KERR("ERROR %s %s", name, dist);
+    KERR("WARNING c2c %s: an ack of %s for a c2c gone here, ignored",
+         name, dist);
   else if (strcmp(loc, locnet))
-    KERR("ERROR %s %s %s", name, dist, loc);
+    KERR("ERROR c2c %s: an ack of %s for the net %s, not this one, ignored",
+         name, dist, loc);
   else if (cur->topo.local_is_master == 0)
-    KERR("ERROR %s %s %s", name, dist, loc);
-   else if (tid != cur->ref_tid)
-    KERR("ERROR %s %d %d", name, tid, cur->ref_tid);
+    KERR("ERROR c2c %s: an ack of %s on the slave side, ignored", name, dist);
+  else if (tid != cur->ref_tid)
+    KERR("ERROR c2c %s: an ack of %s with tid %d, %d agreed, ignored",
+         name, dist, tid, cur->ref_tid);
   else
     {
     cur->topo.tcp_connection_peered = 1;
@@ -882,13 +861,15 @@ void ovs_c2c_transmit_get_free_udp_port(char *name, uint16_t udp_port)
   char msg[MAX_PATH_LEN];
   memset(msg, 0, MAX_PATH_LEN);
   if (!cur)
-    KERR("ERROR %s %hu", name, udp_port);
+    KERR("WARNING c2c %s: udp port %hu from proxymous for a c2c gone here, "
+         "ignored", name, udp_port);
   else
     {
     snprintf(msg, MAX_PATH_LEN-1,
              "c2c_get_free_udp_port %s proxycrun %hu", name, udp_port);
     if (!msg_exist_channel(cur->ovs_llid))
-      KERR("ERROR %s %hu", cur->name, udp_port);
+      KERR("ERROR c2c %s: udp port %hu not passed on, no channel to its "
+           "c2c process", cur->name, udp_port);
     else
       {
       rpct_send_sigdiag_msg(cur->ovs_llid, type_hop_c2c, msg);
@@ -932,27 +913,24 @@ int ovs_c2c_diag_llid(int llid)
 
 void ovs_c2c_poldiag_resp(int llid, int tid, char *line)
 {
-  KERR("ERROR %s", line);
+  KERR("ERROR an unexpected poldiag from a c2c process: %s", line);
 }
 
 void ovs_c2c_proxy_dist_udp_ip_port_OK(char *name,
                                        uint32_t ip, uint16_t udp_port)
 {
-  t_ovs_c2c *cur = find_c2c(name);
-  cur = find_c2c(name);
-  if (!cur)
-    KERR("ERROR c2c: %s", name);
+  if (!find_c2c(name))
+    KERR("WARNING c2c %s: proxymous set its udp peer after it was deleted "
+         "here, ignored", name);
   else
     c2c_dist_udp_ip_port_done(name);
 }
 
-void ovs_c2c_proxy_dist_tcp_ip_port_OK(char *name,
-                                       uint32_t ip, uint16_t tcp_port)
+/* An answer of its process for a c2c deleted here meanwhile. */
+static void answer_of_gone(char *name, char *line)
 {
-  t_ovs_c2c *cur = find_c2c(name);
-  cur = find_c2c(name);
-  if (!cur)
-    KERR("ERROR c2c:");
+  KERR("WARNING c2c %s: its process answered after it was deleted here, "
+       "ignored: %s", name, line);
 }
 
 void ovs_c2c_sigdiag_resp(int llid, int tid, char *line)
@@ -966,16 +944,17 @@ void ovs_c2c_sigdiag_resp(int llid, int tid, char *line)
     {
     cur = find_c2c(name);
     if (!cur)
-      KERR("ERROR c2c: %s", line);
+      answer_of_gone(name, line);
     else
-      KERR("ERROR Started c2c: %s", name);
+      KERR("ERROR c2c %s: its process could not become root, asked again",
+           name);
     }
   else if (sscanf(line,
   "c2c_suidroot_ok %63s", name) == 1)
     {
     cur = find_c2c(name);
     if (!cur)
-      KERR("ERROR c2c: %s", line);
+      answer_of_gone(name, line);
     else
       {
       cur->suid_root_done = 1;
@@ -987,7 +966,7 @@ void ovs_c2c_sigdiag_resp(int llid, int tid, char *line)
     {
     cur = find_c2c(name);
     if (!cur)
-      KERR("ERROR c2c: %s", line);
+      answer_of_gone(name, line);
     else
       free_udp_port_done(name, 0, -1);
     }
@@ -996,7 +975,7 @@ void ovs_c2c_sigdiag_resp(int llid, int tid, char *line)
     {
     cur = find_c2c(name);
     if (!cur)
-      KERR("ERROR c2c: %s", line);
+      answer_of_gone(name, line);
     else
       free_udp_port_done(name, udp_port, 0);
     }
@@ -1005,7 +984,7 @@ void ovs_c2c_sigdiag_resp(int llid, int tid, char *line)
     {
     cur = find_c2c(name);
     if (!cur)
-      KERR("ERROR c2c: %s %hhu", line, probe_idx);
+      answer_of_gone(name, line);
     else
       c2c_receive_probe_udp(name, probe_idx);
     }
@@ -1014,13 +993,13 @@ void ovs_c2c_sigdiag_resp(int llid, int tid, char *line)
     {
     cur = find_c2c(name);
     if (!cur)
-      KERR("ERROR c2c: %s", line);
+      answer_of_gone(name, line);
     else
       cur->topo.udp_connection_peered = 1;
     }
 
   else
-    KERR("ERROR c2c: %s", line);
+    KERR("ERROR an unknown message from a c2c process, dropped: %s", line);
 }
 
 int ovs_c2c_get_all_pid(t_lst_pid **lst_pid)
@@ -1111,13 +1090,13 @@ void ovs_c2c_add(int llid, int tid, char *name, uint32_t loc_udp_ip,
   char *ctx;
   if (cur)
     {
-    KERR("ERROR %s", name);
+    KERR("ERROR c2c %s refused: it exists already", name);
     if (llid)
       send_status_ko(llid, tid, "Exists already");
     }
   else if (!strcmp(locnet, dist_name))
     {
-    KERR("ERROR %s", name);
+    KERR("ERROR c2c %s refused: its peer net is this net", name);
     if (llid)
       send_status_ko(llid, tid, "Cannot c2c to our own name");
     }
@@ -1155,28 +1134,53 @@ int ovs_c2c_up_test(void *ctx, char *err)
   return 0;
 }
 
+/* A delete is answered when the c2c is gone, not when it is asked for. */
+static int c2c_gone_test(void *ctx, char *err)
+{
+  if (find_c2c((char *) ctx))
+    {
+    snprintf(err, MAX_PATH_LEN-1, "c2c %s is still being destroyed",
+             (char *) ctx);
+    return 0;
+    }
+  return 1;
+}
+
+static void ack_when_gone(int llid, int tid, char *name)
+{
+  char *ctx = (char *) malloc(MAX_NAME_LEN);
+  memset(ctx, 0, MAX_NAME_LEN);
+  strncpy(ctx, name, MAX_NAME_LEN-1);
+  ack_pending(llid, tid, 100, 20000, "del c2c", c2c_gone_test, NULL, ctx);
+}
+
 void ovs_c2c_del(int llid, int tid, char *name)
 {
   t_ovs_c2c *cur = find_c2c(name);
   if (!cur)
     {
-    KERR("ERROR %s", name);
+    KERR("ERROR del c2c %s refused: it does not exist", name);
     if (llid)
       send_status_ko(llid, tid, "Does not exist");
     }
-  else if ((cur->destroy_c2c_req) || (cur->free_c2c_req))
+  else if (cur->destroy_c2c_done)
     {
-    KERR("WARNING %s: delete arrived while it was already being "
-         "destroyed, remembering it so the restart is cancelled", name);
+    if (cur->recv_delete_req_from_client)
+      KTRC("%s: delete asked again while its delete runs", name);
+    else
+      KERR("WARNING %s: delete arrived while it was already being "
+           "destroyed, remembering it so that no restart follows", name);
     cur->recv_delete_req_from_client = 1;
+    wrap_send_c2c_peer_ping(cur, status_peer_ping_deleted);
     if (llid)
-      send_status_ok(llid, tid, "OK");
+      ack_when_gone(llid, tid, name);
     }
   else if (!cur->topo.local_is_master)
     {
     if (llid)
       {
-      KERR("ERROR %s Slave, cannot be deleted", name);
+      KERR("ERROR del c2c %s refused: it is the slave side, delete it on "
+           "its master net", name);
       send_status_ko(llid, tid, "Slave, cannot be deleted"); 
       }
     else if (tid == 7777)
@@ -1187,10 +1191,10 @@ void ovs_c2c_del(int llid, int tid, char *name)
     } 
   else
     {
-    if (llid)
-      send_status_ok(llid, tid, "OK");
     cur->recv_delete_req_from_client = 1;
     carefull_destroy_c2c(cur);
+    if (llid)
+      ack_when_gone(llid, tid, name);
     }
 }
 
@@ -1213,11 +1217,14 @@ void ovs_c2c_peer_conf(int llid, int tid, char *name, int peer_status,
 {
   t_ovs_c2c *cur = find_c2c(name);
   if (!cur)
-    KERR("ERROR %s", name);
+    KERR("WARNING c2c %s: a peer conf of %s for a c2c gone here, ignored",
+         name, dist);
   else if (tid != cur->ref_tid)
-    KERR("ERROR %s %d %d", name, tid, cur->ref_tid);
+    KERR("ERROR c2c %s: a peer conf of %s with tid %d, %d agreed, ignored",
+         name, dist, tid, cur->ref_tid);
   else if (peer_status == -1)
-    KERR("ERROR %s", name);
+    KERR("ERROR c2c %s: a peer conf of %s carrying a failure, ignored",
+         name, dist);
   else
     {
     cur->topo.dist_udp_port = dist_udp_port;
@@ -1278,7 +1285,8 @@ static void master_and_slave_ping_process(t_ovs_c2c *cur, int peer_status)
       (cur->udp_dist_port_chosen == 1))
     {
     if ((ip == 0) || (port == 0))
-      KERR("ERROR %s %s", cur->name, label);
+      KERR("ERROR c2c %s: the udp ip or port of its peer is zero in %s, the "
+           "udp link not set", cur->name, label);
     else
       init_dist_udp_ip_port(name, ip, port);
     }
@@ -1291,7 +1299,8 @@ static void master_and_slave_ping_process(t_ovs_c2c *cur, int peer_status)
              "c2c_enter_traffic_udp %s probe_idx 0", cur->name);
     if (!msg_exist_channel(cur->ovs_llid))
       {
-      KERR("ERROR %s %s", cur->name, label);
+      KERR("ERROR c2c %s: no channel to its c2c process to enter the udp "
+           "traffic in %s, destroying this side", cur->name, label);
       carefull_destroy_c2c(cur);
       }
     else
@@ -1313,7 +1322,8 @@ static void master_and_slave_ping_process(t_ovs_c2c *cur, int peer_status)
       else if (cur->state_up == state_master_udp_peer_conf_sent)
         { }
       else
-        KERR("ERROR %s %s", cur->name, label);
+        KERR("ERROR c2c %s: a peer ping in the unexpected state %s, ignored",
+             cur->name, label);
       cfg_hysteresis_send_topo_info();
       }
     }
@@ -1350,7 +1360,8 @@ void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status)
         carefull_destroy_c2c(cur);
         }
       }
-    else if (peer_status == -1)
+    else if ((peer_status == status_peer_ping_error) ||
+             (peer_status == status_peer_ping_deleted))
       {
       if ((cur->topo.local_is_master == 1) &&
           (cur->recv_delete_req_from_client))
@@ -1360,6 +1371,8 @@ void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status)
       else if (cur->topo.local_is_master == 0)
         {
         KTRC("%s: the master reported itself down, destroying this side", name);
+        if (peer_status == status_peer_ping_deleted)
+          cur->recv_delete_req_from_client = 1;
         carefull_destroy_c2c(cur);
         }
       else
@@ -1368,6 +1381,11 @@ void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status)
              "delete was asked for here, destroying this side", name);
         carefull_destroy_c2c(cur);
         }
+      }
+    else if (cur->destroy_c2c_done)
+      {
+      /* Its process stopped or stopping: no probe, no state move. */
+      KTRC("%s: a ping of the peer during its destroy, ignored", name);
       }
     else
       {
@@ -1378,7 +1396,7 @@ void ovs_c2c_peer_ping(int llid, int tid, char *name, int peer_status)
     }
 }
      
-/* Stored for the lan attach, and sent now when the c2c already runs.       */
+/* Stored for the lan attach, and sent now when the c2c already runs. */
 int ovs_c2c_mac_mangle(char *name, uint8_t *mac)
 {
   char msg[MAX_PATH_LEN];
@@ -1411,7 +1429,7 @@ int  ovs_c2c_dyn_snf(char *name, int val)
   char *vh;
 
   if (cur == NULL)
-    KERR("ERROR %s", name);
+    KERR("ERROR sniff of c2c %s refused: no c2c of that name", name);
   else if (val)
     {
     if (cur->topo.endp_type == endp_type_c2cs)
@@ -1442,7 +1460,8 @@ int  ovs_c2c_dyn_snf(char *name, int val)
         if (strlen(cur->topo.attlan))
           {
           if (ovs_snf_send_del_snf_lan(name, 0, cur->vhost, cur->topo.attlan))
-            KERR("ERROR DEL KVMETH %s %s", name, cur->topo.attlan);
+            KERR("ERROR c2c %s: the del of its sniff on lan %s could not be "
+                 "sent", name, cur->topo.attlan);
           }
         ovs_dyn_snf_stop_process(tap);
         }

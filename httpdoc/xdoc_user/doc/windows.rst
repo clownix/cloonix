@@ -44,16 +44,16 @@ kind of disk you have::
     dd if=/tmp/s01.bin bs=512 skip=1 count=1 2>/dev/null | head -c 8 | od -c
     od -A d -t x1 -j 450 -N 1 /tmp/s01.bin
 
-*E F I   P A R T* on the first and *ee* on the second mean GPT and *add
-win*, which always boots OVMF; an MBR disk does not boot that way. The firmware
-is shipped in the qemu data directory of cloonfs, *bin/qemu*: the code
-*edk2-x86_64-code.fd*, read only, and, when the qemu tree it was built from
-carries one, the variables template *edk2-i386-vars.fd*. qemu trees since
-2025 ship no x86 template and build their OVMF for stateless use: the code
-alone is given to qemu, nothing is kept between boots, and the boot manager
-starts from *EFI/BOOT/BOOTX64.EFI* of the disk, which every microsoft image
-has. With a template, each machine gets a writable copy of it as a second
-pflash unit and the boot entry the firmware writes survives a reboot.
+*E F I   P A R T* on the first and *ee* on the second mean GPT, for *add
+win*, which always boots OVMF; an MBR disk does not boot that way. The
+firmware is in the qemu data directory of cloonfs, *bin/qemu*: the code,
+*edk2-x86_64-code.fd*, read only, and the variables template
+*edk2-i386-vars.fd* when the qemu tree it was built from has one. qemu trees
+since 2025 have no x86 template and build OVMF for stateless use: qemu gets
+the code alone, nothing is kept between boots, and the boot manager starts
+*EFI/BOOT/BOOTX64.EFI* of the disk, present on every microsoft image. With a
+template, each machine gets a writable copy of it as a second pflash unit,
+and the boot entry the firmware writes survives a reboot.
 
 
 The driver disc
@@ -77,12 +77,11 @@ the four things needed::
 The C-A-D button
 ================
 
-A windows machine shows *Press Ctrl+Alt+Del to sign in*, and that
-combination cannot be typed into a browser panel: the browser or the host
-desktop takes it first. The button labelled **C-A-D** at the top right of
-the desktop panel sends it and hands the keyboard back to the canvas. It is
-the only button of the panel, appears while the vnc session is connected,
-and is for the secure screens: sign-in, lock, Task Manager.
+A windows machine shows *Press Ctrl+Alt+Del to sign in*, a combination the
+browser or the host desktop takes before a browser panel. **C-A-D**, the one
+button at the top right of the desktop panel, shown while the vnc session is
+connected, sends it and hands the keyboard back to the canvas: sign-in,
+lock, Task Manager.
 
 
 Preparing the image, once

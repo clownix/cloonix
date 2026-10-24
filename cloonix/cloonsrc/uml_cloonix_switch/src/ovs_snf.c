@@ -93,25 +93,20 @@ static void timer_dumpcap_restart(void *data);
 static void defer_snf_restart(char *name, int num, int item_type,
                               char *vhost, char *lan);
 
-/* The eth of that name and number still exists and is of the s kind: what */
-/* makes an snf wanted on it.                                              */
-static int eth_still_sniffable(char *name, int num)
+/* An snf is wanted on the eth of a machine there, not being deleted, the eth
+   of the s kind. */
+static int eth_wants_snf(char *name, int num)
 {
+  t_cnt *cnt = find_cnt(name);
   t_vm *vm;
-  int nb_eth;
-  t_eth_table *eth_tab;
-  if (cnt_eth_table(name, &nb_eth, &eth_tab))
-    {
-    if ((num < 0) || (num >= nb_eth))
-      return 0;
-    return (eth_tab[num].endp_type == endp_type_eths);
-    }
+  if (cnt)
+    return ((!cnt->poweroff_done) && (num >= 0) &&
+            (num < cnt->cnt.nb_tot_eth) &&
+            (cnt->cnt.eth_table[num].endp_type == endp_type_eths));
   vm = cfg_get_vm(name);
-  if (!vm)
-    return 0;
-  if ((num < 0) || (num >= vm->kvm.nb_tot_eth))
-    return 0;
-  return (vm->kvm.eth_table[num].endp_type == endp_type_eths);
+  return ((vm) && (!vm->vm_to_be_killed) && (num >= 0) &&
+          (num < vm->kvm.nb_tot_eth) &&
+          (vm->kvm.eth_table[num].endp_type == endp_type_eths));
 }
 static t_snf *g_head_snf;
 static int g_nb_snf;
@@ -121,7 +116,7 @@ static int g_nb_snf;
 typedef struct t_snf_event
 {
   char tap[MAX_NAME_LEN];
-  char what[80];
+  char what[128];
   unsigned long at_ms;
 } t_snf_event;
 
@@ -282,8 +277,8 @@ static int snf_hist_has(char *tap, char *needle)
   return 0;
 }
 
-/* One death of an snf is seen from several places within a second; the    */
-/* history goes out with the first and the others refer to it.             */
+/* One death of an snf is seen from several places within a second; the */
+/* history goes out with the first and the others refer to it. */
 #define NB_HIST_DUMPED 64
 #define HIST_DUMP_AGAIN_MS 10000
 typedef struct t_hist_dumped
@@ -309,6 +304,21 @@ static int hist_dumped_recently(char *tap, unsigned long now)
   return -1;
 }
 
+/* The last event of the tap before its record was freed: what ended it. */
+static char *snf_hist_cause(char *tap)
+{
+  int i, idx;
+  for (i=1; i<=NB_SNF_HISTORY; i++)
+    {
+    idx = (g_snf_history_idx - i + NB_SNF_HISTORY) % NB_SNF_HISTORY;
+    if ((!g_snf_history[idx].tap[0]) || strcmp(g_snf_history[idx].tap, tap))
+      continue;
+    if (strncmp(g_snf_history[idx].what, "record freed", 12))
+      return g_snf_history[idx].what;
+    }
+  return "no event recorded";
+}
+
 /* One block: its head is gated, never a line in the middle of it. */
 static void snf_hist_dump(char *tap, char *why)
 {
@@ -316,10 +326,10 @@ static void snf_hist_dump(char *tap, char *why)
   int i, idx, passed, nb = 0, ago = hist_dumped_recently(tap, now);
   if (ago >= 0)
     {
-    KERR("  snf %s history (%s): as shown %d ms ago", tap, why, ago);
+    KERR("WARNING snf %s history (%s): as shown %d ms ago", tap, why, ago);
     return;
     }
-  KERR_HEAD(passed, "  snf %s history (%s):", tap, why);
+  KERR_HEAD(passed, "WARNING snf %s history (%s):", tap, why);
   for (i=0; i<NB_SNF_HISTORY; i++)
     {
     idx = (g_snf_history_idx + i) % NB_SNF_HISTORY;
@@ -328,11 +338,12 @@ static void snf_hist_dump(char *tap, char *why)
     if (strcmp(g_snf_history[idx].tap, tap))
       continue;
     nb += 1;
-    KERR_MORE(passed, "    %6lu ms ago: %s", now - g_snf_history[idx].at_ms,
-              g_snf_history[idx].what);
+    KERR_MORE(passed, "WARNING snf %s history: %lu ms ago: %s", tap,
+              now - g_snf_history[idx].at_ms, g_snf_history[idx].what);
     }
   if (!nb)
-    KERR_MORE(passed, "    nothing in the last %d snf events", NB_SNF_HISTORY);
+    KERR_MORE(passed, "WARNING snf %s history: nothing in the last %d snf "
+              "events", tap, NB_SNF_HISTORY);
 }
 
 int ovs_snf_get_qty(void)
@@ -398,15 +409,13 @@ static t_snf *find_snf(char *tap)
   return cur;
 }
 
-/* The dumpcap's <name_num>_pcap_sock/_fifo/_log go with the record; the log
-   is kept when the death was not asked for. */
+/* The dumpcap's <name_num>_pcap_sock/_log go with the record; the log is
+   kept when the death was not asked for. */
 static void snf_pcap_files_unlink(char *name_num, int stopped)
 {
   char path[MAX_PATH_LEN];
   char *dir = utils_get_snf_pcap_dir();
   snprintf(path, MAX_PATH_LEN-1, "%s/%s_pcap_sock", dir, name_num);
-  unlink(path);
-  snprintf(path, MAX_PATH_LEN-1, "%s/%s_pcap_fifo", dir, name_num);
   unlink(path);
   if (stopped)
     {
@@ -423,20 +432,24 @@ static void free_snf(t_snf *cur)
            cur->lan[0] ? cur->lan : "none", cur->mirror_on);
   if (!cur->being_stopped)
     {
-    snf_hist_dump(cur->tap, "the capture is gone with the eth still "
-                  "sniffable");
-    if (eth_still_sniffable(cur->name, cur->num))
+    if (eth_wants_snf(cur->name, cur->num))
       {
-      KERR("WARNING the capture of %s %d went on its own while its "
+      /* Restarted at once: one line; the history is dumped if the next
+         one fails too. */
+      KERR("WARNING the capture of %s %d went on its own (%s) while its "
            "interface is still marked sniffable: starting another one%s%s",
-           cur->name, cur->num, cur->lan[0] ? " on lan " : "",
-           cur->lan[0] ? cur->lan : "");
+           cur->name, cur->num, snf_hist_cause(cur->tap),
+           cur->lan[0] ? " on lan " : "", cur->lan[0] ? cur->lan : "");
       defer_snf_restart(cur->name, cur->num, cur->item_type, cur->vhost,
                         cur->lan[0] ? cur->lan : NULL);
       }
     else
-      KERR("WARNING the capture of %s %d went on its own, its interface "
-           "has gone too", cur->name, cur->num);
+      {
+      snf_hist_dump(cur->tap, "the capture is gone with its interface");
+      KERR("WARNING the capture of %s %d went on its own, its eth gone, "
+           "going or no longer sniffed: none started in its place",
+           cur->name, cur->num);
+      }
     }
   /* Take the mirror out of ovs, if this snf still owns one; a lan that no
      longer exists took it with its bridge. */
@@ -640,9 +653,8 @@ typedef struct t_kil_req
   int tries;
 } t_kil_req;
 
-/* A stop asked while the switch has not connected yet waits for the
-   connection, the heartbeat trying it, then goes on the channel: within the
-   watchdog of the process, which ends it at CTRL_LINK_GRACE_MS unconnected. */
+/* A stop before the switch connects waits for the connection, within the
+   process watchdog (CTRL_LINK_GRACE_MS). */
 #define SNF_KIL_WAIT 10
 #define SNF_KIL_TRIES ((CTRL_LINK_GRACE_MS / 10 - 100) / SNF_KIL_WAIT)
 
@@ -776,17 +788,16 @@ static void dumpcap_death(void *data, int status, char *tap)
     {
     cur->dumpcap_retried += 1;
     KERR("WARNING the dumpcap of %s %d died (status %d) before its snf was "
-         "ready, so its fifo did not exist yet. Starting another one",
-         cur->name, cur->num, status);
+         "ready, starting another one; its own account is in %s/%s_%d_pcap_log",
+         cur->name, cur->num, status, utils_get_snf_pcap_dir(), cur->name,
+         cur->num);
     snf_hist(cur->tap, "dumpcap died before the snf was ready, retrying");
     cur->dumpcap_pid = dumpcap_start(cur, cur->name_num);
     snf_hist(cur->tap, "its second dumpcap started as pid %d",
              cur->dumpcap_pid);
     return;
     }
-  /* EOF on the fifo: its writer, the snf, is gone, before or after it
-     told its pid; free_snf reports and restarts. The snf says itself when
-     it closes the fifo alive, on a write error. */
+  /* EOF on the fifo: the snf is gone; free_snf reports and restarts. */
   if ((status == 0) &&
       ((cur->pid == 0) || (!snf_pid_is_this_tap(cur->pid, cur->tap))))
     {
@@ -870,8 +881,7 @@ static int dumpcap_start(t_snf *cur, char *name_num)
     KERR("ERROR could not start %s -i %s", bin, snf_file);
     return 0;
     }
-  PLOG("dumpcap %d serving %s_pcap_sock and %s_pcap_fifo",
-       pid, snf_file, snf_file);
+  PLOG("dumpcap %d serving %s_pcap_sock", pid, snf_file);
   return pid;
 }
 
@@ -966,17 +976,24 @@ static void timer_heartbeat(void *data)
         {
         rpct_send_pid_req(cur->llid, type_hop_snf, cur->tap, 0);
         cur->count = 0;
+        /* Two audits in a row: a killed snf is seen by its dumpcap a few
+           ms before its channel closes. */
         if ((cur->pid > 0) && (!cur->being_stopped) &&
-            (!snf_pid_is_this_tap(cur->pid, cur->tap)) && (!cur->said_gone))
+            (!snf_pid_is_this_tap(cur->pid, cur->tap)))
           {
-          cur->said_gone = 1;
-          snf_hist_dump(cur->tap, "the record is here and the process is "
-                        "not");
-          KERR("ERROR snf %s of %s %d: its record says pid %d on llid %d, "
-               "and no process of that pid owns this tap. Nothing captures "
-               "it and no channel has closed to say so",
-               cur->tap, cur->name, cur->num, cur->pid, cur->llid);
+          cur->said_gone += 1;
+          if (cur->said_gone == 2)
+            {
+            snf_hist_dump(cur->tap, "the record is here and the process is "
+                          "not");
+            KERR("ERROR snf %s of %s %d: its record says pid %d on llid %d, "
+                 "and no process of that pid owns this tap. Nothing captures "
+                 "it and no channel has closed to say so",
+                 cur->tap, cur->name, cur->num, cur->pid, cur->llid);
+            }
           }
+        else if (cur->said_gone == 1)
+          cur->said_gone = 0;
         }
       if (cur->closed_count > 0)
         { 
@@ -1318,11 +1335,10 @@ static void timer_snf_defer(void *data)
       }
     KTRC("%s %d: the tap %s is free now, starting its snf", df->name,
          df->num, tap);
-    ovs_dyn_snf_start_process(df->name, df->num, df->item_type, df->vhost,
-                              df->cb);
-    /* The record exists now with no pid: the lan is filed as wanted and
-       the mirror is asked for when the pid arrives. */
-    if (df->lan[0])
+    /* Started: the record exists with no pid, the lan is filed as wanted
+       and the mirror is asked for when the pid arrives. */
+    if ((!ovs_dyn_snf_start_process(df->name, df->num, df->item_type,
+                                    df->vhost, df->cb)) && (df->lan[0]))
       ovs_snf_send_add_snf_lan(df->name, df->num, df->vhost, df->lan);
     clownix_free(df, __FUNCTION__);
     }
@@ -1427,8 +1443,8 @@ void ovs_dyn_snf_stop_process(char *tap)
     }
 }
 
-void ovs_dyn_snf_start_process(char *name, int num, int item_type,
-                               char *vhost, t_fct_cb cb)
+int ovs_dyn_snf_start_process(char *name, int num, int item_type,
+                              char *vhost, t_fct_cb cb)
 {
   t_snf *cur;
   char *root = g_root_path;
@@ -1436,6 +1452,14 @@ void ovs_dyn_snf_start_process(char *name, int num, int item_type,
   char tap[MAX_NAME_LEN];
   char *tp = tap;
 
+  /* A capture started for a machine being deleted outlives it. */
+  if (((item_type == item_type_ceth) || (item_type == item_type_keth)) &&
+      (!eth_wants_snf(name, num)))
+    {
+    KTRC("snf start for %s %d: its machine is going or its eth is no longer "
+         "sniffed, none started", name, num);
+    return -1;
+    }
   memset(name_num, 0, MAX_NAME_LEN);
   snprintf(name_num, MAX_NAME_LEN-1, "%s_%d", name, num);
   memset(tap, 0, MAX_NAME_LEN);
@@ -1449,7 +1473,7 @@ void ovs_dyn_snf_start_process(char *name, int num, int item_type,
     snf_hist(tap, "start asked, the snf already there is kept");
     if (!cur->callback_process_up)
       cur->callback_process_up = cb;
-    return;
+    return 0;
     }
   if (cur)
     {
@@ -1458,52 +1482,53 @@ void ovs_dyn_snf_start_process(char *name, int num, int item_type,
          name, num, vhost);
     ovs_dyn_snf_stop_process(tap);
     defer_snf_start(name, num, item_type, vhost, cb);
-    return;
+    return 0;
     }
   if ((item_type != item_type_keth) && (item_type != item_type_ceth) &&
       (item_type != item_type_tap) && (item_type != item_type_c2c) &&
       (item_type != item_type_nat) && (item_type != item_type_a2b) &&
       (item_type != item_type_phy))
+    {
     KERR("ERROR snf start for %s %d vhost %s: %d is not an item type that "
          "can be sniffed", name, num, vhost, item_type);
-  else
-    {
-    cur = (t_snf *) malloc(sizeof(t_snf));
-    memset(cur, 0, sizeof(t_snf));
-    g_snf_gen += 1;
-    cur->gen = g_snf_gen;
-    strncpy(cur->tap, tap, MAX_NAME_LEN-1);
-    strncpy(cur->name, name, MAX_NAME_LEN-1);
-    cur->num = num;
-    cur->item_type = item_type;
-    strncpy(cur->vhost, vhost, MAX_NAME_LEN-1);
-    if (snprintf(cur->socket, MAX_PATH_LEN, "%s/%s/c%s", root, SNF_DIR, tp)
-        >= MAX_PATH_LEN)
-      KOUT("ERROR the snf socket path does not fit: %s/%s/c%s",
-           root, SNF_DIR, tp);
-    cur->callback_process_up = cb;
-    if (g_head_snf)
-      g_head_snf->prev = cur;
-    cur->next = g_head_snf;
-    g_head_snf = cur;
-    snf_hist_forget(tap);
-    snf_hist(tap, "start: process launched for %s %d on vhost %s",
-             name, num, vhost);
-    snf_start(tap, name_num);
-      {
-      t_start_check *chk;
-      chk = (t_start_check *) clownix_malloc(sizeof(t_start_check), 34);
-      memset(chk, 0, sizeof(t_start_check));
-      strncpy(chk->tap, tap, MAX_NAME_LEN-1);
-      chk->gen = cur->gen;
-      clownix_timeout_add(SNF_START_CHECK, timer_start_check, (void *) chk,
-                          NULL, NULL);
-      }
-    strncpy(cur->name_num, name_num, MAX_NAME_LEN-1);
-    cur->dumpcap_pid = dumpcap_start(cur, name_num);
-    snf_hist(tap, "its dumpcap started as pid %d", cur->dumpcap_pid);
-    g_nb_snf += 1;
+    return -1;
     }
+  cur = (t_snf *) malloc(sizeof(t_snf));
+  memset(cur, 0, sizeof(t_snf));
+  g_snf_gen += 1;
+  cur->gen = g_snf_gen;
+  strncpy(cur->tap, tap, MAX_NAME_LEN-1);
+  strncpy(cur->name, name, MAX_NAME_LEN-1);
+  cur->num = num;
+  cur->item_type = item_type;
+  strncpy(cur->vhost, vhost, MAX_NAME_LEN-1);
+  if (snprintf(cur->socket, MAX_PATH_LEN, "%s/%s/c%s", root, SNF_DIR, tp)
+      >= MAX_PATH_LEN)
+    KOUT("ERROR the snf socket path does not fit: %s/%s/c%s",
+         root, SNF_DIR, tp);
+  cur->callback_process_up = cb;
+  if (g_head_snf)
+    g_head_snf->prev = cur;
+  cur->next = g_head_snf;
+  g_head_snf = cur;
+  snf_hist_forget(tap);
+  snf_hist(tap, "start: process launched for %s %d on vhost %s",
+           name, num, vhost);
+  snf_start(tap, name_num);
+    {
+    t_start_check *chk;
+    chk = (t_start_check *) clownix_malloc(sizeof(t_start_check), 34);
+    memset(chk, 0, sizeof(t_start_check));
+    strncpy(chk->tap, tap, MAX_NAME_LEN-1);
+    chk->gen = cur->gen;
+    clownix_timeout_add(SNF_START_CHECK, timer_start_check, (void *) chk,
+                        NULL, NULL);
+    }
+  strncpy(cur->name_num, name_num, MAX_NAME_LEN-1);
+  cur->dumpcap_pid = dumpcap_start(cur, name_num);
+  snf_hist(tap, "its dumpcap started as pid %d", cur->dumpcap_pid);
+  g_nb_snf += 1;
+  return 0;
 }
 
 void ovs_snf_resp_msg_vhost_up(int is_ko, char *vhost, char *name, int num)
@@ -1605,6 +1630,17 @@ void ovs_snf_resp_msg_del_lan(int is_ko, char *vhost, char *name, int num, char 
   if (!cur)
     KTRC("snf del response for %s %d on lan %s: no snf record", name, num,
          lan);
+  else if (!cur->llid)
+    {
+    /* no llid, never a mirror: the del of the snf before this one, whose
+       mac topology went with its record (free_snf) */
+    if (is_ko)
+      KERR("ERROR snf del REFUSED BY OVS for %s %d vhost %s on lan %s, the "
+           "mirror of the previous snf of that eth", name, num, vhost, lan);
+    else
+      KTRC("snf del for %s %d on lan %s answers the previous snf of that "
+           "eth", name, num, lan);
+    }
   else
     {
     if (is_ko)
@@ -1617,11 +1653,7 @@ void ovs_snf_resp_msg_del_lan(int is_ko, char *vhost, char *name, int num, char 
            "here", name, num, vhost, lan, cur->nb_add_ok, cur->nb_add_ko,
            cur->nb_del_ko);
       }
-    if (!cur->llid)
-      KERR("ERROR snf del for %s %d on lan %s: the snf has no llid, so the "
-           "mac topology is not told", name, num, lan);
-    else
-      mactopo_snf_del(name, num, lan, cur->llid);
+    mactopo_snf_del(name, num, lan, cur->llid);
     }
 }
 
@@ -1724,51 +1756,154 @@ int ovs_snf_send_del_snf_lan(char *name, int num, char *vhost, char *lan)
   return (result);
 }
 
-void ovs_snf_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
+/* A sync asked while its snf or air capture starts waits for it: 50 tries
+   of 200 ms. */
+#define SYNC_WAIT_TRIES 50
+#define SYNC_WAIT_MAX 64
+typedef struct t_sync_wait
+{
+  char name[MAX_NAME_LEN];
+  int llid;
+  int tid;
+  int num;
+  int cmd;
+  int tries;
+} t_sync_wait;
+static int g_nb_sync_wait;
+
+static void sync_send(t_snf *cur, int llid, int tid, char *name, int num,
+                      int cmd)
 {
   char msg[MAX_PATH_LEN];
+  if (cur->cli_llid)
+    {
+    KERR("WARNING wireshark sync for %s %d refused: a client request is "
+           "already outstanding on this snf", name, num);
+    send_sync_wireshark_resp(llid, tid, name, num, 1);
+    }
+  else
+    {
+    cur->cli_llid = llid;
+    cur->cli_tid = tid;
+    snprintf(msg, MAX_PATH_LEN-1,
+    "cloonsnf_sync_wireshark_req %s %d %d", name, num, cmd);
+    rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
+    }
+}
+
+static void timer_sync_wait(void *data)
+{
+  t_sync_wait *w = (t_sync_wait *) data;
+  t_snf *cur = find_snf_with_name_num(w->name, w->num);
+  if (!msg_exist_channel(w->llid))
+    KERR("WARNING wireshark sync for %s %d: its client left while the snf "
+           "started", w->name, w->num);
+  else if ((cur) && (cur->pid == 0) && (w->tries < SYNC_WAIT_TRIES))
+    {
+    w->tries += 1;
+    clownix_timeout_add(20, timer_sync_wait, (void *) w, NULL, NULL);
+    return;
+    }
+  else if (!cur)
+    {
+    KERR("ERROR wireshark sync for %s %d refused: its snf went while it "
+           "started", w->name, w->num);
+    send_sync_wireshark_resp(w->llid, w->tid, w->name, w->num, 1);
+    }
+  else if (cur->pid == 0)
+    {
+    KERR("ERROR wireshark sync for %s %d refused: its snf not ready after "
+           "10 s", w->name, w->num);
+    send_sync_wireshark_resp(w->llid, w->tid, w->name, w->num, 1);
+    }
+  else
+    sync_send(cur, w->llid, w->tid, w->name, w->num, w->cmd);
+  g_nb_sync_wait -= 1;
+  clownix_free(w, __FUNCTION__);
+}
+
+/* An air captured whose dumpcap starts (next beat, once suid_power made its
+   fifo): the sync waits for it, as for a snf. */
+static void timer_air_wait(void *data)
+{
+  t_sync_wait *w = (t_sync_wait *) data;
+  if (!msg_exist_channel(w->llid))
+    KERR("WARNING wireshark on the air %s: its client left while its "
+           "capture started", w->name);
+  else if (wifi_air_is_up(w->name))
+    send_sync_wireshark_resp(w->llid, w->tid, w->name, w->num, 2);
+  else if (!wifi_air_snf_on(w->name))
+    {
+    KERR("WARNING wireshark on the air %s refused: its capture stopped "
+           "while it started", w->name);
+    send_sync_wireshark_resp(w->llid, w->tid, w->name, w->num, 1);
+    }
+  else if (w->tries < SYNC_WAIT_TRIES)
+    {
+    w->tries += 1;
+    clownix_timeout_add(20, timer_air_wait, (void *) w, NULL, NULL);
+    return;
+    }
+  else
+    {
+    KERR("ERROR wireshark on the air %s refused: its capture not up after "
+           "10 s", w->name);
+    send_sync_wireshark_resp(w->llid, w->tid, w->name, w->num, 1);
+    }
+  g_nb_sync_wait -= 1;
+  clownix_free(w, __FUNCTION__);
+}
+
+/* A sync that waits, SYNC_WAIT_MAX of them at most. */
+static void sync_wait_arm(int llid, int tid, char *name, int num, int cmd,
+                          t_fct_timeout cb)
+{
+  t_sync_wait *w;
+  if (g_nb_sync_wait >= SYNC_WAIT_MAX)
+    {
+    KERR("WARNING wireshark sync for %s %d refused: %d syncs already wait",
+           name, num, g_nb_sync_wait);
+    send_sync_wireshark_resp(llid, tid, name, num, 1);
+    return;
+    }
+  w = (t_sync_wait *) clownix_malloc(sizeof(t_sync_wait), 34);
+  memset(w, 0, sizeof(t_sync_wait));
+  strncpy(w->name, name, MAX_NAME_LEN-1);
+  w->llid = llid;
+  w->tid = tid;
+  w->num = num;
+  w->cmd = cmd;
+  g_nb_sync_wait += 1;
+  clownix_timeout_add(20, cb, (void *) w, NULL, NULL);
+}
+
+void ovs_snf_sync_wireshark_req(int llid, int tid, char *name, int num, int cmd)
+{
   t_snf *cur = find_snf_with_name_num(name, num);
   if (wifi_air_in_use(name))
     {
-    /* an air has no snf: its capture is up or it is not */
-    if (!wifi_air_is_up(name))
-      KERR("WARNING wireshark on the air %s refused: not captured, cnf %s "
-           "sniff=on", name, name);
-    send_sync_wireshark_resp(llid, tid, name, num,
-                             wifi_air_is_up(name) ? 2 : 1);
-    }
-  else if (cur)
-    {
-    if (cur->pid != 0)
-      {
-      if (cur->cli_llid)
-        {
-        KERR("WARNING wireshark sync for %s %d refused: a client request is "
-               "already outstanding on this snf", name, num);
-        send_sync_wireshark_resp(llid, tid, name, num, 1);
-        }
-      else
-        {
-        cur->cli_llid = llid;
-        cur->cli_tid = tid;
-        snprintf(msg, MAX_PATH_LEN-1,
-        "cloonsnf_sync_wireshark_req %s %d %d", name, num, cmd);
-        rpct_send_sigdiag_msg(cur->llid, type_hop_snf, msg);
-        }
-      }
+    /* an air has no snf: its capture is up, starting, or off */
+    if (wifi_air_is_up(name))
+      send_sync_wireshark_resp(llid, tid, name, num, 2);
+    else if (wifi_air_snf_on(name))
+      sync_wait_arm(llid, tid, name, num, cmd, timer_air_wait);
     else
       {
-      KERR("ERROR wireshark sync for %s %d refused: its snf is not ready",
-             name, num);
+      KERR("WARNING wireshark on the air %s refused: not captured, cnf %s "
+           "sniff=on", name, name);
       send_sync_wireshark_resp(llid, tid, name, num, 1);
       }
     }
-  else
+  else if (!cur)
     {
     KERR("ERROR wireshark sync for %s %d refused: no snf of that name and "
            "eth", name, num);
     send_sync_wireshark_resp(llid, tid, name, num, 1);
     }
+  else if (cur->pid != 0)
+    sync_send(cur, llid, tid, name, num, cmd);
+  else
+    sync_wait_arm(llid, tid, name, num, cmd, timer_sync_wait);
 }
 
 void ovs_snf_init(void)

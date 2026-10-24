@@ -89,12 +89,10 @@ SEQ = {
 }
 
 class Keyboard:
-    """A daemon thread reads stdin and a queue hands the bytes over.
-
-    select() does not work on a windows console handle, and a plain
-    blocking read cannot tell the escape key from the first byte of an
-    arrow: both are 0x1b and only the wait afterwards separates them. The
-    queue can be asked with a timeout, which is the whole reason for it.
+    """A daemon thread reads stdin and a queue hands the bytes over: select()
+    does not work on a windows console handle, and only the wait after 0x1b
+    tells the escape key from an arrow, which the timeout of the queue
+    gives.
     """
 
     def __init__(self):

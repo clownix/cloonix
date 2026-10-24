@@ -67,7 +67,7 @@ frame is:
 * **type** 1, *control*: the frames that share the air, ACK, RTS, CTS;
 * **type** 2, *data*: the frames that carry the ip packets.
 
-The **subtype** gives the frame inside its type. In the capture filters of
+The **subtype** gives the frame inside its type. In the display filters of
 webshark the two are read together as *wlan.fc.type_subtype*.
 
 A capture of an air starts each frame with a **radiotap** header: the rate,
@@ -194,6 +194,7 @@ The display filters of webshark, typed in its filter bar:
 filter                                      frames
 ==========================================  ======================================
 wlan.fc.type_subtype == 0x0008              beacons
+wlan.fc.type_subtype != 0x0008              everything but the beacons
 wlan.fc.type_subtype == 0x0004              probe requests
 wlan.fc.type_subtype == 0x0005              probe responses
 wlan.fc.type_subtype == 0x000b              authentication, SAE included
@@ -201,17 +202,40 @@ wlan.fc.type_subtype == 0x0000              association requests
 wlan.fc.type_subtype == 0x0001              association responses
 wlan.fc.type_subtype == 0x000c              deauthentication
 eapol                                       the 4-way handshake, EAP
-wlan.fc.type == 2                           data frames
+wlan.fc.type == 2                           data frames, encrypted or not
 wlan.fc.protected == 1                      encrypted frames
+ip                                          the frames carrying IPv4, open air only
+icmp                                        the pings of an open air
+arp                                         the arp of an open air
 wlan.ssid == "cloonix"                      the frames naming this SSID
 wlan.addr == 02:00:00:00:00:10              the frames of one radio
 ==========================================  ======================================
 
-The button *Data only* of the webshark of an air keeps the data frames that
-carry a payload; *Show all* gives back the filter there was before. The
-chapter on the host system has the exact filter it applies. On an open network the ip of the data frames is
-readable; with WPA2 or WPA3 it is not, even for the medium: the capture of
-cloonix sees what a radio in monitor mode sees (*wifi/cntkvm_monitor.py*).
+The button *Data only* of the webshark of an air applies::
+
+    (wlan.fc.type_subtype == 0x20 || wlan.fc.type_subtype == 0x28) && !eapol
+
+and *Show all* gives back the filter there was before; a filter typed by
+hand ends it. It keeps Data and QoS Data, the 802.11 frames that carry a
+payload, and leaves out the Null function frames (a station telling the
+access point it sleeps or wakes), EAPOL (signalling carried in data frames),
+management (beacons, probes, authentication, association) and control (ACK,
+RTS, CTS). What a data frame carries, after an LLC/SNAP header naming the
+protocol, is what a lan carries::
+
+    ARP         before the first IPv4 packet between two machines
+    IPv4        and above it ICMP (ping), UDP (DNS, DHCP, NTP), TCP (ssh, http)
+    IPv6        sent by a Linux station as soon as it joins: neighbour discovery,
+                router solicitations, mDNS; webshark decodes IPv4, not IPv6,
+                so these show as Data
+    EAPOL       carried in data frames too, left out by Data only
+    any other   what a guest sends on its wlan: a VLAN tag, LLDP
+
+On an open air, *wifi/cnt_open.py*, the payload is decoded. With WPA2 or
+WPA3, *wifi/cnt_wpa2.py* and *wifi/cnt_wpa3.py*, the same frames show as *QoS
+Data ... (encrypted)*: their count, length and times, not their payload, and
+*ip* matches nothing. The capture of cloonix sees what a radio in monitor
+mode sees, *wifi/cntkvm_monitor.py*.
 
 
 The wifi demos, in the order of this chapter

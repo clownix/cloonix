@@ -4,7 +4,7 @@ that does not hold.
 
     ./testitall.py [net] [peer]          defaults: nemo mito
 
-Run by testitall.sh between the start of the two nets and the doc checks;
+Run by top_testitall.sh between the start of the two nets and the doc checks;
 runs alone too, on two nets already up. Both nets are erased first.
 
 The checks, in the order they run. A sniff is a "cloonix cli sniff" with a
@@ -79,6 +79,7 @@ import os
 import shutil
 import socket
 import subprocess
+import syslog
 import sys
 import tempfile
 import threading
@@ -420,7 +421,9 @@ def syslog_after(mark):
 
 
 def sudo_ok():
-    return subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode == 0
+    """Passwordless sudo here; a host without sudo has none, not an error."""
+    return bool(shutil.which("sudo")) and subprocess.run(
+        ["sudo", "-n", "true"], capture_output=True).returncode == 0
 
 
 def sudo_path(cmd):
@@ -470,12 +473,12 @@ def shared_file(name):
 
 
 def net_restart(net):
-    """The net stopped and started again: cloonix start for a bundle, the
-    toy's own cmd for a toy. Returns the CompletedProcess of the start."""
+    """The net started again after a cloonix stop: cloonix start for a
+    bundle, the toy's own cmd for a toy, which clears what the stop left.
+    Returns the CompletedProcess of the start."""
     if TOY:
         cmd = os.path.join(TOY, net, net + "cmd")
-        show("%s stop; %s start" % (cmd, cmd))
-        subprocess.run([cmd, "stop"], capture_output=True, text=True)
+        show("%s start" % cmd)
         return subprocess.run([cmd, "start"], capture_output=True, text=True)
     show("cloonix start %s" % net)
     return subprocess.run(CLOONIX + ["start", net], capture_output=True,
@@ -1169,9 +1172,8 @@ def t_flow_sniff():
         raise Fail("iperf fell to %.1f Mbit/s under a sniff that is read" % snd)
     must(cli("dump", "commands", quiet=True), "dump commands after the sniff")
 
-    # The client that does not read: its pipe fills and it stops taking
-    # frames from the doors connection. Nothing on the lan, and nothing the
-    # server answers, may depend on it.
+    # A client that does not read: nothing on the lan or from the server may
+    # depend on it.
     show("cloonix cli %s sniff %s eth0 --bytes   (stdout never read)"
          % (NET, FB))
     stuck = subprocess.Popen(CLOONIX + ["cli", NET, "sniff", FB, "eth0",
@@ -1402,16 +1404,10 @@ def t_flow_nat():
         must(cli("cnf", "tiflownat", "publish=%d:%d"
                  % (hport, IPERF_PORT)), "cnf publish")
         iperf_server(FB)
-        # No probing connect first: the guest's iperf3 -s takes one as a
-        # test, fails it and re-listens, and a try sent into that window is
-        # reset by the guest kernel. The ok of the publish is the promise
-        # under test here, so the first try goes straight in.
-        # A reset from passt means the guest did not answer its syn. Tried
-        # again once, 3 s later: an answer then is a race at the ok of the
-        # publish (the new passt not yet knowing the guest), still a fault
-        # and named as one; none at all is a broken publish.
-        # The second try is sniffed on the guest: whether the syn arrives
-        # there, and who resets, is what a failure must say.
+        # No probing connect (iperf3 -s takes it as a test, then resets): the ok of
+        # the publish is under test. A passt reset (guest silent to the syn) is
+        # retried once 3 s later, sniffed on the guest: an answer then is a race
+        # fault, none a broken publish.
         first = None
         seen = ""
         for attempt in (1, 2):
@@ -1528,11 +1524,23 @@ CHECKS = (
 )
 
 
+def phase(name):
+    """A marker in the syslog so every KERR after it belongs to a named step.
+
+    Outside the KERR namespace: the collector greps for both.
+    """
+    try:
+        syslog.syslog("CLOONIX-PHASE %s" % name)
+    except Exception:
+        pass
+
+
 def run_checks(checks, title, done):
     """The loop testitall.py and every sub_*.py share: first failure ends it."""
     print(title)
     for name, fn in checks:
         t = time.time()
+        phase(name)
         print("[%6.1fs] %s" % (t - T0, name))
         try:
             fn()

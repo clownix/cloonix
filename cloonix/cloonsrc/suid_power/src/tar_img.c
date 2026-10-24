@@ -213,7 +213,7 @@ static unsigned long le_num(unsigned char *p, int nb)
   return v;
 }
 
-/* PT_INTERP of a little-endian elf: 1 found, 0 none, -1 not an elf.        */
+/* PT_INTERP of a little-endian elf: 1 found, 0 none, -1 not an elf. */
 static int elf_interp(char *file, char *interp)
 {
   unsigned char h[64], p[56];
@@ -348,9 +348,11 @@ static int get_path_uid_image(char *bulktarget, int *uid_image,
         snprintf(host, MAX_PATH_LEN-1, "/var/lib/cloonix/bulk/%s", rel+11);
       else
         snprintf(host, MAX_PATH_LEN-1, "%s (its path on the host)", bulktarget);
+      /* chown -R would clear the setuid bits: a copy by tar keeps them */
       snprintf(why, MAX_PATH_LEN-1, "image %s is owned by another user "
-               "and this toy cannot write to it (persistent), on the host "
-               "run: sudo chown -R $USER: %s", bulktarget, host);
+               "and this toy cannot write to it (persistent), a copy of "
+               "your own on the host: d=%s; mkdir $d.mine && sudo tar -C $d "
+               "-cf - . | tar -C $d.mine -xpf -", bulktarget, host);
       result = -1;
       }
     }

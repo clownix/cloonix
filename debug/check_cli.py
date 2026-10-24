@@ -7,7 +7,9 @@ import sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 CLIENT = os.path.join(ROOT, "cloonix", "cloonix")
 SKIP_DIR = (".git", "__pycache__", "build", "build_user", "build_dev", "rootfs_targz_store")
-SKIP_EXT = (".png", ".jpg", ".jpeg", ".ico", ".gz", ".qcow2", ".pyc", ".o")
+# binaries, then editor and patch leftovers, which are no part of the tree
+SKIP_EXT = (".png", ".jpg", ".jpeg", ".ico", ".gz", ".qcow2", ".pyc", ".o",
+            "~", ".orig", ".rej", ".bak", ".swp", ".swo")
 
 src = open(CLIENT).read().replace('if __name__ == "__main__":', "if False:")
 G = {"__file__": CLIENT, "__name__": "cloonix_grammar"}

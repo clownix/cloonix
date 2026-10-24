@@ -8,7 +8,7 @@ The processes that exist for every net whether or not it has a guest.
 cloonix-main-server
 ===================
 
-Source: *cloonsrc/uml_cloonix_switch*, a *Makefile*, about sixty files. The
+Source: *cloonsrc/uml_cloonix_switch*, a *Makefile*, fifty C files. The
 only process holding the topology; no two helpers talk to each other
 directly. At start, in the order of *uml_clownix_switch.c*: read
 *cloonix.cfg* for the net named on the command line, check the work
@@ -29,7 +29,10 @@ directory, fork the helpers.
     targz.c               a cnt image given as bulk/<n>.tar.gz: extracted once into
                           bulk/<n>_targz by a clone, the add parked until it is there;
                           the tree keeps the modes of the archive, its protection is
-                          idmap_mount_ro of suid_power, the read only lower of the overlay
+                          idmap_mount_ro of suid_power, the read only lower of the overlay;
+                          a tree to redo that a container stands on (a mount of it in
+                          the mount table) is set aside as .<n>_targz.<pid>.old, erased
+                          by a later extraction once nothing stands on it
 
 Every helper is started the same way, *ovs.c* at *connect_ovs_try* being the
 model: write the socket path, fork the helper with it in argv, retry
@@ -39,18 +42,23 @@ connecting on a timer until it answers or a count runs out.
 cloonix-doorways
 ================
 
-Source: *cloonsrc/doorways*, a *Makefile*, about 2200 lines. Binds no tcp
+Source: *cloonsrc/doorways*, a *Makefile*, about 2700 lines. Binds no tcp
 port: it listens on *proxy_pmain.sock*, where proxymous delivers what
 arrived on *cloonix_port*, checks the hmac, and relays between that client
 and the unix socket of the main server, so the process holding the topology
 never listens on tcp. *dispach.c* routes the leg types; *llid_traffic.c* holds the
-data path and *check_wire_version*.
+data path and *check_wire_version*. A backdoor that closes is said only of
+a guest still known 10 s later (*BACKDOOR_CLOSE_GRACE_MS* of
+*llid_backdoor.c*): a delete tells suid_power to stop the guest and doorways
+to forget it in the same turn, so the backdoor can close first, and the
+death of a guest is reported by its owner, the switch for a qemu, suid_power
+and the switch for a container.
 
 
 cloonix-cxp-cli
 ===============
 
-Source: *cloonsrc/cxp_cli*, one file of about 650 lines::
+Source: *cloonsrc/cxp_cli*, one file of about 600 lines::
 
     cloonix-cxp-cli <ip:port | unix_socket> <passwd> <vm> [command...]
 
@@ -70,7 +78,7 @@ plus the message in *json_interface.c*.
 cloonix-proxymous
 =================
 
-Source: *cloonsrc/proxymous_passt*, a *Makefile*, about 6400 lines. The one
+Source: *cloonsrc/proxymous_passt*, a *Makefile*, about 4200 lines. The one
 process that stays on the host in the toy, hence its four jobs:
 
   * **The web door.** *jsweb_relay.c*, *proxy_tls.c*: accepts https on

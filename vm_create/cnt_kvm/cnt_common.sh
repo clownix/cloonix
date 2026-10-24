@@ -127,10 +127,8 @@ EOF
   return 0
 }
 
-# The delivered form of a container image is <dir>.tar.gz in bulk: the
-# server extracts it at the first use into <dir>_targz, never modified. The tree
-# was built in a user namespace, so it is packed from the same kind of
-# namespace, where its owners read 0..n, and erased from it afterwards.
+# Delivered as <dir>.tar.gz in bulk (extracted once into <dir>_targz); packed
+# and erased in a user namespace, as it was built.
 cnt_common_pack() {
   ROOTFS="$1"
   TARGZ="${ROOTFS}.tar.gz"

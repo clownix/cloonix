@@ -37,7 +37,7 @@ static void free_boundary(t_data_channel *dchan)
 static const unsigned char json_magic[JSON_MAGIC_LEN] = {
   0xCA, 0xFE, 0xDE, 0xCA, 0xCA, 0xFE, 0xDE, 0xCA };
 
-/* One flat chunk, so a magic spanning two chunks is found.                 */
+/* One flat chunk, so a magic spanning two chunks is found. */
 static void flatten_rx_chain(t_data_channel *dchan)
 {
   int total = 0, i = 0;

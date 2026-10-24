@@ -26,13 +26,16 @@ text{fill:#1a1a2e;font-size:12px}
 .cross{stroke:#e94560;stroke-width:3}
 </style>
 <rect width="900" height="150" fill="#ffffff"/>
-<circle cx="150" cy="60" r="22" fill="#e8e8e8" stroke="#7a8695" stroke-width="2"/><circle cx="150" cy="60" r="6" fill="#ffffff" stroke="#7a8695"/>
-<text x="150" y="98" text-anchor="middle" class="m">insider_agent_x86_64.iso</text>
-<circle cx="450" cy="60" r="22" fill="#e8e8e8" stroke="#7a8695" stroke-width="2"/><circle cx="450" cy="60" r="6" fill="#ffffff" stroke="#7a8695"/>
-<text x="450" y="98" text-anchor="middle" class="m">insider_agent_win_x86_64.iso</text>
-<circle cx="750" cy="60" r="22" fill="#e8e8e8" stroke="#7a8695" stroke-width="2"/><circle cx="750" cy="60" r="6" fill="#ffffff" stroke="#7a8695"/>
-<text x="750" y="98" text-anchor="middle" class="m">insider_agent_bsd_x86_64.iso</text>
-<text x="150" y="125" text-anchor="middle" class="s">linux kvm + cnt</text>
-<text x="450" y="125" text-anchor="middle" class="s">windows kvm</text>
-<text x="750" y="125" text-anchor="middle" class="s">freebsd kvm</text>
+<circle cx="112" cy="60" r="22" fill="#e8e8e8" stroke="#7a8695" stroke-width="2"/><circle cx="112" cy="60" r="6" fill="#ffffff" stroke="#7a8695"/>
+<text x="112" y="98" text-anchor="middle" class="m">insider_agent_x86_64.iso</text>
+<text x="112" y="125" text-anchor="middle" class="s">linux kvm</text>
+<circle cx="337" cy="60" r="22" fill="#e8e8e8" stroke="#7a8695" stroke-width="2"/><circle cx="337" cy="60" r="6" fill="#ffffff" stroke="#7a8695"/>
+<text x="337" y="98" text-anchor="middle" class="m">insider_agent_win_x86_64.iso</text>
+<text x="337" y="125" text-anchor="middle" class="s">windows kvm</text>
+<circle cx="562" cy="60" r="22" fill="#e8e8e8" stroke="#7a8695" stroke-width="2"/><circle cx="562" cy="60" r="6" fill="#ffffff" stroke="#7a8695"/>
+<text x="562" y="98" text-anchor="middle" class="m">insider_agent_bsd_x86_64.iso</text>
+<text x="562" y="125" text-anchor="middle" class="s">freebsd kvm</text>
+<path d="M763,44 h16 l5,6 h27 v32 h-48 z" fill="#fdf6e3" stroke="#c8a24a" stroke-width="2"/>
+<text x="787" y="98" text-anchor="middle" class="m">insider_agent_cnt/</text>
+<text x="787" y="125" text-anchor="middle" class="s">linux cnt, copied in</text>
 </svg>

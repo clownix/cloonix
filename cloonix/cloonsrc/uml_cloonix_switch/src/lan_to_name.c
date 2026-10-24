@@ -173,17 +173,17 @@ void lan_history_dump(char *name)
       continue;
     /* one block: the first line is gated, the others follow it */
     if (nb == 0)
-      KERR_HEAD(passed, "  lan %s history: %s (users=%d) %lu ms ago", name,
-                g_lan_history[idx].what, g_lan_history[idx].users,
+      KERR_HEAD(passed, "WARNING lan %s history: %s (users=%d) %lu ms ago",
+                name, g_lan_history[idx].what, g_lan_history[idx].users,
                 now - g_lan_history[idx].at_ms);
     else
-      KERR_MORE(passed, "  lan %s history: %s (users=%d) %lu ms ago", name,
-                g_lan_history[idx].what, g_lan_history[idx].users,
+      KERR_MORE(passed, "WARNING lan %s history: %s (users=%d) %lu ms ago",
+                name, g_lan_history[idx].what, g_lan_history[idx].users,
                 now - g_lan_history[idx].at_ms);
     nb += 1;
     }
   if (!nb)
-    KERR("  lan %s history: nothing in the last %d lan events",
+    KERR("WARNING lan %s history: nothing in the last %d lan events",
          name, NB_LAN_HISTORY);
 }
 

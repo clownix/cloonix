@@ -1,9 +1,9 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* Notice the installation directory (from /proc/self/exe) being deleted   */
-/* under a running net, toy or bundle alike. Then, both needed: the main    */
-/* server is asked to stop the "kill <net>" way, and a few seconds later    */
-/* the container init is killed, since pid 1 of the crun never returns and  */
-/* crun delete needs the state directory that has just gone.                */
+/* Notice the installation directory (from /proc/self/exe) being deleted */
+/* under a running net, toy or bundle alike. Then, both needed: the main */
+/* server is asked to stop the "kill <net>" way, and a few seconds later */
+/* the container init is killed, in case the server could not stop: crun */
+/* delete needs the state directory that has just gone. */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>

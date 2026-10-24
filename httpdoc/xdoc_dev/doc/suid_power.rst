@@ -67,7 +67,13 @@ Six steps, in *crun.c* and *crun_utils.c*:
 1. *crun_utils_create_overlay*: overlayfs, the image of bulk read-only
    below, a writable layer above. Twenty containers share one image.
 2. *create_config_json*: the OCI spec from the template in
-   *config_json.h*, mounts, capabilities, uid and gid maps, namespaces.
+   *config_json.h*, mounts, capabilities, uid and gid maps, namespaces,
+   and rp_filter 0 in *all* and *default* (*linux.sysctl*), which crun
+   writes inside the namespace of the container: a new namespace takes the
+   ipv4 settings of the host, whose rp_filter, 2 on systemd distributions,
+   drops what enters through an interface without address, a VRF device.
+   suid_power itself cannot write them in a toy, where its /proc/sys is
+   read-only.
 3. *crun create*: the container exists, paused; *read_crun_create_pid*
    reads the pid, the handle on every namespace.
 4. *crun_utils_create_veth*: one end in the switch namespace, the other

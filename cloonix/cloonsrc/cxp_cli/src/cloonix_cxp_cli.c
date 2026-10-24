@@ -1,5 +1,5 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The host end of the cloonix exec pipe: ssh, scp and get.                 */
+/* The host end of the cloonix exec pipe: ssh, scp and get. */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -123,7 +123,7 @@ static int tls_wrap(int fd)
   return -2;
 }
 
-/* One doorways frame: header, hmac of the payload, payload.               */
+/* One doorways frame: header, hmac of the payload, payload. */
 static int doors_tx(int type, int val, const char *payload, int len)
 {
   unsigned char head[DOORS_HDR];
@@ -151,7 +151,7 @@ static int doors_tx(int type, int val, const char *payload, int len)
   return 0;
 }
 
-/* The leg payloads make one byte stream; the cxp frames are cut from it.  */
+/* The leg payloads make one byte stream; the cxp frames are cut from it. */
 static char *g_doors_buf;
 static int   g_doors_len, g_doors_max;
 static char *g_strm_buf;

@@ -1,16 +1,16 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
 /* Runs a demo on the host for the gui server: the toy crun has no python. */
-/* A unix socket in the proxyshare directory carries the job. What travels  */
+/* A unix socket in the proxyshare directory carries the job. What travels */
 /* is the demo as the gui server read it from its own disk, never the bytes */
-/* the browser sent.                                                        */
-/*   ->  RUN <net> <len>\n  followed by <len> bytes of script                */
-/*   <-  O <line>\n         one per line of stdout and stderr               */
-/*   <-  E <code>\n         last, then the connection is closed             */
-/* The listener does setsid, closes inherited descriptors, PDEATHSIG is     */
-/* SIGTERM so it unlinks its socket. Environment switches for bisecting:    */
-/*   CLOONIX_DEMO_EXEC=0     do not start the runner                        */
-/*   CLOONIX_DEMO_NOFORK=1   bind the socket but do not fork the listener   */
-/*   CLOONIX_DEMO_KEEPFD=1   keep the inherited descriptors                 */
+/* the browser sent. */
+/* ->  RUN <net> <len>\n  followed by <len> bytes of script */
+/* <-  O <line>\n         one per line of stdout and stderr */
+/* <-  E <code>\n         last, then the connection is closed */
+/* The listener does setsid, closes inherited descriptors, PDEATHSIG is */
+/* SIGTERM so it unlinks its socket. Environment switches for bisecting: */
+/* CLOONIX_DEMO_EXEC=0     do not start the runner */
+/* CLOONIX_DEMO_NOFORK=1   bind the socket but do not fork the listener */
+/* CLOONIX_DEMO_KEEPFD=1   keep the inherited descriptors */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,7 +77,7 @@ static int read_all(int fd, char *buf, int len)
   return 0;
 }
 
-/* Read one byte at a time: the script bytes follow the line.              */
+/* Read one byte at a time: the script bytes follow the line. */
 static int read_line(int fd, char *buf, int max)
 {
   int i = 0;
@@ -175,6 +175,18 @@ static int job_stop(int pid)
   return 1;
 }
 
+/* The last lines of the demo running, told in the syslog if it fails. */
+#define DEMO_TAIL 8
+#define DEMO_TAIL_LEN 160
+static char g_tail[DEMO_TAIL][DEMO_TAIL_LEN];
+static int g_tail_nb;
+
+static void tail_keep(char *line)
+{
+  snprintf(g_tail[g_tail_nb % DEMO_TAIL], DEMO_TAIL_LEN, "%s", line);
+  g_tail_nb += 1;
+}
+
 static int job_relay(int fd, int in_fd, int out_fd, int pid)
 {
   char obuf[DEMO_MAX_LINE], kbuf[DEMO_MAX_LINE], out[DEMO_MAX_LINE + 8];
@@ -209,6 +221,7 @@ static int job_relay(int fd, int in_fd, int out_fd, int pid)
         obuf[i] = 0;
         if ((i > start) && (obuf[i-1] == '\r'))
           obuf[i-1] = 0;
+        tail_keep(obuf + start);
         snprintf(out, sizeof(out), "O %s\n", obuf + start);
         if ((!peer_gone) && (util_write_all(fd, out, (int) strlen(out))))
           {
@@ -254,13 +267,27 @@ static int job_relay(int fd, int in_fd, int out_fd, int pid)
   return nb_lines;
 }
 
+/* The first line of a demo after its shebang, quotes stripped. */
+static void demo_ident(char *script, char *ident, int len)
+{
+  char *p = script, *e;
+  if (!strncmp(p, "#!", 2) && (e = strchr(p, '\n')))
+    p = e + 1;
+  if (((*p == 'r') || (*p == 'R')) && ((p[1] == '"') || (p[1] == '\'')))
+    p++;
+  while ((*p == '"') || (*p == '\'') || (*p == '#') || (*p == ' '))
+    p++;
+  snprintf(ident, len, "%.*s", (int) strcspn(p, "\n"), p);
+}
+
 static void handle_job(int fd)
 {
   char line[DEMO_MAX_LINE], net[MAX_NAME_LEN], bindir[MAX_PATH_LEN];
   char tmp[] = "/tmp/cloonix_demo_XXXXXX";
   char cmd[2 * MAX_PATH_LEN];
-  char *script = NULL;
+  char *script = NULL, ident[DEMO_TAIL_LEN];
   int len = 0, tmpfd, rc = 0, code, nb_lines = 0, child_pid, in_fd, out_fd;
+  int i, passed;
 
   signal(SIGCHLD, SIG_DFL);
   DLOG("JOB start pid=%d", (int) getpid());
@@ -277,7 +304,7 @@ static void handle_job(int fd)
     }
   if (!net_name_is_sane(net))
     {
-    KERR("ERROR DEMOEXEC JOB bad net [%s]", net);
+    KERR("ERROR DEMOEXEC JOB bad net []");
     return;
     }
   if ((len <= 0) || (len > DEMO_MAX_SCRIPT))
@@ -299,6 +326,7 @@ static void handle_job(int fd)
     return;
     }
   script[len] = 0;
+  demo_ident(script, ident, sizeof(ident));
 
   tmpfd = mkstemp(tmp);
   if (tmpfd < 0)
@@ -345,10 +373,19 @@ static void handle_job(int fd)
   unlink(tmp);
   code = WIFEXITED(rc) ? WEXITSTATUS(rc) : 255;
   DLOG("JOB done lines=%d code=%d", nb_lines, code);
+  if (code)
+    {
+    KERR_HEAD(passed, "WARNING DEMOEXEC demo exited %d after %d lines: %s",
+              code, nb_lines, ident);
+    i = (g_tail_nb > DEMO_TAIL) ? g_tail_nb - DEMO_TAIL : 0;
+    for (; i < g_tail_nb; i++)
+      KERR_MORE(passed, "WARNING DEMOEXEC %s | %s", ident,
+                g_tail[i % DEMO_TAIL]);
+    }
   send_exit(fd, code);
 }
 
-/* PDEATHSIG is SIGTERM so the socket file gets unlinked.                   */
+/* PDEATHSIG is SIGTERM so the socket file gets unlinked. */
 static void listener_bye(int sig)
 {
   DLOG("LISTENER signal %d, unlinking %s", sig, g_sock_path);

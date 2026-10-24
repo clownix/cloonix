@@ -15,7 +15,8 @@ import threading
 import time
 import __main__ as DEMO
 
-from demolib import CLOONIX, NET, cli, put, show, ssh, story, trace
+from demolib import (CLOONIX, NET, cli, put, show, ssh, story, trace,
+                     unavailable)
 
 
 def hwsim_on_host():
@@ -23,7 +24,7 @@ def hwsim_on_host():
     local = os.path.isdir("/var/lib/cloonix/" + NET)
     if local and os.path.isdir("/sys/module") and \
        not os.path.isdir("/sys/module/mac80211_hwsim"):
-        sys.exit("the kernel module mac80211_hwsim is not loaded, and the\n"
+        unavailable("the kernel module mac80211_hwsim is not loaded, and the\n"
                  "  radios of wlan= are its phys. cloonix never loads a\n"
                  "  module; load it, then run this demo again:\n"
                  "    sudo modprobe mac80211_hwsim radios=0")

@@ -143,7 +143,7 @@ int main (int argc, char *argv[])
   memset(g_root_path, 0, MAX_PATH_LEN);
   memset(g_ctrl_path, 0, MAX_PATH_LEN);
   memset(g_snf_path, 0, MAX_PATH_LEN);
-/* Setuid binary: its arguments are not trusted.                            */
+/* Setuid binary: its arguments are not trusted. */
   if (!name_is_sane(argv[1]))
     KOUT("ERROR refused net name");
   if (!path_is_sane(argv[2]))
@@ -171,7 +171,7 @@ int main (int argc, char *argv[])
   close(fd);
   g_ms_setns = cloonix_now_ms();
   if (tun_tap_open(snf))
-    KOUT("Problem tap %s\n", snf);
+    KOUT("Problem tap %s", snf);
   g_ms_tap = cloonix_now_ms();
   ctrl_link_init(g_net_name, "snf", g_snf_name, type_hop_snf, g_ctrl_path);
   ctrl_link_keep_path(g_snf_path);

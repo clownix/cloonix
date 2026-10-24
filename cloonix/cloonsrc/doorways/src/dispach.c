@@ -84,7 +84,7 @@ void in_err_gene(int inside_llid, int err, int from)
   ilt = get_inside_transfert(inside_llid);
   if (!ilt)
     {
-    KERR("%d", inside_llid);
+    KERR("ERROR no transfer for llid %d", inside_llid);
     if (msg_exist_channel(inside_llid))
       msg_delete_channel(inside_llid);
     }
@@ -103,7 +103,7 @@ static void in_rx_switch(int inside_llid, int len, char *buf)
   ilt = get_inside_transfert(inside_llid);
   if (!ilt)
     {
-    KERR(" ");
+    KERR("ERROR rx on llid %d, which has no transfer", inside_llid);
     if (msg_exist_channel(inside_llid))
       msg_delete_channel(inside_llid);
     }
@@ -142,9 +142,7 @@ void dispach_door_end(int dido_llid)
     if (dido_llid != olt->dido_llid)
       KOUT(" ");
     inside_llid = olt->inside_llid;
-    /* dbssh only: tell the agent (guest socket closed, command killed) and
-       free the traffic record; the llid itself is freed once by free_transfert
-       below. llid_traf_delete here armed a deferred close on a reused llid. */
+    /* dbssh: tell the agent, free the record; the llid is freed once, below. */
     if (olt->type == doors_type_dbssh)
       llid_traf_client_gone(dido_llid);
     free_transfert(dido_llid, inside_llid, 0, __LINE__);
@@ -223,7 +221,7 @@ static void dispach_door_rx_switch(int dido_llid, int val, int len, char *buf)
       }
     }
   else
-    KERR("%d", val);
+    KERR("ERROR doors value %d not expected here", val);
 }
 
 /* A leg carries only these three vals from a client. */

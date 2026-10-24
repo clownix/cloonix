@@ -35,7 +35,8 @@ Set up, register callbacks, call the loop, never return.
     starved process, voluntary switches or major faults one blocked in
     the kernel. The loop itself says, at most once per ten seconds, where
     a late turn lost its time (*late loop*: *epoll_wait* back late, or one
-    turn of callbacks and its cpu). A stall line ends with what the
+    turn of callbacks and its cpu, with its slowest callback named by its
+    channel or as the timers). A stall line ends with what the
     machine did meanwhile, from */proc/stat*: steal, softirq, iowait, idle.
   * **KERR never blocks.** *syslog(3)* waits while the log daemon does not
     read */dev/log*; *KERR* sends on a non-blocking socket of its own, a

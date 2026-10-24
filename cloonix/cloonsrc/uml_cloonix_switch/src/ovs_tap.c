@@ -18,6 +18,7 @@
 #include "ovs_snf.h"
 #include "mactopo.h"
 #include "pthexec.h"
+#include "ack_pending.h"
 
 static t_ovs_tap *g_head_tap;
 static int g_nb_tap;
@@ -95,7 +96,7 @@ void ovs_tap_resp_add_lan(int is_ko, char *name, int num,
     if (is_ko)
       {
       mactopo_add_resp(0, item_tap, name, num, lan);
-      KTRC("tap %s: the add of lan %s was refused", name, lan);
+      KERR("ERROR tap %s: the add of lan %s was refused", name, lan);
       utils_send_status_ko(&(cur->llid), &(cur->tid), name);
       if (strlen(cur->lan_added))
         {
@@ -222,26 +223,32 @@ void ovs_tap_add(int llid, int tid, char *name)
     }
 }
 
+static int tap_del_busy(char *name)
+{
+  t_ovs_tap *cur = find_tap(name);
+  if (!cur)
+    return -1;
+  return ((cur->llid) || (cur->del_tap_req));
+}
+
 void ovs_tap_del(int llid, int tid, char *name)
 {
   t_ovs_tap *cur = find_tap(name);
   int val;
   if (!cur)
     {
-    KERR("ERROR %s", name);
+    KERR("ERROR del tap %s refused: it does not exist", name);
     if (llid)
       send_status_ko(llid, tid, "Does not exist");
     }
-  else if (cur->llid)
+  else if ((cur->llid) || (cur->del_tap_req))
     {
-    KERR("ERROR %s %d %d", name, cur->llid, cur->del_tap_req);
-    if (llid)
-      send_status_ko(llid, tid, "Not ready");
-    }
-  else if (cur->del_tap_req)
-    {
-    if (llid)
-      send_status_ko(llid, tid, "Not ready");
+    /* no client: the del all pass asking again while ovs answers */
+    if (!llid)
+      KTRC("tap %s: a request on it is in flight, the del all pass waits",
+           name);
+    else
+      del_when_free(llid, tid, name, "tap", tap_del_busy, ovs_tap_del);
     }
   else
     {
@@ -256,10 +263,12 @@ void ovs_tap_del(int llid, int tid, char *name)
       memset(cur->lan_added, 0, MAX_NAME_LEN);
       if (val == 2*MAX_LAN)
         {
+        cur->del_tap_req = 2;
         if (msg_send_del_tap(name, cur->vhost))
           {
-          KERR("ERROR %s", name);
+          KERR("ERROR tap %s: the del could not be sent to ovs", name);
           utils_send_status_ko(&(cur->llid), &(cur->tid), name);
+          free_tap(cur);
           }
         }
       else
@@ -280,11 +289,15 @@ void ovs_tap_del(int llid, int tid, char *name)
           }
         }
       }
-    else if (msg_send_del_tap(name, cur->vhost))
+    else
       {
-      KERR("ERROR tap %s: the del could not be sent to ovs", name);
-      utils_send_status_ko(&(cur->llid), &(cur->tid), name);
-      free_tap(cur);
+      cur->del_tap_req = 2;
+      if (msg_send_del_tap(name, cur->vhost))
+        {
+        KERR("ERROR tap %s: the del could not be sent to ovs", name);
+        utils_send_status_ko(&(cur->llid), &(cur->tid), name);
+        free_tap(cur);
+        }
       }
     }
 }
@@ -295,14 +308,13 @@ void ovs_tap_add_lan(int llid, int tid, char *name, char *lan)
   char err[MAX_PATH_LEN]; 
   if (!cur)
     {
-    KTRC("plug %s to tap %s: no tap of that name", lan, name);
+    KERR("ERROR plug %s to tap %s: no tap of that name", lan, name);
     send_status_ko(llid, tid, "Does not exist");
     }
   else if ((cur->llid) || (cur->del_tap_req))
     {
-    KERR("ERROR tap %s cannot take lan %s now: a request of its own is "
-         "still open (llid %d), or it is being deleted (%d)",
-         name, lan, cur->llid, cur->del_tap_req);
+    KERR("ERROR plug %s %s refused: %s", name, lan, cur->del_tap_req ?
+         "its delete is running" : "a request of its own is in flight");
     send_status_ko(llid, tid, "Not ready");
     }
   else if (strlen(cur->lan))
@@ -348,7 +360,8 @@ void ovs_tap_del_lan(int llid, int tid, char *name, char *lan)
     }
   else if ((cur->llid) || (cur->del_tap_req))
     {
-    KERR("ERROR %s %d %d", name, cur->llid, cur->del_tap_req);
+    KERR("ERROR unplug %s %s refused: %s", name, lan, cur->del_tap_req ?
+         "its delete is running" : "a request of its own is in flight");
     send_status_ko(llid, tid, "Not ready");
     }
   else

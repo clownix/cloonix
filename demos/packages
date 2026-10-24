@@ -4,6 +4,7 @@
 # debug/check_demos.py refuses a difference with learn.rst or with the tree.
 
 0 The first network
+all.py                       every demo of this list in a row, stopping at the first problem
 cloonix/cnt.py               two containers, one lan, one ping
 cloonix/kvm.py               the same with two virtual machines
 

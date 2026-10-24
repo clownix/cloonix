@@ -1,0 +1,18 @@
+# packages - the bind_demo part of the Demo picker of the bind toy, appended
+# to demos/packages by create_bind_toy_targz.sh. Same format: "<number>
+# <title>", then "<area>/<demo>.py  <one line>". The line is the section
+# title of the BIND 9 Administrator Reference Manual the demo plays.
+
+11 BIND 9 Administrator Reference Manual examples
+bind_demo/primary_authoritative.py    Primary Authoritative Name Server
+bind_demo/secondary_authoritative.py  Secondary Authoritative Name Server
+bind_demo/resolver.py                 Resolver Configuration
+bind_demo/forwarding_resolver.py      Forwarding Resolver Configuration
+bind_demo/selective_forwarding.py     Selective Forwarding Resolver Configuration
+bind_demo/load_balancing.py           Load Balancing
+bind_demo/dnssec.py                   DNSSEC: Zone Signing, Secure Delegation, Validation
+bind_demo/dynamic_update.py           Dynamic Update, The Journal File
+bind_demo/notify_ixfr.py              NOTIFY, Incremental Zone Transfers (IXFR)
+bind_demo/catalog_zones.py            Catalog Zones
+bind_demo/rpz.py                      DNS Firewalls and Response Policy Zones
+bind_demo/tsig.py                     TSIG

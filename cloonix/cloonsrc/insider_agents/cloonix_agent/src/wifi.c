@@ -1,9 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The radios of a kvm: mac80211_hwsim of the guest, wlan0 up to wlan3. The
-   agent is the medium of the guest: every frame of a radio goes to the host
-   with the index of the radio, doorways relays it to the radios on the same
-   air, and their frames come back here with the index of the radio to give
-   them to. Raw generic netlink: the agent links no library. */
+/* kvm radios (mac80211_hwsim wlan0-3): the agent is the guest's medium,
+   frames to and from the host tagged with the radio index; raw genl. */
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,7 +14,6 @@
 #include "commun.h"
 #include "sock.h"
 
-#ifdef __linux__
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -77,7 +73,6 @@ static uint64_t msec(void)
   return ((uint64_t) tv.tv_sec * 1000) + (tv.tv_usec / 1000);
 }
 
-/*--------------------------------------------------------------------------*/
 static void to_host(int type, int val, int len, char *data)
 {
   char buf[MAX_A2D_LEN];
@@ -96,7 +91,7 @@ static void say(int val, char *txt)
   to_host(header_type_wifi_ctrl, val, strlen(txt) + 1, txt);
 }
 
-/*------------------------------ netlink ----------------------------------*/
+/* netlink */
 static void msg_init(char *m, int type, int flags, int cmd)
 {
   struct nlmsghdr *nh = (struct nlmsghdr *) m;
@@ -150,9 +145,8 @@ static void attrs_parse(struct nlmsghdr *nh, struct nlattr **tb, int max)
 #define ADATA(a) ((void *) ((char *) (a) + NLA_HDRLEN))
 #define ALEN(a)  ((int) ((a)->nla_len - NLA_HDRLEN))
 
-/* A request and its answer, blocking, 2 s at most: 0 or -errno; the
-   family id of a GETFAMILY in fam. The kernel acks a new radio with its
-   index. */
+/* Blocking request/answer, 2 s max: 0, a new radio's index or -errno; fam
+   gets the GETFAMILY id. */
 static int request(int fd, char *m, int *fam)
 {
   static char rx[NL_BUF];
@@ -201,7 +195,7 @@ static int family(int fd)
   return fam;
 }
 
-/*------------------------------ the medium -------------------------------*/
+/* the medium */
 /* A frame given to the radio came from its air: its sender is a peer
    until doorways sends the next list, before the one it may be late with. */
 static void peer_heard(t_radio *r, uint8_t *mac)
@@ -442,12 +436,9 @@ void wifi_events(fd_set *infd)
     }
 }
 
-/*------------------------------ the radio --------------------------------*/
-/* systemd-networkd leaves the radios to the user: its 80-wifi-*.network
-   would take a wlan and flush the addresses given by hand. Two ways, made
-   before the radios: the udev property ID_NET_MANAGED_BY (systemd 255 and
-   later), set as each radio appears, whatever networkd has loaded yet; and
-   an Unmanaged .network with a reload, for an older networkd. */
+/* the radio */
+/* Keep systemd-networkd off the radios: udev ID_NET_MANAGED_BY (systemd
+   255+), else an Unmanaged .network and a reload. */
 #define NETWORKD_RUN "/run/systemd/network"
 #define UDEV_RUN "/run/udev/rules.d"
 static void udev_hands_off(uint8_t *mac, int nb)
@@ -626,29 +617,3 @@ int wifi_get_fd(void)
   return g_fd;
 }
 
-#else
-
-void wifi_rx_host_frame(int len, char *rx)
-{
-}
-
-void wifi_events(fd_set *infd)
-{
-}
-
-void wifi_rx_host_ctrl(int val, int len, char *rx)
-{
-  char buf[MAX_A2D_LEN];
-  int headsize = sock_header_get_size();
-  char *txt = "no wifi radio on this guest";
-  memcpy(buf + headsize, txt, strlen(txt) + 1);
-  send_to_virtio(0, 0, 0, header_type_wifi_ctrl, header_val_wifi_ko,
-                 strlen(txt) + 1, buf);
-}
-
-int wifi_get_fd(void)
-{
-  return -1;
-}
-
-#endif

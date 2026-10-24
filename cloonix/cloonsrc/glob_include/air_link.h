@@ -1,7 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The air link: suid_power, medium of every air, and doorways, relay of the
-   kvm radios. One seqpacket socket, <root>/air_link, listened by suid_power.
-   A message: its type, the kvm name, then the payload the agent has. */
+/* Air link suid_power (medium) <-> doorways (kvm radios): seqpacket
+   <root>/air_link; message: type, kvm name, agent payload. */
 #ifndef AIR_LINK_H
 #define AIR_LINK_H
 

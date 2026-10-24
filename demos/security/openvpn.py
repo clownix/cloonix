@@ -51,16 +51,14 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
     NET, build, check_net, choose_rootfs, count_on, erase_net, place, put,
-    reached, run, ssh, step, story, tools_present)
+    reached, run, ssh, step, story, tools_present, unavailable)
 
 HISTORY = """\
 OpenVPN was written by James Yonan and first released in 2001. It runs
-entirely in user space on top of a tun or tap device and uses the OpenSSL
-library for its cryptography, which made it easy to port and easy to run
-through NAT and firewalls -- it just looks like a UDP flow. For two decades it
-was the default do-it-yourself VPN before WireGuard arrived; the wg demo in
-this same area is the deliberate modern comparison. Here it is shown in its
-oldest and simplest mode: two peers and a single shared key.
+entirely in user space on top of a tun device and uses OpenSSL for its
+cryptography; on the wire it is one UDP flow, which crosses NAT and
+firewalls as any other. For two decades it was the default do-it-yourself
+VPN before WireGuard; the wg demo in this area is the modern comparison.
 """
 
 ROOTFS_CHOICES = ("openvpn_trixie",)
@@ -81,7 +79,7 @@ GATEWAY = {}
 def ensure_tun(node):
     r = ssh(node, "test -c /dev/net/tun && echo yes || echo no", check=False)
     if "yes" not in r:
-        sys.exit("%s has no /dev/net/tun.\n"
+        unavailable("%s has no /dev/net/tun.\n"
                  "  the container is given this node whenever the host has it.\n"
                  "  On the host, once per boot, load the module as yourself:\n"
                  "    sudo modprobe tun\n"
@@ -156,7 +154,7 @@ def main():
     ok_ping = reached(r)
     story()
 
-    step("act 3: what the underlay actually carried")
+    step("act 3: what the underlay carried")
     story()
     udp = count_on(OVS, 0, "udp port 1194",
                    lambda: ssh(OVS, "ping -c 5 10.8.0.2", check=False),
@@ -181,7 +179,7 @@ def main():
                  % (ok_ping, ok_udp, ok_hidden))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the tunnel interface and a ping over it:
     cloonix cli %s ssh ovs "ip addr show tun0"

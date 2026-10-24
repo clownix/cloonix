@@ -11,18 +11,14 @@ One container, one wire, one nat::
   10.117.0.10        10.117.0.1
    nginx :80          = passt
 
-A cloonix network is isolated and the nat is egress only. Publishing a port
-is how the one exception is asked for, and it is spelled the way docker
-spells it: publish=HOSTPORT:80.
+A cloonix network is isolated and its nat is egress only; a published port
+is the one way in, spelled as docker spells it, publish=HOSTPORT:80.
 
   ACT 1  the container, the nat, the wire.
   ACT 2  nginx started inside Cnt1, serving one page, read from inside.
-  ACT 3  the same page asked for from the HOST, with nothing published.
+  ACT 3  the same page asked for from the host, with nothing published.
   ACT 4  the port published, and the same question answered.
-  ACT 5  the port moved, then taken away, nginx never being told any of it.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself.
+  ACT 5  the port moved, then taken away, nginx never told of it.
 
 Image: proxy_trixie (nginx-light and curl)
 Size:  1 container, 1 lan, 1 nat
@@ -34,65 +30,36 @@ THE PACKET TO CATCH
     cloonix cli nemo cnf Cnt1 eth0 sniff=on
     cloonix cli nemo sniff Cnt1 eth0 --dump tcp port 80
 
-  Note the port in that filter. The connection leaves the host as
-  HOSTPORT and arrives on this wire as 80, and the subscription proves
-  which of the two numbers is really on the wire -- filter on HOSTPORT
-  instead and nothing is caught at all.
-
-  Run the same subscription during ACT 3, before anything is published,
-  and nothing appears either. There is nothing to drop and no rule
-  refusing anything: the connection was never carried in the first place,
-  so it never reached this wire to be seen.
+  The connection leaves the host as HOSTPORT and arrives on this wire as
+  80: a filter on HOSTPORT catches nothing. During ACT 3, nothing being
+  published, nothing appears either: the connection is never carried, so
+  there is nothing to drop.
 
 Important
-  The image is proxy_trixie because it already carries nginx-light and
-  curl, and the demo needs nothing else. There is no nginx image of its
-  own and there does not need to be.
+  The address is set by hand: passt is started with -a 10.117.0.10 -g
+  10.117.0.1, which two commands write, where a dhcp client costs a hundred
+  lines; demos/cloonix/nat.py shows the dhcp exchange.
 
-  The address is set by hand rather than by dhcp. passt is started with
-  -a 10.117.0.10 -g 10.117.0.1, so those two are what it expects to see on
-  the wire, and writing them into the container directly costs two
-  commands where a dhcp client costs a hundred lines. The nat demo
-  (demos/cloonix/nat) is the one that shows the dhcp exchange; this one is
-  about the other direction and stays out of its way.
+  The host port is asked of the kernel, not fixed, so a second run does not
+  meet the port of the first; it is printed, to put in a browser.
 
-  The host port is asked of the kernel rather than fixed, so running this
-  demo twice does not fight whatever took the port the first time. The
-  number is printed, and it is what to put in a browser.
-
-  A cnf restarts passt, which cuts every connection through that nat. The
-  container keeps its address and notices nothing else. Where that matters,
-  publish at creation instead of changing it afterwards.
+  A cnf restarts passt, which cuts every connection through that nat; the
+  container keeps its address. Where that matters, publish at creation.
 
 WHAT A PUBLISHED PORT IS
 ------------------------
-A cloonix network is isolated. The nat is the way out, and it is egress
-only: the container reaches the outside, and nothing outside can open a
-connection to the container. Publishing a port is how you ask for the one
-exception, and it is spelled the way docker spells it:
+The nat is passt, an unprivileged process on the host owning the real
+sockets. A published port is one more -t argument of that process: passt
+binds the port on the host and carries what arrives to the container. No
+firewall rule is written, no privilege taken, and the port goes with the
+nat. docker reaches the same result with an iptables DNAT rule and a
+userland proxy, both root, both able to outlive their container:
 
     cloonix cli nemo add nat nat1 publish=8080:80
-
-8080 on the host reaches 80 in the container. publish=5353:53/udp does
-the same for udp. On a nat already up the same spelling is a cnf, and each
-cnf replaces the whole list:
-
     cloonix cli nemo cnf nat1 publish=9090:80
     cloonix cli nemo cnf nat1 publish=none
 
-The mechanism is smaller than it looks. The nat is built on **passt**, a
-process on the host, unprivileged, that already owns the real sockets --
-that is what a cloonix nat is. A published port becomes the -t argument of
-that process, so passt binds the port on the host and carries what arrives
-on it to the container. Nothing is added to the host's firewall, no rule is
-written anywhere, and no privilege is taken: it is one more socket held by
-a process that already holds sockets. When the nat goes, the port goes with
-it, because the process that was holding it is gone.
-
-That is the difference worth keeping in mind against docker, which reaches
-the same result with an iptables DNAT rule and a userland proxy, both of
-which need root and both of which can survive the container that asked for
-them.
+publish=5353:53/udp does the same for udp; each cnf replaces the whole list.
 """
 import glob
 import os
@@ -107,8 +74,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    NET, answers, check_net, erase_net, in_lst, place, put, reached, run,
-    ssh, step, story, wait_exists)
+    NET, answers, check_net, erase_net, place, put, reached, run, ssh, step,
+    story, wait_exists, unavailable, needs_subuid, guarded)
 
 ROOTFS_CHOICES = ("proxy_trixie",)
 
@@ -146,7 +113,7 @@ def choose_rootfs():
         if ok:
             return cand
         said = (r.stdout + r.stderr).strip() or "nothing"
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -203,8 +170,8 @@ def knock(port, timeout=4):
 
     A socket rather than curl: the demo must run where curl is not
     installed, and what is wanted here is the plain answer to "did the
-    connection open at all", which an exception name gives better than a
-    tool's exit code.
+    connection open at all", answered by the name of an exception rather
+    than by the exit code of a tool.
     """
     try:
         with socket.create_connection(("127.0.0.1", port), timeout) as sk:
@@ -268,6 +235,7 @@ CARD = r"""
 """
 
 def main():
+    needs_subuid()
     step("checking the server")
     check_net()
 
@@ -464,7 +432,7 @@ def main():
           % (last, body_of(said).strip().split("\n")[0] or "(nothing)"))
 
     story("""
-the network is left up, with the port published. Things worth trying:
+the network is left up, with the port published. Things to try:
 
   read the page in a browser on this machine:
     http://127.0.0.1:%d/
@@ -483,16 +451,4 @@ the network is left up, with the port published. Things worth trying:
 """ % (last, last, NET, CNT, NET, CNT, NET, CNT, NET, NAT))
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit as stop:
-        if stop.code:
-            sys.stderr.write("%s\n" % stop.code)
-            up = [n for n in (CNT, NAT) if in_lst(n)]
-            if up:
-                sys.stderr.write("Still running: %s\n" % ", ".join(up))
-            raise SystemExit(1)
-        raise
-    except RuntimeError as err:
-        sys.stderr.write("%s\n" % err)
-        raise SystemExit(1)
+    guarded(main, (CNT, NAT))

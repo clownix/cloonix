@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """sub_webshark_wifi - webshark on the capture of an air, with no radio: a
-pcap of radiotap 802.11 frames, the kinds an air carries, written into the
-fifo webshark reads. Checked on its websocket: the link type 127 sent to the
+pcap of radiotap 802.11 frames, the kinds an air carries, served on the
+capture socket webshark subscribes to, <snf>_pcap_sock, as the fan-out of a
+dumpcap serves it. Checked on its websocket: the link type 127 sent to the
 page (it shows the button Data only), the decoding of each frame (beacon and
 SSID, probe, authentication, association, the four EAPOL messages, an
 encrypted data frame, ARP and ICMP carried over LLC/SNAP, ACK, deauth,
@@ -155,24 +156,31 @@ def sub_webshark_wifi():
     if not binary:
         raise Fail("no cloonix-webshark in %s" % ", ".join(b for b in BIN if b))
     base = "/tmp/tisub_ws_%d" % os.getpid()
-    sock, fifo = base + ".sock", base + "_pcap_fifo"
-    for f in (sock, fifo):
+    sock, feed = base + ".sock", base + "_pcap_sock"
+    for f in (sock, feed):
         if os.path.exists(f):
             os.unlink(f)
-    os.mkfifo(fifo)
+    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    srv.bind(feed)
+    srv.listen(1)
     proc = subprocess.Popen([binary, "-f", sock, base],
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL)
     data = pcap()
     done = threading.Event()
 
-    def write():
-        # held open as dumpcap holds it: an end of file stops the capture
-        with open(fifo, "wb") as f:
-            f.write(data)
-            f.flush()
+    def serve():
+        # one subscriber, held open as the fan-out holds it: a close stops
+        # the capture
+        srv.settimeout(20)
+        try:
+            conn, _a = srv.accept()
+        except OSError:
+            return
+        with conn:
+            conn.sendall(data)
             done.wait(30)
-    threading.Thread(target=write, daemon=True).start()
+    threading.Thread(target=serve, daemon=True).start()
     try:
         end = time.time() + 15
         while not os.path.exists(sock) and time.time() < end:
@@ -222,6 +230,7 @@ def sub_webshark_wifi():
             print("      filter %s: frames %s" % (expr, shown))
     finally:
         done.set()
+        srv.close()
         proc.terminate()
         try:
             proc.wait(timeout=5)

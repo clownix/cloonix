@@ -27,7 +27,7 @@ THE PACKET TO CATCH
     cloonix cli nemo sniff web eth0 --dump tcp port 8080
     cloonix cli nemo sniff web eth0 --dump tcp port 8443
 
-  On 8080 the packet worth catching is the reply, the page readable in it.
+  On 8080 the packet to catch is the reply, the page readable in it.
   On 8443 it is the first one of the client, the ClientHello: the last
   readable thing of the connection, the versions and ciphers it offers.
 
@@ -212,12 +212,12 @@ def main():
     wanted = NEEDLE.decode()
     if page != wanted or page_tls != wanted:
         sys.exit("the page did not arrive: http=%r https=%r" % (page, page_tls))
-    if plain_seen is False or tls_seen or not refused:
+    if plain_seen is not True or tls_seen is not False or not refused:
         sys.exit("a check failed: string on 8080=%s, on 8443=%s, refused=%s"
                  % (plain_seen, tls_seen, refused))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the handshake, certificate and ciphers, as openssl sees them:
     cloonix cli %s ssh client "openssl s_client -connect 10.0.0.2:8443 </dev/null"

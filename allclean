@@ -19,7 +19,6 @@ CLOONSRC=${SRC_TREE_ROOT}/cloonix/cloonsrc
     ./allclean
   done
   for i in  doorways \
-            proxymous_passt \
             suid_power \
             uml_cloonix_switch \
             insider_agents/cloonix_agent ; do
@@ -47,4 +46,4 @@ CLOONSRC=${SRC_TREE_ROOT}/cloonix/cloonsrc
   rm -f ${CLOONSRC}/insider_agents/insider_agent_win_x86_64.iso
   rm -rf ${CLOONSRC}/insider_agents/cdrom
   rm -rf ${CLOONSRC}/insider_agents/cdrom_win
-  rm -rf cloonix/__pycache__
+  rm -rf ${CLOONSRC}/insider_agents/insider_agent_cnt

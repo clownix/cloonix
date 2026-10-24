@@ -27,6 +27,7 @@
 #include "mactopo.h"
 #include "proxycrun.h"
 #include "pthexec.h"
+#include "ack_pending.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_bin_nat_main[MAX_PATH_LEN];
@@ -192,9 +193,8 @@ static void timer_heartbeat(void *data)
   while(cur)
     {
     next = cur->next;
-    /* An answer that never comes must not block the nat for ever. The
-       lan goes with its last cable before the answer of the del clears
-       it here: only a name still held after 5 s is stale. */
+    /* A missing answer must not block the nat: a name held after 5 s is
+           stale. */
     if ((strlen(cur->lan)) && (!lan_get_with_name(cur->lan)))
       {
       cur->lan_gone_count += 1;
@@ -232,8 +232,9 @@ static void timer_heartbeat(void *data)
     if (cur->closed_count)
       {
       /* The helper never restarts: a closed channel is a dead helper. */
-      KERR("WARNING nat %s: its channel closed, the client request is "
-           "refused and the nat is freed", cur->name);
+      KERR("WARNING nat %s: its channel closed, the nat is freed%s",
+           cur->name, ((cur->cli_llid) || (cur->pub_llid)) ?
+           ", the client request it held is refused" : "");
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), cur->name);
       utils_send_status_ko(&(cur->pub_llid), &(cur->pub_tid), cur->name);
       free_nat(cur);
@@ -273,17 +274,16 @@ static void timer_heartbeat(void *data)
       }
     else if (cur->watchdog_count >= 500)
       {
-      KERR("KILL nat %s REAPED by watchdog: watchdog_count reached %d "
-           "(~10s no heartbeat answer) socket=%s",
+      KERR("ERROR nat %s killed by the watchdog: no heartbeat answer for %d "
+           "beats (about 10 s), socket %s",
            cur->name, cur->watchdog_count, cur->socket);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), cur->name);
       free_nat(cur);
       }
     else
       {
-      /* A passt gone is the helper's call: it retries 15 s then dies, and
-         the watchdog above reaps it. The state is asked with the pid, to
-         keep last_gen current for a publish. */
+      /* passt gone: the helper retries 15 s then dies, reaped above; asked with
+               the pid to keep last_gen current. */
       cur->count += 1;
       if (cur->count == 5)
         {
@@ -387,9 +387,8 @@ void ovs_nat_main_sigdiag_resp(int llid, int tid, char *line)
       {
       if (cur->pub_llid == 0)
         cur->last_gen = gen;
-      /* Up only on a connection newer than the request (generation grew), a
-         pid written by the new passt (the old connection is the passt being
-         replaced) and a frame back from it: it knows the guest. */
+      /* Up only on a newer connection (generation grew), a pid from the new
+               passt and a frame back from it. */
       pid = passt_pid_of(name);
       if ((cur->pub_llid) && (connected) && (alive) &&
           (gen != cur->pub_old_gen) && (pid != 0) && (pid != cur->pub_old_pid))
@@ -509,7 +508,8 @@ void ovs_nat_main_resp_add_lan(int is_ko, char *name, int num,
   if (!cur)
     {
     mactopo_add_resp(0, item_nat, name, num, lan);
-    KERR("ERROR %d %s", is_ko, name); 
+    KERR("ERROR the add of a lan is answered for nat %s, which no longer "
+         "exists (ovs said ko=%d)", name, is_ko);
     }
   else
     {
@@ -519,7 +519,7 @@ void ovs_nat_main_resp_add_lan(int is_ko, char *name, int num,
     if (is_ko)
       {
       mactopo_add_resp(0, item_nat, name, num, lan);
-      KTRC("nat %s: the add of lan %s was refused", name, lan);
+      KERR("ERROR nat %s: the add of lan %s was refused", name, lan);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), name);
       if (strlen(cur->lan_added))
         {
@@ -619,7 +619,14 @@ void ovs_nat_main_add(int cli_llid, int cli_tid, char *name, char *ports)
 }
 
 /* Beats a request may be outstanding before it counts as slow. */
-#define NAT_SLOW_ANSWER_BEATS 50
+
+static int nat_del_busy(char *name)
+{
+  t_ovs_nat_main *cur = find_nat(name);
+  if (!cur)
+    return -1;
+  return ((cur->cli_llid) || (cur->del_nat_req));
+}
 
 void ovs_nat_main_del(int cli_llid, int cli_tid, char *name)
 {
@@ -633,16 +640,13 @@ void ovs_nat_main_del(int cli_llid, int cli_tid, char *name)
     }
   else if ((cur->cli_llid) || (cur->del_nat_req))
     {
-    if (cur->stuck_count < NAT_SLOW_ANSWER_BEATS)
-      KTRC("nat %s is busy with a request sent %d beat(s) ago, this delete "
-           "is refused", name, cur->stuck_count);
+    /* no client: the del all pass asking again while ovs answers */
+    if (!cli_llid)
+      KTRC("nat %s: a request on it is in flight, the del all pass waits",
+           name);
     else
-      KERR("ERROR nat %s not ready for a delete: cli_llid=%d "
-           "del_nat_req=%d, the previous request has been outstanding for "
-           "%d beats (freed at 300)", name, cur->cli_llid,
-           cur->del_nat_req, cur->stuck_count);
-    if (cli_llid)
-      send_status_ko(cli_llid, cli_tid, "Not ready");
+      del_when_free(cli_llid, cli_tid, name, "nat", nat_del_busy,
+                    ovs_nat_main_del);
     }
   else
     {

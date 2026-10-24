@@ -81,7 +81,7 @@ static int extract_info(char *buf)
   int  c2c_udp_port_low, port, result = -1;
   uint32_t ipnum, udp_ip;
   if (find_entry(buf, "CLOONIX_VERSION=", g_cloonix_version, MAX_NAME_LEN)) 
-    KERR(" ");
+    KERR("ERROR no CLOONIX_VERSION= in the config");
   else
     {
     ptr_start = buf;

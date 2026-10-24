@@ -133,8 +133,8 @@ void c2c_chainlan_resp_add_lan(int is_ko, char *name, int num,
     cur->add_ko += 1;
     if (cur->add_ko <= 5)
       {
-      KTRC("c2c %s: ovs refused the add of lan %s (%d), the heartbeat "
-           "will retry", name, lan, cur->add_ko);
+      KERR("WARNING c2c %s: ovs refused the add of lan %s (%d), the "
+           "heartbeat will retry", name, lan, cur->add_ko);
       ovs_c2c_attlan_clear(name);
       }
     else
@@ -312,9 +312,8 @@ int c2c_chainlan_partial_del(t_ovs_c2c *c2c)
   else
     {
     result = 0;
-    /* the port is on topo.attlan; after an unplug cur->lan is already
-       empty for one beat, and a record kept refuses the lan to the next c2c
-       of that name */
+    /* after an unplug cur->lan is empty one beat: a kept record would refuse
+           the lan to the next c2c of that name */
     if (mactopo_test_exists(cur->name, 0))
       {
       if (strlen(c2c->topo.attlan))

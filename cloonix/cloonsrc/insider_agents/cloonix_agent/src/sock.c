@@ -77,7 +77,7 @@ int util_socket_listen_unix(char *pname)
   unlink (pname);
   fd = socket (AF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
-    KOUT("%d %d\n", fd, errno);
+    KOUT("%d %d", fd, errno);
   memset (&serv, 0, sizeof (struct sockaddr_un));
   serv.sun_family = AF_UNIX;
   strncpy (serv.sun_path, pname, strlen(pname));

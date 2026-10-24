@@ -699,6 +699,16 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// A filter the canvas opens the capture with (a sniff line of a demo):
+// applied as if typed in the Filter box.
+window.addEventListener('message', e => {
+  if (e.source !== window.parent) return;
+  const d = e.data;
+  if (!d || typeof d !== 'object' || typeof d.cloonix_webshark_filter !== 'string') return;
+  document.getElementById('filter-input').value = d.cloonix_webshark_filter;
+  UI.applyFilter();
+});
+
 document.addEventListener('keydown', e => {
   if (e.key === '/' && !e.ctrlKey) { e.preventDefault(); document.getElementById('filter-input').focus(); }
 });

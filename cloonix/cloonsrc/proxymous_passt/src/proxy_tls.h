@@ -1,5 +1,5 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* TLS termination for the https port and the doors port. See proxy_tls.c.  */
+/* TLS termination for the https port and the doors port. See proxy_tls.c. */
 
 /* Certificate, key and the shared SSL_CTX, once. 0 when tls can be served. */
 int proxy_tls_init(void);

@@ -2,10 +2,9 @@
 Recipes
 =======
 
-Complete command sequences for the situations that come back. Every block
-is cut and paste on a running net called *nemo*; the host commands need
-*sudo*. Each recipe says what it builds, then the commands, then what to
-check.
+Command sequences for the situations that come back, each saying what it
+builds, then the commands, then what to check. Every block pastes on a
+running net *nemo*; the host commands need *sudo*.
 
 
 A guest on the real network
@@ -35,11 +34,11 @@ tap, *br0*, *eno1*, cable::
     cloonix cli nemo ssh Cloon1 "ping -c 3 192.168.100.238"
 
 The line that is forgotten is ``ip link set tap1 master br0``. *add tap*
-makes the pair and puts one end on the lan; the host end is an interface
-attached to nothing, and a frame from the guest that reaches it is
-delivered to the host's ip stack and goes no further. The bridge is what
-carries it on to *eno1*. Without that line the guest and the host can talk
-if *tap1* is given an address, and nothing beyond the host answers.
+makes the pair and puts one end on the lan; the host end is attached to
+nothing, and a frame of the guest reaching it stops at the ip stack of the
+host. The bridge carries it on to *eno1*. Without that line the guest and
+the host can talk if *tap1* has an address, and nothing beyond the host
+answers.
 
 The guest's default route, if it needs one, is the real gateway of the
 segment, set inside the guest: ``ip route add default via 192.168.100.1``.
@@ -100,7 +99,7 @@ of that cable, and the host no longer sees the interface::
     cloonix cli nemo add phy enp6s0
     cloonix cli nemo plug enp6s0_0 lanx
     cloonix cli nemo plug Cloon1 eth0 lanx
-    sudo ip netns exec cloonix_nemo ip link       enp6s0 is here now
+    sudo ip netns exec cloonix_nemo ip link       enp6s0 is here now, as enp6s0_0
     cloonix cli nemo del enp6s0_0             gives it back to the host
 
 When the host keeps using the interface, *macvlan* makes a second station
@@ -188,4 +187,4 @@ rebuild it, captures, settings and places included, one shell line each::
     cloonix cli nemo del all
     sh mytopo.sh
 
-The *Commands* button of the Demo window prints the same lines in its log.
+The *Commands* button of the Demo panel prints the same lines in its log.

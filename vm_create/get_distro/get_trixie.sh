@@ -5,7 +5,7 @@ hote="ftp.fr.debian.org"
 racine="debian/"
 methode="http"
 distribution="${DISTRO}"
-sections="main,contrib,non-free,non-free-firmware,main/debian-installer"
+sections="main,contrib,non-free,non-free-firmware"
 cible="/media/perrier/T7Shield2/distros/${DISTRO}"
 architecture="amd64"
 /usr/bin/debmirror --passive --no-check-gpg \

@@ -214,7 +214,7 @@ static void dialog_resp_save(char *name, int llid, int tid,
   char job[MAX_NAME_LEN+10];
   t_qmp *qmp = find_qmp(name);
   if (!qmp)
-    KERR("%d %s", llid, name);
+    KERR("WARNING qmp answer on llid %d for %s, which has no qmp record", llid, name);
   else
     {
     if (qmp->waiting_for != waiting_for_save_block_job_ready)
@@ -360,7 +360,7 @@ static void dialog_resp(char *name, int llid, int tid, char *req, char *resp)
 {
   t_qmp *qmp = find_qmp(name);
   if (!qmp)
-    KERR("%d %s", llid, name);
+    KERR("WARNING qmp answer on llid %d for %s, which has no qmp record", llid, name);
   else
     {
     if (!qmp->waiting_for)

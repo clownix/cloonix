@@ -493,7 +493,7 @@ void suid_power_sigdiag_resp(int llid, int tid, char *line)
   else if (!strcmp(line,
   "cloonsuid_resp_suidroot_ko"))
     {
-    KERR("Started suid_power: %s %s", g_cloonix_net, line);
+    KERR("ERROR cloonix-suid-power answered %s: it is not suid root", line);
     g_suid_power_root_resp_ok = 0;
     }
   else if (!strcmp(line,

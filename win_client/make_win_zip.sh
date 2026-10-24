@@ -1,15 +1,9 @@
 #!/bin/bash
-# make_win_zip.sh - the client, the demos and the installer, in one zip to
-# carry to a windows machine.
+# make_win_zip.sh - client, demos and installer in one zip for windows
+# (python source, nothing to build; explorer opens a zip with no tool).
 #   ./make_win_zip.sh                 writes /tmp/cloonix-client-win-<v>.zip
 #   ./make_win_zip.sh <dir>           writes it there instead
-# There is nothing to build: the client is python source and so are the
-# demos. The zip exists only so that one file crosses to the windows machine
-# instead of a directory tree, and a zip is what windows explorer opens with
-# no tool installed.
-# The whole source tree also works: win_client/install.bat run from a copy of
-# the tree finds cloonix/ and demos/ one level up. The zip is for the case
-# where the tree is not what you want to carry.
+# install.bat also works from a copy of the whole tree.
 set -e
 HERE=$(cd $(dirname $0); pwd)
 TOP=$(cd ${HERE}/..; pwd)

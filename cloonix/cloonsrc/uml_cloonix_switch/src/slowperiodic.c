@@ -46,7 +46,7 @@ static int is_duplicate(t_slowperiodic *slowperiodic, char *name, int max)
 }
 
 /* A cnt rootfs is a directory with the shell crun starts; no init needed, */
-/* cloonixsbininit is the host copy. Anything else under bulk is skipped.   */
+/* cloonixsbininit is the host copy. Anything else under bulk is skipped. */
 static int has_cnt_rootfs(char *bulk, char *image)
 {
   int i, result = 0;

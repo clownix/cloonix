@@ -10,10 +10,13 @@ typedef struct t_layout
   int  y;
   unsigned int eth_set;
   short eth_deg[MAX_ETH_VM];
+  char note[MAX_NOTE_LEN];
 } t_layout;
 
 int  layout_set_pos(char *name, int x, int y);
 int  layout_set_eth(char *name, int num, int deg);
+int  layout_set_note(char *name, char *note);
+int  layout_note_cmd(char *out, int size, char *name, char *note);
 void layout_replay(int llid, int tid);
 void layout_del_all(void);
 void layout_forget_absent(void);

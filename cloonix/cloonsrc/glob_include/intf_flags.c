@@ -1,5 +1,5 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* SIOCGIFFLAGS and SIOCSIFFLAGS on a named interface, shared by all.       */
+/* SIOCGIFFLAGS and SIOCSIFFLAGS on a named interface, shared by all. */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,7 +116,7 @@ int set_intf_flags_iff_up_down(char *intf, int up)
   return result;
 }
 
-/* Open a tap of that name owned by the setuid caller, -1 with err set.     */
+/* Open a tap of that name owned by the setuid caller, -1 with err set. */
 int tap_open(char *tap, char *err)
 {
   int fd;
@@ -201,10 +201,8 @@ int tap_fork_open(char *netns, char *tap, int pipe_size,
     }
   if ((pid = fork()) < 0)
     KOUT("ERROR %s %s", netns, tap);
-  /* The writes each way are non blocking: parent and child blocked in
-     write to each other, both pipes full, was a deadlock (the a2b under a
-     flood both ways). A frame is dropped instead, atomically since a frame
-     is under PIPE_BUF. */
+  /* Non blocking both ways (blocked writers deadlocked under a flood): a
+       frame is dropped instead, atomically (< PIPE_BUF). */
   if (pid == 0)
     {
     close(fd1[0]);
@@ -270,7 +268,7 @@ int tap_child_to_parent(int fd_tap, int fd_tx_to_parent, char *tap)
     if (now - last >= 10)
       {
       last = now;
-      KERR("WARNING tap %s: the parent is not taking frames, %lu dropped so "
+      KERR("WARNING %s: the parent is not taking frames, %lu dropped so "
            "far at its pipe", tap, dropped);
       }
     return len;

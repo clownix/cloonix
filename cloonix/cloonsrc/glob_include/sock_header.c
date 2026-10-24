@@ -1,5 +1,5 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* The 16 byte header, also compiled by the windows agent.                  */
+/* The 16 byte header, also compiled by the windows agent. */
 #include "agent_wire.h"
 
 int sock_header_get_size(void)

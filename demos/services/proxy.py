@@ -11,35 +11,26 @@ Four machines and two lans::
   lanA 10.1.0.0/24   client .10   haproxy .1
   lanB 10.2.0.0/24   haproxy .1   web1 .11   web2 .12
 
-The client asks haproxy for a page and gets one. It never speaks to web1 or
-web2 and does not know they exist.
+The client asks haproxy for a page and never speaks to web1 or web2. Its
+connection ends at the proxy: haproxy reads the whole request, then opens a
+second connection of its own to a backend and asks again; the backend
+learns who asked from the header haproxy adds, X-Forwarded-For.
 
-The thing worth seeing is that its connection ENDS at the proxy. haproxy
-reads the whole request, then opens a SECOND connection of its own to one of
-the backends and asks again on the client's behalf. Two conversations, two
-pairs of addresses, one page -- and the only reason the backend has any idea
-who really asked is a header haproxy adds on the way past.
-
-  ACT 1  one request, caught on both lans at once. The same page fetched
-         twice over, in two different conversations.
-  ACT 2  ten requests, and the round robin becomes visible: half land on
-         web1 and half on web2, from one address the client never changes.
-  ACT 3  web1 is stopped. The health check notices within a couple of
-         seconds and every request goes to web2 instead, with the client
-         seeing nothing but a page that keeps arriving.
-  ACT 4  what each backend logged, which is where X-Forwarded-For earns
-         its keep: without it every request in the log comes from the
-         proxy and a real deployment cannot tell its users apart.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+  ACT 1  one request, caught on both lans at once: one page, two
+         conversations.
+  ACT 2  ten requests: round robin, half on web1 and half on web2, from the
+         one address of the client.
+  ACT 3  web1 stopped: the health check notices within a couple of seconds
+         and every request goes to web2, the client seeing pages arrive.
+  ACT 4  what each backend logged: without X-Forwarded-For every request
+         comes from the proxy.
 
 Image: proxy_trixie (haproxy and nginx-light)
 Size:  4 containers, 2 lans
 
 THE PACKET TO CATCH
 -------------------
-  One request, two connections, and the two captures that prove it:
+  One request, two connections, two captures:
 
     cloonix cli nemo cnf haproxy eth0 sniff=on
     cloonix cli nemo cnf haproxy eth1 sniff=on
@@ -47,30 +38,22 @@ THE PACKET TO CATCH
     cloonix cli nemo sniff haproxy eth0 --dump tcp port 80
     cloonix cli nemo sniff haproxy eth1 --dump tcp port 80
 
-  The packet to catch is the pair of SYNs: one from the client to
-  10.1.0.1, and a different one from 10.2.0.1 to a backend, with
-  different ports and different sequence numbers. They are not the same
-  connection and nothing was forwarded -- that is what a reverse proxy
-  is, and it is visible rather than asserted.
+  The packet to catch is the pair of SYNs: one from the client to 10.1.0.1,
+  another from 10.2.0.1 to a backend, with other ports and other sequence
+  numbers: two connections, nothing forwarded, a reverse proxy.
 
-  Round robin is the same subscription and one filter narrower:
+  Round robin, one filter narrower: every other request appears, none once
+  web1 is killed, while lanA keeps being answered:
 
     cloonix cli nemo sniff haproxy eth1 --dump host 10.2.0.11
 
-  Every other request appears. Kill web1 and it stops, while requests on
-  lanA keep being answered.
-
-  The health check is worth catching on its own, because it is traffic
-  nobody asked for:
+  The health check, traffic nobody asked for, a small connection to each
+  backend on a timer:
 
     cloonix cli nemo sniff haproxy eth1 --dump tcp port 80 and less 100
 
-  a small connection to each backend, on a timer, whether or not anybody
-  is using the service.
-
 Important
-  This is the REVERSE proxy. The squid demo is the forward one, and the
-  difference between the two is the whole point of having both.
+  This is the reverse proxy; services/squid.py is the forward one.
 """
 import os
 import subprocess
@@ -87,7 +70,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, create_cnt, erase_net,
     in_parallel, net_answers, parse_bytes_line, show, step, story, trace,
-    trace_ssh, wait_ready)
+    trace_ssh, wait_ready, unavailable,
+    needs_subuid)
 
 ROOTFS_CHOICES = ("proxy_trixie",)
 
@@ -144,8 +128,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -186,7 +170,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -203,7 +187,7 @@ def tools_present(node, *tools):
                             "command -v %s >/dev/null 2>&1" % t],
                            capture_output=True, stdin=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit("%s has no %s: this is not the proxy image.\n"
+            unavailable("%s has no %s: this is not the proxy image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -378,7 +362,7 @@ def real_request_keys(rows):
     Without this, act 1 is unreadable. haproxy checks both backends once a
     second, each check is a whole tcp connection -- SYN, request, reply, FIN
     -- and by the time a person has typed the curl command forty of those
-    have gone past. The one request worth looking at ends up somewhere in
+    have gone past. The one request to look at ends up somewhere in
     the middle, under "and 15 more".
 
     A check is recognisable by what it asks for, and everything else on the
@@ -599,6 +583,7 @@ def place():
         cli("cnf", name, num, "angle=%s" % deg, ack=ACK_FAST)
 
 def main():
+    needs_subuid()
     story(HISTORY)
     step("looking for the image")
     rootfs = choose_rootfs()
@@ -643,7 +628,7 @@ def main():
     haproxy_start()
     time.sleep(2.5)          # let the first health checks run
 
-    step("act 1: one request, and the two connections it really is")
+    step("act 1: one request, and the two connections it is")
     story()
     got = watch(lambda: fetch(1, show_headers=True),
                 "the two connections that carried one page:",
@@ -664,7 +649,7 @@ def main():
     story("      * the request on lanB carries a header the one on lanA did")
     story("        not: X-Forwarded-For, with the client's address in it.")
     story("        That is the only reason the backend has any idea who")
-    story("        really asked, and act 4 shows what happens in its log.")
+    story("        asked, and act 4 shows what happens in its log.")
     story()
 
     step("act 2: ten requests, and the round robin becomes visible")
@@ -723,7 +708,7 @@ def main():
     story()
     for name in BACKENDS:
         story("  %s, one line per request -- who tcp says asked, and who "
-              "really did:" % name)
+              "did:" % name)
         log = ssh(name, "grep -v /health /var/log/nginx/who.log 2>/dev/null "
                         "| tail -n 6", check=False)
         for line in (log.rstrip().split("\n") if log.strip()
@@ -741,7 +726,7 @@ def main():
     story("    every request came from the proxy, because it did. xff= is")
     story("    the header haproxy added, and it is the only place the real")
     story("    client survives. Turn option forwardfor off and a backend")
-    story("    log becomes useless for anything about users.")
+    story("    log tells nothing about users.")
     story()
 
     if not (ok_balanced and ok_failover):
@@ -750,7 +735,7 @@ def main():
                  "\n  the history says where: on a terminal, CLOONIX_DEMO_STORY=1 prints it")
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   watch the two connections live, one on each lan, at the same time:
     cloonix cli %s sniff client eth0 --dump

@@ -53,11 +53,9 @@ from demolib import (
 HISTORY = """\
 Squid descends from the Harvest project's cache of the early 1990s and has
 been developed as Squid since 1996, long coordinated by Duane Wessels and
-Henrik Nordstrom. For years it was how organisations gave a whole office one
-shared, cached path to the web, and how they filtered what that path would
-carry. It is a forward proxy, a reverse proxy and a cache in one, and though
-the web's move to end-to-end encryption has changed its role, it is still
-widely run for caching, filtering and access control.
+Henrik Nordstrom. For years it was how an office got one shared, cached path
+to the web, and how it filtered what that path would carry. It is a forward
+proxy, a reverse proxy and a cache in one.
 """
 
 ROOTFS_CHOICES = ("squid_trixie",)
@@ -195,7 +193,7 @@ def main():
                  % (ok_first, ok_hit, ok_denied))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   fetch through the proxy and watch the cache column:
     cloonix cli %s ssh cl "curl -s -x http://10.0.0.2:3128 http://10.0.0.80/"

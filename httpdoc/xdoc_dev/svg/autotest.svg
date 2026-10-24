@@ -30,7 +30,7 @@ text{fill:#1a1a2e;font-size:12px}
 <text x="95" y="80" text-anchor="middle" class="m">sources</text>
 <rect width="900" height="300" fill="#ffffff"/>
 <rect class="zoneg" x="15" y="15" width="870" height="270" rx="8"/>
-<text x="30" y="35" class="s">host: cloonix start nemo, debug/autotest/autotest.sh</text>
+<text x="30" y="35" class="s">host: cloonix start nemo, debug/autotest/slow_autotest.sh</text>
 <rect class="yel" x="30" y="50" width="170" height="40" rx="6"/>
 <text x="115" y="70" text-anchor="middle" class="m">kvm_autotest_&lt;distro&gt;.qcow2</text>
 <text x="115" y="82" text-anchor="middle" class="s">one per distro, made once</text>
@@ -58,7 +58,7 @@ text{fill:#1a1a2e;font-size:12px}
 <text x="345" y="65" class="m">kvm1</text>
 <text x="345" y="80" class="s">bundle installed, nested nemo + mito</text>
 <rect class="box" x="345" y="95" width="220" height="30" rx="6"/>
-<text x="455" y="114" text-anchor="middle" class="m">user: ./testitall.sh</text>
+<text x="455" y="114" text-anchor="middle" class="m">user: ./top_testitall.sh</text>
 <rect class="acc" x="345" y="145" width="220" height="30" rx="6"/>
 <text x="455" y="164" text-anchor="middle" class="m">results_outputs.log, tst_max.sh</text>
 <text x="455" y="205" text-anchor="middle" class="s">eth0 10.9.9.1, autolan, autotap 10.9.9.3</text>
@@ -66,7 +66,7 @@ text{fill:#1a1a2e;font-size:12px}
 <text x="635" y="65" class="m">kvm2</text>
 <text x="635" y="80" class="s">toy in /home/user, toys nemo + mito</text>
 <rect class="box" x="635" y="95" width="220" height="30" rx="6"/>
-<text x="745" y="114" text-anchor="middle" class="m">user: ./testitalltoy.sh</text>
+<text x="745" y="114" text-anchor="middle" class="m">user: ./top_testitalltoy.sh</text>
 <rect class="acc" x="635" y="145" width="220" height="30" rx="6"/>
 <text x="745" y="164" text-anchor="middle" class="m">results_outputs.log, tst_maxtoy.sh</text>
 <text x="745" y="205" text-anchor="middle" class="s">eth0 10.9.9.2, autolan, autotap 10.9.9.3</text>

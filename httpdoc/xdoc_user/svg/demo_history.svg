@@ -34,14 +34,14 @@ text{fill:#1a1a2e;font-size:12px}
 <path d="M170,172 C200,172 200,95 232,95" class="arr"/>
 <text x="95" y="100" text-anchor="middle" class="s">"    $ cloonix ..."</text><text x="95" y="113" text-anchor="middle" class="s">unmarked: to the log</text>
 <path d="M170,220 C205,220 200,300 232,300" class="arrr"/>
-<text x="95" y="290" text-anchor="middle" class="s">"#story# ..."</text><text x="95" y="303" text-anchor="middle" class="s">marked: to the popup</text>
+<text x="95" y="290" text-anchor="middle" class="s">"#story# ..."</text><text x="95" y="303" text-anchor="middle" class="s">marked: to the panel</text>
 <rect x="235" y="20" width="300" height="150" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1.5"/>
 <rect x="235" y="20" width="300" height="20" rx="6" fill="#161b22"/>
 <circle cx="247" cy="30" r="4" fill="#3fb950"/><text x="258" y="34" style="fill:#8b949e;font-size:10px">Demo — script player</text>
 <rect x="243" y="46" width="38" height="16" rx="3" fill="#0f3460"/><text x="262" y="58" text-anchor="middle" style="fill:#e6edf3;font-size:10px">Play</text>
 <rect x="283" y="46" width="60" height="16" rx="3" fill="#0f3460"/><text x="313" y="58" text-anchor="middle" style="fill:#e6edf3;font-size:10px">Commands</text>
 <rect x="345" y="46" width="86" height="16" rx="3" fill="#0f3460"/><text x="388" y="58" text-anchor="middle" style="fill:#e6edf3;font-size:10px">Clear Screen</text>
-<rect x="433" y="46" width="56" height="16" rx="3" fill="#0f3460"/><text x="461" y="58" text-anchor="middle" style="fill:#e6edf3;font-size:10px">History</text>
+<rect x="433" y="46" width="74" height="16" rx="3" fill="#0f3460"/><text x="470" y="58" text-anchor="middle" style="fill:#e6edf3;font-size:10px">Comments off</text>
 <text x="245" y="82" style="font-family:monospace;font-size:10px;fill:#e6edf3">$ cloonix cli nemo add cnt gwA eth=2 wg_trixie</text>
 <text x="245" y="97" style="font-family:monospace;font-size:10px;fill:#e6edf3">$ cloonix cli nemo plug gwA eth1 lanC</text>
 <text x="245" y="112" style="font-family:monospace;font-size:10px;fill:#e6edf3">$ cloonix cli nemo ssh gwA &quot;wg-quick up wg0&quot;</text>
@@ -52,7 +52,7 @@ text{fill:#1a1a2e;font-size:12px}
 <text x="385" y="201" text-anchor="middle" class="s">what a terminal run prints too; keys typed here reach the demo</text>
 <rect x="235" y="215" width="420" height="175" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1.5"/>
 <rect x="235" y="215" width="420" height="20" rx="6" fill="#161b22"/>
-<circle cx="247" cy="225" r="4" fill="#3fb950"/><text x="258" y="229" style="fill:#8b949e;font-size:10px">History — wg.py</text>
+<circle cx="247" cy="225" r="4" fill="#3fb950"/><text x="258" y="229" style="fill:#8b949e;font-size:10px">Comments — wg.py</text>
 <text x="247" y="250" style="fill:#e6edf3;font-size:10.5px">Steps</text><rect x="245" y="254" width="30" height="2" fill="#f78166"/>
 <text x="290" y="250" style="fill:#8b949e;font-size:10.5px">About</text>
 <text x="645" y="250" text-anchor="end" style="fill:#e3b341;font-size:10px">running · step 9 · 01:12</text>
@@ -92,6 +92,6 @@ text{fill:#1a1a2e;font-size:12px}
 <text x="672" y="264" font-weight="bold" style="font-size:11px">About</text>
 <text x="672" y="277" class="s">the docstring: the network, the acts,</text>
 <text x="672" y="289" class="s">the packet to catch</text>
-<text x="672" y="310" font-weight="bold" style="font-size:11px">History button</text>
-<text x="672" y="323" class="s">opens the popup again, nothing lost</text>
+<text x="672" y="310" font-weight="bold" style="font-size:11px">Comments on / off</text>
+<text x="672" y="323" class="s">opens it again, nothing lost, or closes it</text>
 </svg>

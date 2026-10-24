@@ -1,9 +1,9 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
 
 /* webshark.c - Wireshark engine with a WebSocket/HTTP frontend (GET / page,
- * /ws). Text frames of JSON. Client: open, filter{expr}, select{frame},
- * bytes{frame}, stop, save. Server: packet_list, proto_tree, bytes, status,
- * error, stopped, saved. SPDX-License-Identifier: GPL-2.0-or-later */
+ * /ws). Text frames of JSON. Client: filter{expr}, select{frame},
+ * bytes{frame}, stop, save, save_where. Server: packet_list, proto_tree,
+ * bytes, status, error, stopped, saved. SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "config.h"
 
@@ -60,7 +60,7 @@
 #include "file.h"
 #include "frame_tvbuff.h"
 
-/* Configuration                                                        */
+/* Configuration */
 
 #define MAX_CLIENTS    8
 #define RX_BUFSIZE     65536
@@ -122,7 +122,7 @@ bool __wrap_call_capture_dissector(capture_dissector_handle_t handle,
     return __real_call_capture_dissector(handle, pd, offset, len, cpinfo, pseudo_header);
 }
 
-/* Global state                                                         */
+/* Global state */
 
 static capture_file  g_cf;
 static bool          g_epan_ready = false;
@@ -194,7 +194,7 @@ static char           *g_live_filter_expr = NULL;
 static uint64_t        g_src_dropped     = 0;
 static uint64_t        g_src_seen        = 0;
 
-/* Minimal WebSocket implementation (RFC 6455)                         */
+/* Minimal WebSocket implementation (RFC 6455) */
 
 #define WS_MAGIC "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
@@ -505,14 +505,14 @@ static int ws_decode_frame(const uint8_t *buf, int buflen, char *out, int outmax
     return (int)(off + plen);
 }
 
-/* Embedded HTML frontend (served at GET /)                            */
+/* Embedded HTML frontend (served at GET /) */
 
 /* The actual HTML content is in webshark.html, compiled in as a string.
    For the build we embed it here as a long literal.                   */
-extern const char g_webshark_html[];  /* defined in webshark_html.c   */
+extern const char g_webshark_html[];  /* defined in webshark_html.c */
 extern size_t     g_webshark_html_len;
 
-/* JSON helpers                                                         */
+/* JSON helpers */
 
 /* Escape a C string for JSON — returns newly allocated string */
 static char *json_escape(const char *s)
@@ -533,7 +533,7 @@ static char *json_escape(const char *s)
     return g_string_free(gs, FALSE);
 }
 
-/* Proto-tree → JSON                                                    */
+/* Proto-tree → JSON */
 
 static void proto_node_to_json(proto_node *node, GString *gs, int depth)
 {
@@ -582,7 +582,7 @@ static void proto_node_to_json(proto_node *node, GString *gs, int depth)
     g_string_append_c(gs, '}');
 }
 
-/* Packet-list summary → JSON                                           */
+/* Packet-list summary → JSON */
 
 /* Build the standard 6-column display: No, Time, Source, Dest, Proto, Info */
 /* Column setup uses prefs (loaded before calling this). */
@@ -591,7 +591,7 @@ static void build_column_format(column_info *cinfo)
     build_column_format_array(cinfo, prefs.num_cols, true);
 }
 
-/* JSON row of one packet: live_ba bytes if non-NULL, else read via wtap. Caller g_frees. */
+/* JSON row of one packet, NULL once its bytes left KEEP_RAW. Caller g_frees. */
 static char *packet_to_json_row(capture_file *cf, frame_data *fdata,
                                 GByteArray *live_ba)
 {
@@ -608,7 +608,7 @@ static char *packet_to_json_row(capture_file *cf, frame_data *fdata,
         rec.rec_header.packet_header.len       = live_ba->len;
         rec.rec_header.packet_header.pkt_encap = cf->cd_t;
         ws_buffer_append(&buf, live_ba->data, live_ba->len);
-    } else if (!cf_read_record_no_alert(cf, fdata, &rec, &buf)) {
+    } else {
         wtap_rec_cleanup(&rec);
         ws_buffer_free(&buf);
         return NULL;
@@ -639,7 +639,7 @@ static char *packet_to_json_row(capture_file *cf, frame_data *fdata,
     return g_string_free(gs, FALSE);
 }
 
-/* Command handlers                                                     */
+/* Command handlers */
 
 static void send_status(int fd, const char *msg)
 {
@@ -659,7 +659,7 @@ static void send_error(int fd, const char *msg)
     g_free(json);
 }
 
-/* Live capture from Unix-socket pcap stream                           */
+/* Live capture from Unix-socket pcap stream */
 
 /* Read exactly n bytes from fd, retrying on short reads. Returns false on EOF/error. */
 static bool read_exact(int fd, void *buf, size_t n)
@@ -795,8 +795,8 @@ static void live_dissect_and_queue(const uint8_t *data, uint32_t caplen,
     /* Dissect using the sequence-owned frame_data */
     Buffer buf_holder;
     ws_buffer_init(&buf_holder, caplen);
-    /* ws_buffer_append takes a non-const source although it only copies from   */
-    /* it; data is our read-only packet buffer, so the cast is safe.            */
+    /* ws_buffer_append takes a non-const source although it only copies from */
+    /* it; data is our read-only packet buffer, so the cast is safe. */
     ws_buffer_append(&buf_holder, (uint8_t *)data, caplen);
 
     /* A tree is built only when there is a filter to apply to it, and then
@@ -841,19 +841,24 @@ static void live_dissect_and_queue(const uint8_t *data, uint32_t caplen,
     /* fdata is owned by the sequence; fdlocal is on the stack — no cleanup needed */
 }
 
-/* Open <snf_path>_pcap_fifo of the dumpcap the switch runs for this snf
- * (ovs_snf.c). Blocks until the writer is there: runs in the capture thread.
- * Returns a read fd, or -1. */
-#define SNF_FIFO_WAIT_S 15
-static int open_fanout_fifo(const char *snf_path)
+/* A subscriber of <snf_path>_pcap_sock, the socket of the dumpcap the switch
+ * runs for this snf (ovs_snf.c): a stream of its own, its own pcap file
+ * header first. Returns a read fd, or -1 with errno. */
+#define SNF_SOCK_WAIT_S 15
+static int open_fanout_sock(const char *snf_path)
 {
-    char fifo[512];
-    snprintf(fifo, sizeof(fifo), "%s_pcap_fifo", snf_path);
-    /* The dumpcap holds the fifo open at both ends, so this neither blocks
-     * for ever nor sees a premature end of file when a capture goes quiet. */
-    int fd = open(fifo, O_RDONLY);
+    struct sockaddr_un sa = {0};
+    int err, fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0)
-        fprintf(stderr, "open_fanout_fifo: %s: %s\n", fifo, strerror(errno));
+        return -1;
+    sa.sun_family = AF_UNIX;
+    snprintf(sa.sun_path, sizeof(sa.sun_path), "%s_pcap_sock", snf_path);
+    if (connect(fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+        err = errno;
+        close(fd);
+        errno = err;
+        return -1;
+    }
     return fd;
 }
 
@@ -907,27 +912,29 @@ static void reap_dumpcap(int fd)
     }
 }
 
-/* Background thread: spawn cloonix-dumpcap and read pcap from its stdout */
+/* Background thread: the pcap of the switch's dumpcap, as a subscriber of its
+ * socket, or of a dumpcap of our own */
 static void *capture_thread(void *arg)
 {
     const char *snf_path = (const char *)arg;
-    char fifo[512];
     pid_t pid = -1;
-    int fd;
+    int fd = -1;
 
-    /* Wait up to SNF_FIFO_WAIT_S for the switch's fan-out fifo (it is still
-     * coming up right after the interface is made; a second dumpcap on the
-     * snf fifo split the stream in two). Spawn our own only after that. */
-    snprintf(fifo, sizeof(fifo), "%s_pcap_fifo", snf_path);
-    for (int i = 0; (i < SNF_FIFO_WAIT_S * 10) && (access(fifo, R_OK)); i++)
-        usleep(100000);
-    if (access(fifo, R_OK) == 0) {
-        fprintf(stderr, "capture_thread: reading the fan-out fifo %s\n", fifo);
-        fd = open_fanout_fifo(snf_path);
+    /* Wait up to SNF_SOCK_WAIT_S for the socket of the switch's dumpcap (it
+     * is still coming up right after the interface is made; a second dumpcap
+     * on the snf fifo split the stream in two). Spawn our own only after. */
+    for (int i = 0; (i < SNF_SOCK_WAIT_S * 10) && (fd < 0); i++) {
+        fd = open_fanout_sock(snf_path);
+        if (fd < 0)
+            usleep(100000);
     }
+    if (fd >= 0)
+        fprintf(stderr, "capture_thread: subscriber of %s_pcap_sock\n",
+                snf_path);
     else {
-        fprintf(stderr, "capture_thread: no %s, spawning: %s -i %s\n",
-                fifo, g_dumpcap_bin, snf_path);
+        fprintf(stderr, "capture_thread: no %s_pcap_sock (%s), spawning: "
+                "%s -i %s\n", snf_path, strerror(errno), g_dumpcap_bin,
+                snf_path);
         fd = spawn_dumpcap(snf_path, &pid);
     }
     if (fd < 0) {
@@ -1197,12 +1204,6 @@ static void start_live_capture(const char *path)
 }
 
 /* cmd: open — kept for filter replay; not used for live socket */
-static void cmd_open(int fd, const char *filepath)
-{
-    (void)fd; (void)filepath;
-    /* Live capture is started automatically at startup; no-op here */
-}
-
 /* cmd: select — send proto tree for a frame */
 static void cmd_select(int fd, uint32_t frame_num)
 {
@@ -1232,14 +1233,13 @@ static void cmd_select(int fd, uint32_t frame_num)
         rec.rec_header.packet_header.len       = live_ba->len;
         rec.rec_header.packet_header.pkt_encap = g_cf.cd_t;
         ws_buffer_append(&buf, live_ba->data, live_ba->len);
-    } else if (!cf_read_record_no_alert(&g_cf, fdata, &rec, &buf)) {
+    } else {
+        /* No wtap file behind a live capture: bytes past KEEP_RAW are gone. */
         pthread_mutex_unlock(&g_cf_mutex);
         wtap_rec_cleanup(&rec);
         ws_buffer_free(&buf);
-        send_error(fd, "Cannot read frame");
+        send_error(fd, "Frame bytes no longer kept");
         return;
-    } else {
-        /* file-based capture, read via wtap */
     }
 
     epan_dissect_t edt;
@@ -1294,11 +1294,11 @@ static void cmd_bytes(int fd, uint32_t frame_num)
 
     if (live_ba) {
         ws_buffer_append(&buf, live_ba->data, live_ba->len);
-    } else if (!cf_read_record_no_alert(&g_cf, fdata, &rec, &buf)) {
+    } else {
         pthread_mutex_unlock(&g_cf_mutex);
         wtap_rec_cleanup(&rec);
         ws_buffer_free(&buf);
-        send_error(fd, "Cannot read frame");
+        send_error(fd, "Frame bytes no longer kept");
         return;
     }
 
@@ -1406,7 +1406,7 @@ static void cmd_filter_ordered(int fd, const char *expr)
             rec2.rec_header.packet_header.len       = live_ba->len;
             rec2.rec_header.packet_header.pkt_encap = g_cf.cd_t;
             ws_buffer_append(&buf2, live_ba->data, live_ba->len);
-        } else if (!cf_read_record_no_alert(&g_cf, fdata, &rec2, &buf2)) {
+        } else {
             wtap_rec_cleanup(&rec2);
             ws_buffer_free(&buf2);
             fdata->passed_dfilter = 0;
@@ -1437,7 +1437,7 @@ static void cmd_filter_ordered(int fd, const char *expr)
     }
 }
 
-/* Message dispatcher                                                   */
+/* Message dispatcher */
 
 /* Minimal JSON key extraction — good enough for our protocol */
 static char *json_get_str(const char *json, const char *key)
@@ -1474,7 +1474,7 @@ static bool json_get_uint(const char *json, const char *key, uint32_t *out)
 }
 
 /* cmd: stop  — halt the live capture, leaving captured packets intact */
-/* so they can be browsed and saved. Replies {"type":"stopped",...}.   */
+/* so they can be browsed and saved. Replies {"type":"stopped",...}. */
 static void cmd_stop(int fd)
 {
     if (g_capture_running) {
@@ -1586,8 +1586,8 @@ static void cmd_save(int fd, const char *want_path)
     ok = ok && (write(out, &vmaj, 2) == 2);
     ok = ok && (write(out, &vmin, 2) == 2);
     ok = ok && write_u32(out, 0);          /* thiszone */
-    ok = ok && write_u32(out, 0);          /* sigfigs  */
-    ok = ok && write_u32(out, 262144);     /* snaplen  */
+    ok = ok && write_u32(out, 0);          /* sigfigs */
+    ok = ok && write_u32(out, 262144);     /* snaplen */
     ok = ok && write_u32(out, network);    /* linktype */
 
     uint32_t written = 0;
@@ -1605,7 +1605,7 @@ static void cmd_save(int fd, const char *want_path)
         ok = ok && write_u32(out, ts_sec);
         ok = ok && write_u32(out, ts_usec);
         ok = ok && write_u32(out, ba->len);   /* incl_len (caplen) */
-        ok = ok && write_u32(out, orig_len);  /* orig_len          */
+        ok = ok && write_u32(out, orig_len);  /* orig_len */
         ok = ok && (write(out, ba->data, ba->len) == (ssize_t)ba->len);
         if (ok) written++;
     }
@@ -1648,11 +1648,7 @@ static void dispatch_command(int fd, const char *json)
     char *cmd = json_get_str(json, "cmd");
     if (!cmd) return;
 
-    if (strcmp(cmd, "open") == 0) {
-        char *file = json_get_str(json, "file");
-        if (file) { cmd_open(fd, file); g_free(file); }
-        else       send_error(fd, "Missing file parameter");
-    } else if (strcmp(cmd, "select") == 0) {
+    if (strcmp(cmd, "select") == 0) {
         uint32_t frame = 0;
         if (json_get_uint(json, "frame", &frame))
             cmd_select(fd, frame);
@@ -1688,7 +1684,7 @@ static void dispatch_command(int fd, const char *json)
     g_free(cmd);
 }
 
-/* HTTP request handler (serves the single-page frontend)              */
+/* HTTP request handler (serves the single-page frontend) */
 
 static void handle_http(int fd, const char *request)
 {
@@ -1775,7 +1771,7 @@ static void handle_http(int fd, const char *request)
     }
 }
 
-/* Per-client thread                                                    */
+/* Per-client thread */
 
 typedef struct { ws_client_t *cli; } client_thread_arg_t;
 
@@ -1991,7 +1987,7 @@ disconnect:
     return NULL;
 }
 
-/* epan plumbing                                                        */
+/* epan plumbing */
 
 /* Report routines — all provided by ui/alert_box.c */
 static const struct report_message_routines g_report_routines = {
@@ -2012,7 +2008,7 @@ static void ws_register_cb(register_action_e action, const char *message, void *
     (void)action; (void)message; (void)u;
 }
 
-/* main                                                                 */
+/* main */
 
 static void sighandler(int sig)
 {

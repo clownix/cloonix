@@ -184,7 +184,6 @@ chrony was started by Richard Curnow in 1997 and is now maintained mainly by
 Miroslav Lichvar at Red Hat. It implements NTP, the Network Time Protocol
 whose design goes back to David Mills in the 1980s, and was written to keep
 good time on machines that are not always connected and whose clocks drift.
-It is the default time daemon on most linux distributions.
 
 Today: chrony is the default time daemon of Red Hat, Fedora, SUSE and Ubuntu
 server; a virtual machine that pauses and resumes, or a laptop that sleeps,

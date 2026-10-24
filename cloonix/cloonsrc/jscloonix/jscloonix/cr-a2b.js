@@ -17,9 +17,8 @@
   // One panel per a2b name; re-opening focuses the existing one.
   var g_a2b_panels = {};
 
-  // Coalesced sender: at most one POST in flight per (name,dir,cmd); while
-  // one is pending the latest value is stashed and fired when the first
-  // returns.
+  // Coalesced sender: one POST in flight per (name,dir,cmd), the latest value
+  // fired when it returns.
   var g_inflight = {};   // key -> true while a POST is outstanding
   var g_pending  = {};   // key -> latest value waiting to be sent
 

@@ -42,7 +42,7 @@ static char *mirror_name(char *vhost)
 }
 
 #define MAX_MIR_ROWS 8
-#define MAX_BR_ROWS 64
+#define MAX_BR_ROWS 4096
 #define REMOVE_PER_VSCTL 6
 
 static int mirror_rows(char *bin, char *dir, char *mir,
@@ -81,22 +81,38 @@ static int mirror_rows(char *bin, char *dir, char *mir,
   return n;
 }
 
-static int mirror_clear(char *bin, char *dir, char *mir)
+/* Rows of that name taken out of the bridge of the request, then out of every
+   other bridge only if a row is left. */
+static int mirror_clear(char *bin, char *dir, char *mir, char *bvhost)
 {
   char uuid[MAX_MIR_ROWS][MAX_NAME_LEN];
-  char br[MAX_BR_ROWS][MAX_NAME_LEN];
+  char (*br)[MAX_NAME_LEN];
   char cmd[MAX_ARG_LEN];
   int i, j, k, len, nbu, nbr, left;
   nbu = mirror_rows(bin, dir, mir, uuid, MAX_MIR_ROWS);
   if (nbu <= 0)
     return nbu;
+  /* Quiet: the lan may have gone with its bridge, the count below decides. */
+  for (i=0; i<nbu; i++)
+    {
+    memset(cmd, 0, MAX_ARG_LEN);
+    snprintf(cmd, MAX_ARG_LEN-1, "-- remove Bridge %s mirrors %s",
+             bvhost, uuid[i]);
+    ovs_vsctl_quiet(bin, dir, cmd);
+    }
+  left = mirror_rows(bin, dir, mir, uuid, MAX_MIR_ROWS);
+  if (left <= 0)
+    return (left < 0) ? -1 : nbu;
   if (ovs_vsctl_quiet(bin, dir, "list-br"))
     {
     KERR("ERROR OVSCMD: list-br failed, mirror %s cannot be cleared", mir);
     return -1;
     }
+  br = malloc(MAX_BR_ROWS * MAX_NAME_LEN);
+  if (!br)
+    KOUT("ERROR malloc");
   nbr = ovs_popen_read_lines(dir, br, MAX_BR_ROWS);
-  for (i=0; i<nbu; i++)
+  for (i=0; i<left; i++)
     {
     for (j=0; j<nbr; j+=REMOVE_PER_VSCTL)
       {
@@ -111,11 +127,13 @@ static int mirror_clear(char *bin, char *dir, char *mir)
              "the bridges", mir, uuid[i]);
       }
     }
+  free(br);
   left = mirror_rows(bin, dir, mir, uuid, MAX_MIR_ROWS);
   if (left)
     {
     KERR("ERROR OVSCMD: %d mirror row(s) named %s are STILL there after "
-         "being removed from all %d bridges", left, mir, nbr);
+         "being removed from %s and from all %d bridges", left, mir,
+         bvhost, nbr);
     return -1;
     }
   return nbu;
@@ -139,7 +157,7 @@ int ovs_cmd_add_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,
     KERR("ERROR OVSCMD: SNF ADD %s: the interface cannot be set up", vhost);
     return -1;
     }
-  nb = mirror_clear(ovs_bin, ovs_dir, mir);
+  nb = mirror_clear(ovs_bin, ovs_dir, mir, bvhost);
   if (nb < 0)
     return -1;
   if (nb > 0)
@@ -166,7 +184,7 @@ int ovs_cmd_add_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,
     else
       KERR("ERROR OVSCMD: SNF ADD %s on %s refused -- see what ovs said "
            "above; whatever it left is removed again", vhost, bvhost);
-    mirror_clear(ovs_bin, ovs_dir, mir);
+    mirror_clear(ovs_bin, ovs_dir, mir, bvhost);
     memset(cmd, 0, MAX_ARG_LEN);
     snprintf(cmd, MAX_ARG_LEN-1, "-- --if-exists del-port s%s", vhost);
     if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
@@ -189,7 +207,7 @@ int ovs_cmd_del_snf_lan(char *ovs_bin, char *ovs_dir, char *name, int num,
   memset(mir, 0, MAX_NAME_LEN);
   snprintf(bvhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, lan);
   strncpy(mir, mirror_name(vhost), MAX_NAME_LEN-1);
-  nb = mirror_clear(ovs_bin, ovs_dir, mir);
+  nb = mirror_clear(ovs_bin, ovs_dir, mir, bvhost);
   if (nb < 0)
     result = -1;
   else if (nb == 0)
@@ -234,9 +252,8 @@ int ovs_cmd_add_lan(char *ovs_bin, char *ovs_dir, char *lan)
   memset(vhost, 0, MAX_NAME_LEN);
   memset(cmd, 0, MAX_ARG_LEN);
   snprintf(vhost, MAX_NAME_LEN-1, "%s%s", OVS_BRIDGE, lan);
-  /* forward-bpdu: a lan is a wire, so 01:80:c2:00:00:0x frames (the stp
-     of the guests' own bridges, lldp, pause) cross it; ovs drops them by
-     default. When rstp is turned on for the lan ovs processes them itself. */
+  /* forward-bpdu: a lan is a wire, 01:80:c2:00:00:0x frames cross it; with
+       rstp on, ovs handles them. */
   snprintf(cmd, MAX_ARG_LEN-1, "-- add-br %s -- set Bridge %s "
            "other-config:forward-bpdu=true", vhost, vhost);
   if (ovs_vsctl(ovs_bin, ovs_dir, cmd))
@@ -299,6 +316,40 @@ int ovs_cmd_del_lan(char *ovs_bin, char *ovs_dir, char *lan)
   return result;
 }
 
+/* vswitchd makes the interface of a bridge as it reconfigures: waited for
+   1 s; a bridge ovs does not hold was deleted with its lan meanwhile. */
+static int bridge_intf_up(char *ovs_bin, char *ovs_dir, char *lan,
+                          char *bvhost)
+{
+  char cmd[MAX_ARG_LEN];
+  int i;
+  for (i=0; (i<20) && (!if_nametoindex(bvhost)); i++)
+    usleep(50000);
+  if (if_nametoindex(bvhost))
+    {
+    /* a short wait is vswitchd's pace; from half the limit, a warning */
+    if (i >= 10)
+      KERR("WARNING OVSCMD: ADD LAN ETH %s: the interface of bridge %s came "
+           "%d ms after the add-br", lan, bvhost, i * 50);
+    else if (i)
+      KTRC("ADD LAN ETH %s: bridge interface %s after %d ms", lan, bvhost,
+           i * 50);
+    if (!set_intf_flags_iff_up_down(bvhost, 1))
+      return 0;
+    KERR("ERROR OVSCMD: bridge interface %s cannot be set up", bvhost);
+    return -1;
+    }
+  memset(cmd, 0, MAX_ARG_LEN);
+  snprintf(cmd, MAX_ARG_LEN-1, "-- br-exists %s", bvhost);
+  if (ovs_vsctl_quiet(ovs_bin, ovs_dir, cmd))
+    KERR("WARNING OVSCMD: ADD LAN ETH %s: bridge %s is not in ovs, its lan "
+         "was deleted before this endpoint came", lan, bvhost);
+  else
+    KERR("ERROR OVSCMD: ADD LAN ETH %s: bridge %s is in ovs and its "
+         "interface did not appear in 1 s", lan, bvhost);
+  return -1;
+}
+
 int ovs_cmd_add_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost)
 {
   int result = 0;
@@ -312,11 +363,8 @@ int ovs_cmd_add_lan_endp(char *ovs_bin, char *ovs_dir, char *lan, char *vhost)
     KERR("ERROR OVSCMD: %s cannot be set up, no such interface?", vhost);
     result = -1;
     }
-  else if (set_intf_flags_iff_up_down(bvhost, 1))
-    {
-    KERR("ERROR OVSCMD: bridge interface %s cannot be set up", bvhost);
+  else if (bridge_intf_up(ovs_bin, ovs_dir, lan, bvhost))
     result = -1;
-    }
   else
     {
     memset(cmd, 0, MAX_ARG_LEN);

@@ -151,12 +151,10 @@ echo "   filesystem: ${FSTYPE:-unknown}"
 COLON_PROBE="${DEST}/.colon:probe"
 if : > "${COLON_PROBE}" 2>/dev/null; then
   rm -f "${COLON_PROBE}"
-  COLON_OK=1
   echo "   colons    : the destination accepts ':' in a filename"
   echo "               (the epoch workaround is not needed here, but is"
   echo "                harmless and stays on)"
 else
-  COLON_OK=0
   echo "   colons    : the destination REFUSES ':' in a filename, which is"
   echo "               normal for exFAT and NTFS. Epoch packages are"
   echo "               excluded from rsync and fetched separately under a"

@@ -30,7 +30,7 @@ PCAP_LIBS    := $(shell pkg-config --libs   libpcap 2>/dev/null)
 
 # ── Compiler flags ─────────────────────────────────────────────────────────────
 CFLAGS := \
-	-std=c11 -O2 -g \
+	-std=c11 -O2 -g -ffunction-sections -fdata-sections \
 	-Wall -Wextra \
 	-Wno-unused-parameter \
 	-Wno-format-nonliteral \
@@ -55,6 +55,9 @@ CFLAGS := \
 	$(PCRE2_CFLAGS) \
 	$(PCAP_CFLAGS)
 
+# the linker drops what no binary reaches
+LDGC ?= -Wl,--gc-sections
+
 LIBS := \
 	$(GLIB_LIBS) \
 	$(PCRE2_LIBS) \
@@ -76,48 +79,32 @@ WSUTIL_C := \
 	wsutil/wmem/wmem_list.c \
 	wsutil/wmem/wmem_map.c \
 	wsutil/wmem/wmem_miscutl.c \
-	wsutil/wmem/wmem_multimap.c \
-	wsutil/wmem/wmem_stack.c \
 	wsutil/wmem/wmem_strbuf.c \
 	wsutil/wmem/wmem_strutl.c \
 	wsutil/wmem/wmem_tree.c \
 	wsutil/wmem/wmem_user_cb.c \
-	wsutil/802_11-utils.c \
 	wsutil/buffer.c \
-	wsutil/clopts_common.c \
 	wsutil/cmdarg_err.c \
 	wsutil/cpu_info.c \
 	wsutil/crash_info.c \
 	wsutil/crc32.c \
-	wsutil/feature_list.c \
-	wsutil/filter_files.c \
 	wsutil/inet_addr.c \
 	wsutil/inet_cidr.c \
-	wsutil/interface.c \
-	wsutil/jsmn.c \
-	wsutil/mpeg-audio.c \
 	wsutil/nstime.c \
 	wsutil/os_version_info.c \
 	wsutil/privileges.c \
 	wsutil/regex.c \
 	wsutil/report_message.c \
-	wsutil/sober128.c \
-	wsutil/socket.c \
 	wsutil/str_util.c \
-	wsutil/strnatcmp.c \
 	wsutil/strtoi.c \
 	wsutil/tempfile.c \
 	wsutil/time_util.c \
 	wsutil/to_str.c \
-	wsutil/type_util.c \
 	wsutil/unicode-utils.c \
 	wsutil/version_info.c \
 	wsutil/ws_getopt.c \
 	wsutil/ws_mempbrk.c \
-	wsutil/ws_pipe.c \
-	wsutil/ws_strptime.c \
-	wsutil/wsjson.c \
-	wsutil/xtea.c
+	wsutil/ws_strptime.c
 
 WIRETAP_C := \
 	wiretap/erf.c \
@@ -132,8 +119,6 @@ WIRETAP_C := \
 EPAN_C := \
 	epan/address_types.c \
 	epan/afn.c \
-	epan/aftypes.c \
-	epan/asn1.c \
 	epan/capture_dissectors.c \
 	epan/charsets.c \
 	epan/color_filters.c \
@@ -145,12 +130,7 @@ EPAN_C := \
 	epan/crc32-tvb.c \
 	epan/decode_as.c \
 	epan/disabled_protos.c \
-	epan/dtd_grammar.c \
-	epan/dtd_parse.c \
-	epan/dtd_preparse.c \
-	epan/dvb_chartbl.c \
 	epan/epan.c \
-	epan/ex-opt.c \
 	epan/except.c \
 	epan/expert.c \
 	epan/exported_pdu.c \
@@ -162,41 +142,29 @@ EPAN_C := \
 	epan/guid-utils.c \
 	epan/in_cksum.c \
 	epan/ipproto.c \
-	epan/media_params.c \
-	epan/next_tvb.c \
 	epan/oids.c \
 	epan/osi-utils.c \
 	epan/packet.c \
 	epan/prefs.c \
-	epan/print_stream.c \
 	epan/proto.c \
 	epan/proto_data.c \
 	epan/range.c \
 	epan/reassemble.c \
 	epan/register.c \
-	epan/rtd_table.c \
 	epan/scanner.c \
-	epan/sctpppids.c \
 	epan/sequence_analysis.c \
 	epan/show_exception.c \
-	epan/srt_table.c \
 	epan/stat_tap_ui.c \
 	epan/strutil.c \
 	epan/tap.c \
 	epan/tfs.c \
 	epan/timestamp.c \
-	epan/timestats.c \
 	epan/to_str.c \
-	epan/tvbparse.c \
 	epan/tvbuff.c \
 	epan/tvbuff_base64.c \
 	epan/tvbuff_composite.c \
-	epan/tvbuff_lznt1.c \
-	epan/tvbuff_rdp.c \
 	epan/tvbuff_real.c \
 	epan/tvbuff_subset.c \
-	epan/tvbuff_zlib.c \
-	epan/tvbuff_zstd.c \
 	epan/uat.c \
 	epan/uat_load.c \
 	epan/unit_strings.c \
@@ -230,14 +198,9 @@ EPAN_C := \
 	epan/ftypes/ftype-time.c \
 	epan/ftypes/ftypes.c \
 	epan/dissectors/dissectors.c \
-	epan/dissectors/errno.c \
-	epan/dissectors/file-file.c \
-	epan/dissectors/file-pcap.c \
-	epan/dissectors/file-pcapng.c \
 	epan/dissectors/packet-arp.c \
 	epan/dissectors/packet-data.c \
 	epan/dissectors/packet-dhcp.c \
-	epan/dissectors/packet-dhcpv6.c \
 	epan/dissectors/packet-dns.c \
 	epan/dissectors/packet-eth.c \
 	epan/dissectors/packet-ethertype.c \
@@ -247,14 +210,10 @@ EPAN_C := \
 	epan/dissectors/packet-ieee8023.c \
 	epan/dissectors/packet-igmp.c \
 	epan/dissectors/packet-ip.c \
-	epan/dissectors/packet-isl.c \
 	epan/dissectors/packet-media-type.c \
 	epan/dissectors/packet-media.c \
-	epan/dissectors/packet-pcap_pktdata.c \
-	epan/dissectors/packet-sll.c \
 	epan/dissectors/packet-smtp.c \
 	epan/dissectors/packet-tcp.c \
-	epan/dissectors/packet-telnet.c \
 	epan/dissectors/packet-text-media.c \
 	epan/dissectors/packet-udp.c \
 	epan/dissectors/packet-vlan.c \
@@ -262,25 +221,15 @@ EPAN_C := \
 
 UI_C := \
 	ui/alert_box.c \
-	ui/commandline.c \
-	ui/dissect_opts.c \
-	ui/packet_range.c \
-	ui/preference_utils.c \
-	ui/recent.c \
-	ui/recent_utils.c \
-	ui/simple_dialog_stubs.c \
-	ui/util.c \
-	ui/ws_ui_util.c
+	ui/simple_dialog_stubs.c
 
 MAIN_C := \
 	webshark.c \
 	webshark_html.c \
 	cfile.c \
-	file.c \
 	file_packet_provider.c \
 	frame_tvbuff.c \
 	sync_pipe_write.c \
-	fileset.c \
 	capture_opts.c
 
 ALL_C := $(WSUTIL_C) $(WIRETAP_C) $(EPAN_C) $(UI_C) $(MAIN_C)
@@ -325,7 +274,7 @@ $(B)/webshark_html.o: $(HTML_INC)
 
 $(BINDIR)/webshark: $(OBJS) | $(BINDIR)
 	@echo "  LINK  $@"
-	@$(CC) -o $@ $(OBJS) $(LIBS) \
+	@$(CC) -o $@ $(OBJS) $(LIBS) $(LDGC) \
 		-Wl,--wrap,capture_dissector_increment_count \
 		-Wl,--wrap,try_capture_dissector \
 		-Wl,--wrap,call_capture_dissector
@@ -335,7 +284,7 @@ $(BINDIR)/webshark: $(OBJS) | $(BINDIR)
 
 $(BINDIR)/dumpcap: $(DUMPCAP_OBJS) $(SHARED_OBJS) | $(BINDIR)
 	@echo "  LINK  $@"
-	@$(CC) -o $@ $(DUMPCAP_OBJS) $(SHARED_OBJS) $(LIBS)
+	@$(CC) -o $@ $(DUMPCAP_OBJS) $(SHARED_OBJS) $(LIBS) $(LDGC)
 	@echo "Built: $@"
 
 # ── Compilation rules ──────────────────────────────────────────────────────────

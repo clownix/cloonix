@@ -54,7 +54,7 @@ static int get_bnd_event(char *bound)
   return 0;
 }
 
-/* All four doors messages have the same shape: one name and one escaped   */
+/* All four doors messages have the same shape: one name and one escaped */
 /* text field. */
 static void doors_send_named_text(int llid, int tid, char *fctident,
                                   char *nkey, char *name,
@@ -195,7 +195,7 @@ void doors_json_init(void)
 #undef SB
 }
 
-/* Weak default for a receiver the linking process does not define.        */
+/* Weak default for a receiver the linking process does not define. */
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #define RECV_DEFAULT(name, args) \
 __attribute__((weak)) void name args \

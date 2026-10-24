@@ -5,73 +5,54 @@
 
 Five machines and three lans::
 
-  clientA -- lanA -- relay1 --\
-                               lanC -- kea
+  clientA -- lanA -- relay1 --                               lanC -- kea
   clientB -- lanB -- relay2 --/
 
   lanA   10.1.0.0/24    relay1 eth0 is 10.1.0.1
   lanB   10.2.0.0/24    relay2 eth0 is 10.2.0.1
   lanC   10.0.0.0/24    relay1 .1, relay2 .2, kea .3
 
-The two clients have no address at all when they start. That is the point:
-this demo is about how they get one.
+The two clients start with no address, and the one server is on neither
+client lan. A dhcp client shouts to 255.255.255.255 and a broadcast does
+not leave its wire: the relay picks it up, writes its own client-facing
+address into the field giaddr, and sends it to the server as a unicast.
+giaddr is then all the server knows of where the client is: kea holds two
+subnets and chooses on that field, 10.1.0.1 meaning lanA.
 
-There is ONE server, and it is on neither client lan. A dhcp client shouts
-to 255.255.255.255 and a broadcast does not leave its own wire, so without
-help nothing on lanC would ever hear it. The relay is the help: it picks the
-broadcast up, writes its own client-facing address into a field called
-giaddr, and sends it on to the server as an ordinary unicast packet.
-
-giaddr is then the only thing telling the server where the client is. Kea
-holds two subnets and chooses between them on that one field -- 10.1.0.1 in
-giaddr means the client is on lanA, so give it a lanA address. Change the
-relay and the same client gets a different network from the same server
-without either of them being reconfigured.
-
-  ACT 1  clientA asks, and the whole exchange is caught at three points:
-         the client lan, the relay's backbone side, and the server. The
-         same conversation seen before and after relaying.
-  ACT 2  clientB asks from the other lan, and gets an address from the
-         other subnet, from the same server, on the strength of giaddr.
-  ACT 3  clientA lets its lease expire and asks again with a different
-         client -- busybox udhcpc instead of dhcpcd -- to show the protocol
-         is the protocol whoever speaks it.
-  ACT 4  what the server thinks it has handed out, from its own lease file.
-
-Needs cloonix on the PATH and nothing else. Standard library only, like
-cloonix itself, so it runs wherever the client does.
+  ACT 1  clientA asks, the exchange caught at the client lan, the backbone
+         side of the relay and the server: one conversation before and
+         after relaying.
+  ACT 2  clientB asks from the other lan, and gets an address of the other
+         subnet from the same server, on the strength of giaddr.
+  ACT 3  clientA lets its lease expire and asks again with another client,
+         busybox udhcpc in place of dhcpcd: the protocol is the same
+         whoever speaks it.
+  ACT 4  what the server has handed out, from its lease file.
 
 Image: dhcp_trixie (kea, dnsmasq, dhcpcd, busybox)
 Size:  5 containers, 3 lans
 
 THE PACKET TO CATCH
 -------------------
-  DHCP is udp 67 and 68, and this demo has the unusual property that the
-  same exchange looks different on the two wires it crosses.
+  DHCP is udp 67 and 68, and the same exchange differs on the two wires it
+  crosses. On the client lan, broadcast, no address yet:
 
-  On the client's lan, broadcast, with no addresses yet:
+    cloonix cli nemo cnf relay1 eth0 sniff=on
+    cloonix cli nemo sniff relay1 eth0 --dump udp port 67 or udp port 68
 
-    cloonix cli nemo cnf r1 eth0 sniff=on
-    cloonix cli nemo sniff r1 eth0 --dump udp port 67 or udp port 68
+  On the server lan, unicast, relayed:
 
-  On the server's lan, unicast, relayed:
+    cloonix cli nemo cnf relay1 eth1 sniff=on
+    cloonix cli nemo sniff relay1 eth1 --dump udp port 67
 
-    cloonix cli nemo cnf r1 eth1 sniff=on
-    cloonix cli nemo sniff r1 eth1 --dump udp port 67
-
-  The packet to catch is the relayed DISCOVER on lanC. It carries giaddr
-  set to 10.1.0.1, and that single field is the entire mechanism by
-  which one server hands out two different subnets. Do the same on r2
-  and the field says 10.2.0.1, everything else being identical.
-
-  The four-packet dance -- DISCOVER, OFFER, REQUEST, ACK -- is worth
-  watching once end to end, because the third packet is a broadcast the
-  client sends after it already has an offer, which surprises people.
+  The packet to catch is the relayed DISCOVER on lanC: giaddr 10.1.0.1,
+  the whole mechanism by which one server hands out two subnets; on relay2
+  it says 10.2.0.1. Of DISCOVER, OFFER, REQUEST, ACK, the third is a
+  broadcast the client sends while it holds an offer already.
 
 Important
-  This is the demo that exercises the cloonix L2 broadcast path hardest --
-  discovery is pure broadcast, and if a lan is not really a broadcast domain
-  nothing gets an address.
+  Discovery is pure broadcast: the demo needs lans that are broadcast
+  domains end to end.
 """
 import os
 import subprocess
@@ -88,7 +69,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, ACK_FAST, CLOONIX, capturable, cli, create_cnt, erase_net,
     in_parallel, net_answers, parse_bytes_line, show, step, story, trace,
-    trace_ssh, wait_ready)
+    trace_ssh, wait_ready, unavailable,
+    needs_subuid)
 
 ROOTFS_CHOICES = ("dhcp_trixie",)
 
@@ -157,8 +139,8 @@ def ssh(node, cmd, check=True, log=None):
 def put(node, path, text):
     """Write a file into a guest with printf.
 
-    printf reads its first argument as a FORMAT, and that is the whole
-    difficulty. Three things in it are not literal:
+    printf reads its first argument as a FORMAT: three things in it are
+    not literal:
 
       %   a conversion. Refused outright below.
       \'   ends the shell argument. Refused too.
@@ -199,7 +181,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip()
     cli("del", "probe_rootfs", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -216,7 +198,7 @@ def tools_present(node, *tools):
                             "command -v %s >/dev/null 2>&1" % t],
                            capture_output=True, stdin=subprocess.DEVNULL)
         if r.returncode:
-            sys.exit("%s has no %s: this is not the dhcp image.\n"
+            unavailable("%s has no %s: this is not the dhcp image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -243,7 +225,7 @@ def address(node):
         trace("%s addressed: %s", node,
               " ".join(a for _, _, a in WIRING[node] if a))
     else:
-        trace("%s is up with no address at all, which is the point", node)
+        trace("%s is up with no address at all", node)
 
 def enable_forwarding(node):
     """The relays route between the client lans and the backbone.
@@ -638,6 +620,7 @@ def place():
         cli("cnf", name, num, "angle=%s" % deg, ack=ACK_FAST)
 
 def main():
+    needs_subuid()
     story(HISTORY)
     step("looking for the image")
     rootfs = choose_rootfs()
@@ -778,7 +761,7 @@ def main():
                  "\n  the history says where: on a terminal, CLOONIX_DEMO_STORY=1 prints it")
 
     story("""
-the network is left up. Things worth trying, in rough order of how much
+the network is left up. Things to try, in rough order of how much
 they teach:
 
   watch a renewal, which is two packets rather than four -- the client

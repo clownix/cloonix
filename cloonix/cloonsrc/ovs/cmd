@@ -10,6 +10,14 @@ tar xvf ${TARGZ}/ovs_*.tar.gz
 cd ${HERE}/ovs
 rm -rf .git
 patch -p1 < ${HERE}/ovs.patch
+# No ct timeout policy probe: its dummy policy makes the kernel log "No such
+# timeout policy" at every start, and cloonix sets none.
+PROBE='backer->rt_support.ct_timeout = check_ct_timeout_policy(backer);'
+if grep -qF "${PROBE}" ofproto/ofproto-dpif.c; then
+  sed -i "s/ct_timeout = check_ct_timeout_policy(backer);/ct_timeout = false \&\& check_ct_timeout_policy(backer);/" ofproto/ofproto-dpif.c
+else
+  echo "WARNING ovs: the ct timeout probe line moved, the kernel will log it"
+fi
 ./boot.sh
 
 export CFLAGS=" -mtune=generic -fno-stack-protector -g -DALLOW_EXPERIMENTAL_API -pthread -lm -ldl -lnuma -lpcap -lrt -fPIC -lunwind"

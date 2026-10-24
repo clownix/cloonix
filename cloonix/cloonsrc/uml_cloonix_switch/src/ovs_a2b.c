@@ -24,6 +24,7 @@
 #include "kvm.h"
 #include "mactopo.h"
 #include "pthexec.h"
+#include "ack_pending.h"
 
 static char g_cloonix_net[MAX_NAME_LEN];
 static char g_root_path[MAX_PATH_LEN];
@@ -175,8 +176,9 @@ static void timer_heartbeat(void *data)
     if (cur->closed_count)
       {
       /* The helper never restarts: a closed channel is a dead helper. */
-      KERR("WARNING a2b %s: its channel closed, the client request is "
-           "refused and the a2b is freed", cur->name);
+      KERR("WARNING a2b %s: its channel closed, the a2b is freed%s",
+           cur->name, (cur->cli_llid) ?
+           ", the client request it held is refused" : "");
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), cur->name);
       free_a2b(cur);
       }
@@ -557,7 +559,8 @@ void ovs_a2b_resp_add_lan(int is_ko, char *name, int num,
     if (is_ko)
       {
       mactopo_add_resp(0, item_a2b, name, num, lan);
-      KTRC("a2b %s side %d: the add of lan %s was refused", name, num, lan);
+      KERR("ERROR a2b %s side %d: the add of lan %s was refused",
+           name, num, lan);
       utils_send_status_ko(&(cur->cli_llid), &(cur->cli_tid), name);
       if (strlen(cur->side[num].lan_added))
         {
@@ -680,6 +683,15 @@ void ovs_a2b_add(int cli_llid, int cli_tid, char *name)
     }
 }
 
+static int a2b_del_busy(char *name)
+{
+  t_ovs_a2b *cur = find_a2b(name);
+  if (!cur)
+    return -1;
+  return ((cur->cli_llid) || (cur->side[0].del_a2b_req) ||
+          (cur->side[1].del_a2b_req));
+}
+
 void ovs_a2b_del(int cli_llid, int cli_tid, char *name)
 {
   t_ovs_a2b *cur = find_a2b(name);
@@ -706,14 +718,7 @@ void ovs_a2b_del(int cli_llid, int cli_tid, char *name)
     if (!cli_llid)
       KTRC("%s: delete already in flight, the del_all pass waits", name);
     else
-      {
-      KERR("ERROR %s cannot be deleted: %s%s%s",
-           name,
-           cur->cli_llid ? "a client is still waiting on it " : "",
-           cur->side[0].del_a2b_req ? "side 0 delete in flight " : "",
-           cur->side[1].del_a2b_req ? "side 1 delete in flight" : "");
-      send_status_ko(cli_llid, cli_tid, "Not ready");
-      }
+      del_when_free(cli_llid, cli_tid, name, "a2b", a2b_del_busy, ovs_a2b_del);
     }
   else
     {
@@ -762,7 +767,7 @@ void ovs_a2b_add_lan(int cli_llid, int cli_tid, char *name, int num, char *lan)
     }
   else if (!cur)
     {
-    KTRC("plug %s to a2b %s side %d: no a2b of that name", lan, name,
+    KERR("ERROR plug %s to a2b %s side %d: no a2b of that name", lan, name,
          num);
     if (cli_llid)
       send_status_ko(cli_llid, cli_tid, "Does not exist");

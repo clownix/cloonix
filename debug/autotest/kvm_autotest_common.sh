@@ -1,32 +1,20 @@
-# kvm_autotest_common.sh - sourced by the kvm_autotest_<distro>.sh builders
-# and by autotest.sh. Functions only, no side effect.
-#
-# A builder sets DISTRO and PKGS, defines pkg_install and distro_setup, and
-# calls autotest_build: <distro>.qcow2 is copied to kvm_autotest_<distro>.qcow2,
-# booted on nemo with a nat to the mirror 10.117.0.1, written into, and
-# powered off. What every autotest machine gets, whatever the distro:
-#   PKGS                  TOOLS below, a libc to compile with, rsyslog, dbus
-#   user                  created when the base has none
-#   sudoers.d/user        passwordless sudo: fail_spider.sh, the tap check
-#   subuid, subgid        user:100000:65536
-#   /etc/hosts            the hostname, so sudo says nothing
-#   /var/lib/cloonix/bulk mode 777
-#   no firewall           FIREWALL_OFF below
-# then distro_setup, built from the named mechanisms below: which devices
-# tool sets kvm/vhost-net/tun to 0666, how vhost_net is loaded, how user@
-# and its bus exist with no login, how /var/log/syslog gets written (rsyslog, or syslog-ng where there
-# is no rsyslog).
+# kvm_autotest_common.sh - sourced by kvm_autotest_<distro>.sh and
+# autotest_common.sh; functions only. A builder sets DISTRO and PKGS, defines
+# pkg_install and distro_setup, calls autotest_build: <distro>.qcow2 copied,
+# booted on nemo (nat to 10.117.0.1), given TOOLS, user, passwordless sudo,
+# subuid/subgid, hosts, a 777 bulk and no firewall, then distro_setup
+# (devices, vhost_net, user@ bus, syslog).
 NET="${NET:-nemo}"
 BULK="/var/lib/cloonix/bulk"
 VMNAME="pod"
 MIRROR="10.117.0.1"
 # What the suites and the runner call on the machine; the builder refuses
-# a machine missing one, autotest.sh refuses to push to one.
-TOOLS="bash tar gzip python3 gcc sudo newuidmap unshare setsid nohup pgrep pkill timeout ip truncate"
+# a machine missing one, the autotests refuse to push to one.
+TOOLS="bash tar gzip xz python3 gcc sudo newuidmap unshare setsid nohup pgrep pkill timeout ip truncate"
 # The tap flow of testbigflows.py is measured only with this one.
 TOOLS_OPT="iperf3"
 
-# Run as root in a machine, by the builder and again by autotest.sh for a
+# Run as root in a machine, by the builder and again by the autotests for a
 # machine built before: every firewall service found is stopped, disabled
 # and masked, its rules flushed, its name printed.
 FIREWALL_OFF='

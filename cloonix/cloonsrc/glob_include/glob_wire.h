@@ -1,8 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* Wire values shared with other builds (clients, c2c peers). Since 76 never
- * break: never remove/reorder an enum (retire as <name>_reserved_N), add only
- * before _max, new fields at the end. debug/check_wire.sh checks against 76.
- * Version is logged, never enforced. The guest agent is not a party. */
+/* Wire values shared with other builds; since 76 never break: retire as
+ * <name>_reserved_N, add before _max, fields at the end (debug/check_wire.sh). */
 #ifndef GLOB_WIRE_H
 #define GLOB_WIRE_H
 
@@ -85,9 +83,7 @@ enum{
   /* host to agent: the addresses on the air of a radio, its index then
    6 bytes each, for the acks the agent gives */
   header_val_wifi_peers,
-  /* header_type_ctrl_agent on a byte pipe, either way: the side that sends
-     it has too much of that pipe queued, the other stops sending it bytes
-     until xon */
+  /* ctrl_agent: the sender has too much queued, the peer waits for xon */
   header_val_xoff,
   header_val_xon,
 

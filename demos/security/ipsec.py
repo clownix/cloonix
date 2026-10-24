@@ -12,7 +12,7 @@ Two security gateways on one lan, each a different program::
   Both speak IKEv2 with a shared secret and set up an ESP transport-mode
   association for the traffic between their two addresses. gwA runs
   strongSwan and is driven by swanctl; gwB runs Libreswan and is driven by
-  ipsec.conf. That they interoperate at all is the point: IPsec is a
+  ipsec.conf. Their interoperating is the subject: IPsec is a
   standard, and two independent stacks meet on it.
 
   ACT 1  both come up and the tunnel is with no protection yet: a ping from
@@ -52,16 +52,14 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
 from demolib import (
     NET, address, cable_all, check_net, count_on, erase_net, eth_spec, hold,
     in_parallel, place, put, run, ssh, step, story, tools_present,
-    wait_answer, wait_exists)
+    wait_answer, wait_exists, unavailable)
 
 HISTORY = """\
-IPsec is the IETF's standard for encryption at the IP layer, specified in the
-1990s and revised as RFC 4301 and the IKEv2 key exchange as RFC 7296. Two
-long-lived open-source stacks implement it on linux. strongSwan grew from the
-older FreeS/WAN project and is led by Andreas Steffen at HSR in Switzerland;
-Libreswan is the other FreeS/WAN descendant, led by Paul Wouters and shipped
-by Red Hat. They are separate code bases that must agree on the wire, which is
-why pairing them is the honest test of a standard.
+IPsec is the IETF standard for encryption at the IP layer, RFC 4301 with the
+IKEv2 key exchange in RFC 7296. Two long-lived open stacks implement it on
+linux: strongSwan, led by Andreas Steffen, and Libreswan, led by Paul
+Wouters and shipped by Red Hat. They are separate code bases that must agree
+on the wire: pairing them tests the standard, not one code base.
 
 Today: IPsec carries most site-to-site VPNs between companies and cloud
 providers, the voice of 4G and 5G phones toward their operator (VoWiFi), and
@@ -137,7 +135,7 @@ def make(node, rootfs):
         if r.returncode == 0 and wait_exists(node):
             return
         time.sleep(2)
-    sys.exit("%s (%s) was not created. The server said: %s\n"
+    unavailable("%s (%s) was not created. The server said: %s\n"
              "  fetch it:  cd /var/lib/cloonix/bulk && wget "
              "https://clownix.net/downloads/cnt_demo_bulk/%s.tar.gz\n"
              "  or build:  cd vm_create/cnt_kvm_demo && ./cnt_%s.sh"
@@ -283,7 +281,7 @@ def main():
                  % (ok_clear_before, ok_esp, ok_hidden))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the association from each side's point of view:
     cloonix cli %s ssh gwA "swanctl --list-sas"

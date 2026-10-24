@@ -29,6 +29,7 @@
 #include "passt_spawn.h"
 #include "demo_exec.h"
 #include "dir_watch.h"
+#include "pthexec.h"
 
 static char g_net_name[MAX_NAME_LEN];
 static char g_ctrl_path[MAX_PATH_LEN];
@@ -106,6 +107,19 @@ static void heartbeat (int delta)
     if (passt_spawn_beat() == 0)
       nat_main_passt_died();
     }
+}
+
+/* qemu beside proxymous (bundle) or in the rootfs of the toy */
+static int has_kvm(void)
+{
+  char path[MAX_PATH_LEN];
+  char *dir = pthexec_self_bin_dir();
+  snprintf(path, MAX_PATH_LEN-1, "%s/cloonix-qemu-system", dir);
+  if (access(path, R_OK) == 0)
+    return 1;
+  snprintf(path, MAX_PATH_LEN-1,
+           "%s/../rootfs/cloonix/cloonfs/bin/cloonix-qemu-system", dir);
+  return (access(path, R_OK) == 0);
 }
 
 static void test_dev_kvm(void)
@@ -230,7 +244,7 @@ int main(int argc, char **argv)
     exit(-1);
     }
   umask(0000);
-  /* Descriptor limit to 4096, capped at the hard limit, never lowered.    */
+  /* Descriptor limit to 4096, capped at the hard limit, never lowered. */
   {
   struct rlimit rl;
   if (getrlimit(RLIMIT_NOFILE, &rl) == 0)
@@ -253,7 +267,8 @@ int main(int argc, char **argv)
     }
   }
   check_and_set_uid();
-  test_dev_kvm();
+  if (has_kvm())
+    test_dev_kvm();
   g_llid_sig = 0;
   g_llid_ctrl = 0;
   g_watchdog_ok = 0;

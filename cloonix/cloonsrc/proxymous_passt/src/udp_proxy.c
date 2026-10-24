@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <fcntl.h>
+#include <linux/sock_diag.h>
 #include "io_clownix.h"
 #include "proxy_crun.h"
 #include "util_sock.h"
@@ -39,11 +40,13 @@ typedef struct t_udp_proxy
   int nb_dropped_no_peer;
   unsigned long nb_full_to_crun;
   unsigned long nb_full_to_peer;
+  uint64_t drops_checked;
+  uint32_t kernel_drops;
+  int drops_unreadable;
 } t_udp_proxy;
 
-/* Non blocking with big buffers: a blocking sendto here and in the c2c
-   deadlocked the two (each stuck while the other's queue was full). A
-   full queue drops the frame, as udp does. */
+/* Non blocking, big buffers (blocking deadlocked with the c2c): a full
+   queue drops the frame, as udp does. */
 static int say_now(uint64_t *last)
 {
   uint64_t now = cloonix_get_msec();
@@ -68,9 +71,7 @@ static int udp_proxy_init(t_udp_proxy *cur, char *proxyshare,
 static int from_crun_rx_one(int llid, int fd);
 static int from_udp_rx_one(int llid, int fd);
 
-/* Up to 64 datagrams per wakeup on each side: the unix queue in front of a
-   socket holds ten (net.unix.max_dgram_qlen), one read per wakeup left it
-   full and the c2c dropping. */
+/* Up to 64 datagrams per wakeup per side: a unix queue holds only ten. */
 static int drain(int llid, int fd, int (*one)(int, int))
 {
   int i, result = 0, r;
@@ -304,6 +305,33 @@ static int from_crun_rx_one(int llid, int fd)
   return result;
 }
 
+/* The kernel drops at the udp socket from the peer when its receive buffer
+   is full, unseen by read: its counter, every 10 s at most. */
+static void udp_kernel_drops(t_udp_proxy *cur, int fd)
+{
+  uint32_t mem[SK_MEMINFO_VARS];
+  socklen_t len = sizeof(mem);
+  uint64_t now = cloonix_get_msec();
+  if (now - cur->drops_checked < 10000)
+    return;
+  cur->drops_checked = now;
+  if (getsockopt(fd, SOL_SOCKET, SO_MEMINFO, mem, &len) ||
+      (len < (SK_MEMINFO_DROPS + 1) * sizeof(uint32_t)))
+    {
+    if (!cur->drops_unreadable)
+      KERR("WARNING %s: the kernel drops of the udp socket cannot be read, "
+           "errno %d", cur->name, errno);
+    cur->drops_unreadable = 1;
+    }
+  else if (mem[SK_MEMINFO_DROPS] != cur->kernel_drops)
+    {
+    KERR("WARNING %s: the kernel dropped %u datagram(s) from the peer, its "
+         "udp receive buffer full, %u so far", cur->name,
+         mem[SK_MEMINFO_DROPS] - cur->kernel_drops, mem[SK_MEMINFO_DROPS]);
+    cur->kernel_drops = mem[SK_MEMINFO_DROPS];
+    }
+}
+
 static int from_udp_rx_one(int llid, int fd)
 {
   char buf[MAX_DGRAM_LEN];
@@ -319,6 +347,7 @@ static int from_udp_rx_one(int llid, int fd)
       msg_delete_channel(llid);
     return -1;
     }
+  udp_kernel_drops(cur, fd);
   len = read(fd, buf, MAX_DGRAM_LEN-1);
   if (len == 0)
     {

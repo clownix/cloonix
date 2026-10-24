@@ -29,7 +29,7 @@ THE PACKET TO CATCH
     cloonix cli nemo cnf r1 eth0 sniff=on
     cloonix cli nemo sniff r1 eth0 --dump icmp6
 
-  The packet worth catching is the router advertisement, sent to ff02::1,
+  The packet to catch is the router advertisement, sent to ff02::1,
   every host of the lan: it carries the prefix and nothing about any host.
 
 Important
@@ -191,7 +191,7 @@ def main():
         sys.exit("h1 did not reach %s" % a2)
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the advertisement, every three seconds:
     cloonix cli %s sniff r1 eth0 --dump icmp6

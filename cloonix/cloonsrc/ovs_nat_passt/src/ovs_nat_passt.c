@@ -133,7 +133,7 @@ void rpct_recv_pid_req(int llid, int tid, char *name, int num)
   ctrl_link_pid_req(llid, tid, name, num);
 }
 
-/* The proxy socket is proxymous', made for this nat and gone with it.    */
+/* The proxy socket is proxymous', made for this nat and gone with it. */
 void rpct_recv_kil_req(int llid, int tid)
 {
   unlink(g_prxy_path);
@@ -316,7 +316,7 @@ int main (int argc, char *argv[])
   memset(g_nat_name, 0, MAX_NAME_LEN);
   memset(g_vhost, 0, MAX_NAME_LEN);
   memset(g_nat_path, 0, MAX_PATH_LEN);
-/* Setuid binary: its arguments are not trusted.                            */
+/* Setuid binary: its arguments are not trusted. */
   if (!name_is_sane(argv[1]))
     KOUT("ERROR refused net name");
   if (!path_is_sane(argv[2]))
@@ -337,10 +337,10 @@ int main (int argc, char *argv[])
           PROXYSHARE_IN, g_net_name, NAT_PROXY_DIR, nat);
   snprintf(g_netns_namespace, MAX_PATH_LEN-1, "%s%s_%s",
            PATH_NAMESPACE, BASE_NAMESPACE, g_net_name);
+  set_cloonix_name(g_net_name);
   pid = tun_tap_open(g_netns_namespace, g_vhost,
                              &fd_rx_from_tap, &fd_tx_to_tap);
   msg_mngt_init("nat", TRAF_TAP_BUF_LEN);
-  set_cloonix_name(g_net_name);
   msg_mngt_heartbeat_init(heartbeat);
   g_fd_rx_from_tap = fd_rx_from_tap;
   g_fd_tx_to_tap   = fd_tx_to_tap;

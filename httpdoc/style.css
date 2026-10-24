@@ -1,157 +1,216 @@
-/* clownix.net — one stylesheet, no framework, no webfont, no javascript.
-   Everything is system fonts and flat colour so the pages load instantly
-   and stay readable when they are twenty years old. */
+/* clownix.net: one stylesheet for the pages and the two books. No framework,
+   no webfont, no javascript: system fonts, and the colours of the canvas,
+   blue cables, grey lans, green and cyan interface dots. */
 
 :root {
-  --ink:      #1a1a2e;
-  --ink-soft: #55606f;
-  --line:     #d9dee6;
-  --band:     #f4f6fa;
-  --blue:     #0f3460;
-  --blue-mid: #3b6ea5;
-  --accent:   #e94560;
-  --code-bg:  #f2f4f8;
+  --ink:      #16202a;
+  --ink-2:    #51606e;
+  --rule:     #d8dfe7;
+  --wash:     #f0f4f8;
+  --cable:    #1b63c6;
+  --cable-dk: #0f3f86;
+  --lan:      #3a4450;
+  --sniff:    #13915a;
+  --port:     #1fb1c7;
+  --clown:    #d62d45;
+  --code-bg:  #f3f6f9;
+  --sans:  "Avenir Next", Avenir, "Segoe UI Variable Display", "Segoe UI",
+           Ubuntu, Cantarell, "Noto Sans", "DejaVu Sans", Helvetica, Arial,
+           sans-serif;
+  --serif: Charter, "Bitstream Charter", "Charis SIL", "Sitka Text", Cambria,
+           "Noto Serif", "DejaVu Serif", Georgia, serif;
+  --mono:  ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono",
+           "DejaVu Sans Mono", Menlo, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 body {
   margin: 0;
   color: var(--ink);
   background: #fff;
-  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-        "DejaVu Sans", Helvetica, Arial, sans-serif;
+  font: 17px/1.62 var(--serif);
 }
 
-.wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+a { color: var(--cable); text-underline-offset: 2px; }
+a:hover { color: var(--cable-dk); }
+:focus-visible { outline: 3px solid var(--port); outline-offset: 2px; }
 
-/* header */
-header { border-bottom: 1px solid var(--line); background: #fff; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+/* header: the name and the pages, over the blue line of a cable */
+header { background: #fff; border-bottom: 3px solid var(--cable); }
 nav {
-  max-width: 880px; margin: 0 auto; padding: 14px 24px;
-  display: flex; gap: 22px; align-items: baseline; flex-wrap: wrap;
+  max-width: 960px; margin: 0 auto; padding: 12px 24px;
+  display: flex; gap: 6px 20px; align-items: center; flex-wrap: wrap;
+  font-family: var(--sans);
 }
-nav a { color: var(--ink-soft); text-decoration: none; font-size: 15px; }
-nav a:hover { color: var(--blue); }
-nav a.on { color: var(--ink); font-weight: 600; }
-nav .brand {
-  font-weight: 700; letter-spacing: 2px; color: var(--accent);
-  margin-right: 8px; font-size: 17px;
-}
+nav a { color: var(--ink-2); text-decoration: none; font-size: 15px;
+        padding: 4px 0; border-bottom: 2px solid transparent; }
+nav a:hover { color: var(--cable-dk); border-bottom-color: var(--rule); }
+nav a.on { color: var(--ink); font-weight: 600;
+           border-bottom-color: var(--sniff); }
+nav .brand { color: var(--clown); font-weight: 700; font-size: 19px;
+             margin-right: 10px; border: 0; }
+nav .brand img { vertical-align: -7px; margin-right: 8px; }
 
-/* hero */
-.hero { max-width: 880px; margin: 0 auto; padding: 60px 24px 48px; }
-.hero h1 { font-size: 38px; line-height: 1.2; margin: 0 0 18px; letter-spacing: -0.5px; }
-.lead { font-size: 19px; color: var(--ink-soft); margin: 0 0 26px; max-width: 44em; }
-.cta { margin: 0 0 18px; }
-.ver { color: var(--ink-soft); font-size: 14px; margin: 0; }
+/* the summary of the main page */
+.hero { max-width: 960px; margin: 0 auto; padding: 52px 24px 38px; }
+.hero .logo { display: block; max-width: 100%; height: auto; margin: 0 0 24px; }
+.hero h1 { font: 700 44px/1.08 var(--sans); letter-spacing: -0.015em;
+           margin: 0 0 18px; max-width: 18em; }
+.lead { font-size: 20px; line-height: 1.55; color: var(--ink-2);
+        margin: 0 0 26px; max-width: 38em; }
+.cta { margin: 0 0 16px; }
+
+/* three facts, each a way further in; the bullet is a sniffable port */
+.facts { list-style: none; padding: 0; margin: 0 0 30px;
+         display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 30px; }
+.facts li { position: relative; padding-left: 24px; font-size: 16px;
+            line-height: 1.5; color: var(--ink-2); }
+.facts li::before { content: ""; position: absolute; left: 1px; top: 0.4em;
+                    width: 11px; height: 11px; border-radius: 50%;
+                    background: var(--sniff); box-shadow: 0 0 0 3px #d5efe2; }
+.facts a { color: inherit; text-decoration: none; }
+.facts b { color: var(--ink); font-family: var(--sans); }
+.facts a:hover b { color: var(--cable); }
+.ver { font: 14px/1.5 var(--sans); color: var(--ink-2); margin: 0; }
 
 .btn {
-  display: inline-block; padding: 10px 20px; margin: 0 10px 8px 0;
-  background: var(--blue); color: #fff; text-decoration: none;
-  border-radius: 5px; font-size: 15px; border: 1px solid var(--blue);
+  display: inline-block; padding: 10px 18px; margin: 0 10px 10px 0;
+  font: 600 15px/1.2 var(--sans); text-decoration: none;
+  background: var(--cable); color: #fff; border: 2px solid var(--cable);
+  border-radius: 4px;
 }
-.btn:hover { background: #143f75; }
-.btn.ghost { background: #fff; color: var(--blue); }
-.btn.ghost:hover { background: var(--band); }
+.btn:hover { background: var(--cable-dk); border-color: var(--cable-dk);
+             color: #fff; }
+.btn.ghost { background: transparent; color: var(--cable); }
+.btn.ghost:hover { background: var(--wash); color: var(--cable-dk); }
 
 /* sections */
-section { padding: 34px 0; }
-section.top { padding-top: 40px; }
-.band { background: var(--band); border-top: 1px solid var(--line);
-        border-bottom: 1px solid var(--line); }
+section { padding: 38px 0; }
+section.top { padding-top: 44px; }
+.band { background: var(--wash); border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule); }
 
-h1 { font-size: 32px; margin: 0 0 16px; }
-h2 { font-size: 22px; margin: 34px 0 12px; }
-h3 { font-size: 16px; margin: 0 0 8px; }
+h1, h2, h3 { font-family: var(--sans); color: var(--ink); }
+h1 { font-size: 36px; line-height: 1.15; margin: 0 0 16px;
+     letter-spacing: -0.01em; }
+h2 { font-size: 26px; line-height: 1.2; margin: 38px 0 12px;
+     letter-spacing: -0.005em; }
+h3 { font-size: 18px; line-height: 1.3; margin: 0 0 8px; }
+.wrap > h2:first-child { margin-top: 0; }
 p  { margin: 0 0 14px; }
-hr { border: 0; border-top: 1px solid var(--line); margin: 40px 0; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 40px 0; }
+.wrap > p, .wrap > ul, .wrap > ol { max-width: 44em; }
 
 .cols  { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
 .cols2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-.cols p, .cols2 p { font-size: 15px; color: var(--ink-soft); }
+.cols p, .cols2 p { font-size: 16px; color: var(--ink-2); }
+.cols > *, .cols2 > *, .duo > *, .facts > * { min-width: 0; }
+.wrap > h3 { margin: 28px 0 8px; }
 
-.card { border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px;
-        background: #fff; }
-.note { font-size: 14px !important; color: var(--blue-mid) !important;
+/* a card is a plug: the coloured edge is the cable that leaves it */
+.card { border: 1px solid var(--rule); border-top: 4px solid var(--cable);
+        border-radius: 0 0 6px 6px; padding: 18px 22px 20px; background: #fff; }
+.card.toy { border-top-color: var(--sniff); }
+.note { font: 14px/1.5 var(--sans) !important; color: var(--ink-2) !important;
         margin-bottom: 0 !important; }
+
+/* drawn or typed: the same network twice */
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
+       align-items: center; margin: 6px 0 4px; }
+.duo .canvas { border: 1px solid var(--rule); border-radius: 6px;
+               background-color: #fbfcfd;
+               background-image: radial-gradient(#d3dae2 1px, transparent 1px);
+               background-size: 18px 18px; padding: 8px; }
+.duo .canvas svg { display: block; width: 100%; height: auto; }
+.duo pre { margin: 0; }
+.duo .cap { font: 14px/1.5 var(--sans); color: var(--ink-2); margin: 10px 0 0; }
 
 /* code */
 pre {
-  background: var(--code-bg); border: 1px solid var(--line);
-  border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px;
+  background: var(--code-bg); border: 1px solid var(--rule);
+  border-left: 4px solid var(--lan); border-radius: 4px;
+  padding: 14px 16px; overflow-x: auto; margin: 0 0 16px;
 }
-code {
-  font: 13.5px/1.6 "DejaVu Sans Mono", Menlo, Consolas, monospace;
-  color: var(--blue);
-}
-p code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+code { font: 14px/1.6 var(--mono); color: var(--cable-dk); }
+p code, li code { overflow-wrap: anywhere; background: var(--code-bg); padding: 1px 5px;
+                  border-radius: 3px; }
 
 /* table */
-table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; }
-th { text-align: left; font-size: 13px; color: var(--ink-soft);
-     padding: 4px 10px; font-weight: 600; }
-td { border-top: 1px solid var(--line); padding: 9px 10px; font-size: 15px;
-     vertical-align: top; }
-td:first-child { width: 42%; color: var(--ink); }
-td:last-child  { color: var(--ink-soft); }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 18px;
+        font-family: var(--sans); }
+th { text-align: left; font: 600 13px/1.4 var(--sans); color: var(--ink-2);
+     padding: 6px 10px; border-bottom: 2px solid var(--rule); }
+td { border-top: 1px solid var(--rule); padding: 9px 10px; font-size: 15px;
+     line-height: 1.5; vertical-align: top; }
+th + th, td + td { border-left: 0; }
+td:first-child { width: 40%; color: var(--ink); }
+td code { overflow-wrap: anywhere; }
+td:last-child  { color: var(--ink-2); }
 table.course td:first-child { width: 4%; }
 table.course td:nth-child(2) { width: 20%; }
 table.course td:nth-child(3) { width: 40%; }
 
 /* figures */
-.fig { width: 100%; height: auto; margin: 6px 0 10px; }
-.fbox { fill: #f7f8fa; stroke: var(--blue); stroke-width: 1.5; }
-.facc { fill: #fdeef1; stroke: var(--accent); stroke-width: 1.5; }
-.fzone { fill: #eef4ff; stroke: var(--blue-mid); stroke-width: 1.5;
+.fig { width: 100%; height: auto; margin: 8px 0 12px; }
+.fbox { fill: #f6f8fa; stroke: var(--cable-dk); stroke-width: 1.5; }
+.facc { fill: #fdeef0; stroke: var(--clown); stroke-width: 1.5; }
+.fzone { fill: #eef4fb; stroke: var(--cable); stroke-width: 1.5;
          stroke-dasharray: 7 4; }
-.ft { font-size: 14px; fill: var(--ink); }
-.fs { font-size: 11.5px; fill: var(--ink-soft); }
-.fm { font-size: 13px; font-family: "DejaVu Sans Mono", monospace;
-      fill: var(--blue); }
-.fz { font-size: 12px; font-weight: bold; fill: var(--blue-mid); }
-.farr { stroke: var(--blue-mid); stroke-width: 2; fill: none;
+.ft { font-size: 14px; font-family: var(--sans); fill: var(--ink); }
+.fs { font-size: 11.5px; font-family: var(--sans); fill: var(--ink-2); }
+.fm { font-size: 13px; font-family: var(--mono); fill: var(--cable-dk); }
+.fz { font-size: 12px; font-weight: bold; font-family: var(--sans);
+      fill: var(--cable); }
+.farr { stroke: var(--cable); stroke-width: 2; fill: none;
         marker-end: url(#ar); }
 
 /* the two books, sphinx body under the same header and footer */
 .book section { padding: 0; }
-.book pre { font: 13.5px/1.6 "DejaVu Sans Mono", Menlo, Consolas, monospace;
-            color: var(--blue); }
-.book img { max-width: 100%; height: auto; margin: 6px 0 10px; }
-.book a { color: var(--blue-mid); }
+.book p, .book li, .book dd { max-width: 44em; }
+.book pre { font: 14px/1.6 var(--mono); color: var(--cable-dk); }
+.book img { max-width: 100%; height: auto; margin: 8px 0 12px; }
+.book a { color: var(--cable); }
 .book h1 { margin-top: 10px; }
-.book h3 { margin: 22px 0 8px; }
-.book em { color: var(--blue); }
+.book h2 { margin: 34px 0 10px; }
+.book h3 { margin: 24px 0 8px; }
+.book em { color: var(--cable-dk); }
 .book li { margin: 0 0 4px; }
 .book li p { margin: 0; }
 .book blockquote { margin: 0 0 14px; }
 .book dl.field-list { display: grid; grid-template-columns: max-content auto;
-                      gap: 0 12px; margin: 0 0 18px; font-size: 14px;
-                      color: var(--ink-soft); }
+                      gap: 0 12px; margin: 0 0 18px; font: 14px/1.5 var(--sans);
+                      color: var(--ink-2); }
 .book dl.field-list dd { margin: 0; }
 .book dl.field-list p { margin: 0; }
 .book .toctree-wrapper ul { list-style: none; padding: 0; columns: 2; }
-.book .toctree-wrapper li { padding: 5px 0; border-top: 1px solid var(--line);
-                            margin: 0; break-inside: avoid; }
+.book .toctree-wrapper li { padding: 5px 0; border-top: 1px solid var(--rule);
+                            margin: 0; break-inside: avoid;
+                            font-family: var(--sans); font-size: 15px; }
 .book .toctree-wrapper a { text-decoration: none; }
 .book td:first-child { width: auto; }
 .book td p { margin: 0; }
-.booknav { font-size: 14px; color: var(--ink-soft); margin: 0 0 22px; }
+.booknav { font: 14px/1.5 var(--sans); color: var(--ink-2); margin: 0 0 22px; }
 .booknav a { text-decoration: none; }
 .booknav:last-child { margin: 30px 0 0; padding-top: 14px;
-                      border-top: 1px solid var(--line); }
+                      border-top: 1px solid var(--rule); }
 
-/* footer */
-footer { border-top: 1px solid var(--line); padding: 26px 0; margin-top: 30px; }
-footer p { font-size: 14px; color: var(--ink-soft); margin: 0; }
-footer a { color: var(--blue-mid); }
+/* footer, the grey of a lan */
+footer { background: var(--lan); padding: 26px 0; margin-top: 30px; }
+footer p { font: 14px/1.5 var(--sans); color: #dfe5ec; margin: 0; }
+footer a { color: #a9d6ff; }
+footer a:hover { color: #fff; }
 
 /* narrow screens */
-@media (max-width: 700px) {
-  .cols, .cols2 { grid-template-columns: 1fr; gap: 22px; }
-  .hero { padding: 40px 24px 34px; }
-  .hero h1 { font-size: 30px; }
-  .lead { font-size: 17px; }
+@media (max-width: 760px) {
+  .cols, .cols2, .facts, .duo { grid-template-columns: 1fr; gap: 22px; }
+  .hero { padding: 36px 20px 30px; }
+  .hero h1 { font-size: 32px; }
+  .lead { font-size: 18px; }
+  .wrap { padding: 0 20px; }
   td:first-child { width: 45%; }
   .book .toctree-wrapper ul { columns: 1; }
 }

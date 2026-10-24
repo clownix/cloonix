@@ -30,7 +30,7 @@ THE PACKET TO CATCH
     cloonix cli nemo cnf r1 eth1 sniff=on
     cloonix cli nemo sniff r1 eth1 --dump "not ip and not ip6 and not arp"
 
-  The packet worth catching is the link state r1 floods at the cut of
+  The packet to catch is the link state r1 floods at the cut of
   ACT 2: one frame, and r2 learns a link it is not attached to is gone.
 
 Important
@@ -220,7 +220,7 @@ def main():
                  % (ok_direct, ok_reroute, ok_back))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the link state database, the same on the three routers:
     cloonix cli %s ssh r2 "vtysh -c 'show isis database'"

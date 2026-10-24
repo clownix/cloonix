@@ -347,7 +347,7 @@ static void fct_job_for_select(int ref_id, void *data)
 static void child_death_catcher_signal(int n)
 {
   if (job_for_select_request(g_jfs, fct_job_for_select, NULL))
-    KERR(" ");
+    KERR("ERROR the SIGCHLD job request failed");
 }
 
 int pid_clone_kill_single(int pid)

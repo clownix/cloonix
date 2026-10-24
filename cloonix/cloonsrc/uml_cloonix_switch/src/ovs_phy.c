@@ -20,6 +20,7 @@
 #include "ovs_a2b.h"
 #include "fmt_diag.h"
 #include "mactopo.h"
+#include "ack_pending.h"
 
 static t_ovs_phy *g_head_phy;
 static int g_nb_phy;
@@ -67,6 +68,19 @@ static int find_num_macvlan(char *name, int type)
   return result;
 }
 
+/* item_phya or item_phym of a phy, by its endpoint type. */
+static int phy_item_type(t_ovs_phy *cur)
+{
+  if ((cur->endp_type == endp_type_phyas) ||
+      (cur->endp_type == endp_type_phyav))
+    return item_phya;
+  if ((cur->endp_type == endp_type_phyms) ||
+      (cur->endp_type == endp_type_phymv))
+    return item_phym;
+  KOUT("ERROR %s %s %d", cur->name, cur->vhost, cur->endp_type);
+  return 0;
+}
+
 static void free_phy(t_ovs_phy *cur)
 {
   int item_phy_type;
@@ -74,14 +88,7 @@ static void free_phy(t_ovs_phy *cur)
   if (strlen(cur->lan_added))
     {
     KERR("ERROR %s %s", cur->vhost, cur->lan_added);
-    if ((cur->endp_type == endp_type_phyas) ||
-        (cur->endp_type == endp_type_phyav))
-      item_phy_type = item_phya;
-    else if ((cur->endp_type == endp_type_phyms) ||
-             (cur->endp_type == endp_type_phymv))
-      item_phy_type = item_phym;
-    else
-      KOUT("ERROR %s %s %d", cur->vhost, cur->lan_added, cur->endp_type);
+    item_phy_type = phy_item_type(cur);
     mactopo_del_req(item_phy_type, cur->name,
                     cur->num_macvlan, cur->lan_added);
     lan_del_name(cur->lan_added, item_phy_type, cur->vhost, 0);
@@ -148,14 +155,7 @@ void ovs_phy_resp_add_lan(int is_ko, char *name, int num,
     }
   else
     {
-    if ((cur->endp_type == endp_type_phyas) ||
-        (cur->endp_type == endp_type_phyav))
-      item_phy_type = item_phya;
-    else if ((cur->endp_type == endp_type_phyms) ||
-             (cur->endp_type == endp_type_phymv))
-      item_phy_type = item_phym;
-    else
-      KOUT("ERROR %s %s %d", name, lan, cur->endp_type);
+    item_phy_type = phy_item_type(cur);
     vcur = find_phy(name, num);
     if (!vcur)
       {
@@ -175,7 +175,7 @@ void ovs_phy_resp_add_lan(int is_ko, char *name, int num,
       if (is_ko)
         {
         mactopo_add_resp(0, item_phy_type, name, num, lan);
-        KTRC("phy %s: the add of lan %s was refused", vhost, lan);
+        KERR("ERROR phy %s: the add of lan %s was refused", vhost, lan);
         utils_send_status_ko(&(cur->llid), &(cur->tid), name);
         if (strlen(cur->lan_added))
           {
@@ -224,14 +224,7 @@ void ovs_phy_resp_del_lan(int is_ko, char *name, int num,
       }
     else 
       {
-      if ((cur->endp_type == endp_type_phyas) ||
-          (cur->endp_type == endp_type_phyav))
-        item_phy_type = item_phya;
-      else if ((cur->endp_type == endp_type_phyms) ||
-               (cur->endp_type == endp_type_phymv))
-        item_phy_type = item_phym;
-      else
-        KOUT("ERROR %s %s %d", name, lan, cur->endp_type);
+      item_phy_type = phy_item_type(cur);
       mactopo_del_resp(item_phy_type, name, num, lan);
       if (cur->del_phy_req == 1)
         {
@@ -366,6 +359,14 @@ void ovs_phy_add(int llid, int tid, char *name, int type)
     }
 }
 
+static int phy_del_busy(char *name)
+{
+  t_ovs_phy *cur = ovs_phy_exists_vhost(name);
+  if (!cur)
+    return -1;
+  return ((cur->llid) || (cur->del_phy_req));
+}
+
 void ovs_phy_del(int llid, int tid, char *name)
 {
   t_ovs_phy *cur = ovs_phy_exists_vhost(name);
@@ -378,16 +379,14 @@ void ovs_phy_del(int llid, int tid, char *name)
     if (llid)
       send_status_ko(llid, tid, "Does not exist");
     }
-  else if (cur->llid)
+  else if ((cur->llid) || (cur->del_phy_req))
     {
-    KERR("ERROR %s %d %d", name, cur->llid, cur->del_phy_req);
-    if (llid)
-      send_status_ko(llid, tid, "Not ready");
-    }
-  else if (cur->del_phy_req)
-    {
-    if (llid)
-      send_status_ko(llid, tid, "Not ready");
+    /* no client: the del all pass asking again while ovs answers */
+    if (!llid)
+      KTRC("phy %s: a request on it is in flight, the del all pass waits",
+           name);
+    else
+      del_when_free(llid, tid, name, "phy", phy_del_busy, ovs_phy_del);
     }
   else
     {
@@ -397,14 +396,7 @@ void ovs_phy_del(int llid, int tid, char *name)
       {
       if (!strlen(cur->lan))
         KERR("ERROR %s %s", name, cur->lan_added);
-      if ((cur->endp_type == endp_type_phyms) ||
-          (cur->endp_type == endp_type_phymv))
-        item_phy_type = item_phym;
-      else if ((cur->endp_type == endp_type_phyas) ||
-               (cur->endp_type == endp_type_phyav))
-        item_phy_type = item_phya;
-      else
-        KOUT("ERROR %s %d", name, cur->endp_type);
+      item_phy_type = phy_item_type(cur);
       mactopo_del_req(item_phy_type, cur->name,
                       cur->num_macvlan, cur->lan_added);
       val = lan_del_name(cur->lan_added, item_phy_type, cur->vhost, 0);
@@ -466,14 +458,7 @@ void ovs_phy_add_lan(int llid, int tid, char *name, char *lan)
     }
   else
     {
-    if ((cur->endp_type == endp_type_phyms) ||
-        (cur->endp_type == endp_type_phymv))
-      item_phy_type = item_phym;
-    else if ((cur->endp_type == endp_type_phyas) ||
-             (cur->endp_type == endp_type_phyav))
-      item_phy_type = item_phya;
-    else
-      KOUT("ERROR %s %s", name, lan);
+    item_phy_type = phy_item_type(cur);
     lan_add_name(lan, item_phy_type, cur->vhost, 0);
     if (mactopo_add_req(item_phy_type, cur->name,  cur->num_macvlan,
                         lan, cur->vhost, cur->mac_addr, err))
@@ -518,14 +503,7 @@ void ovs_phy_del_lan(int llid, int tid, char *name, char *lan)
       KERR("ERROR: %s %s", name, lan);
     else
       {
-      if ((cur->endp_type == endp_type_phyas) ||
-          (cur->endp_type == endp_type_phyav))
-        item_phy_type = item_phya;
-      else if ((cur->endp_type == endp_type_phyms) ||
-               (cur->endp_type == endp_type_phymv))
-        item_phy_type = item_phym;
-      else
-        KOUT("ERROR %s %s %d", cur->vhost, cur->lan_added, cur->endp_type);
+      item_phy_type = phy_item_type(cur);
       mactopo_del_req(item_phy_type, cur->name,
                       cur->num_macvlan, cur->lan_added);
       val = lan_del_name(cur->lan_added, item_phy_type, cur->vhost, 0);

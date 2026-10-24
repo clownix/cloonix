@@ -1,8 +1,8 @@
 #!/bin/bash
-# kvm_autotest_trixie.qcow2: trixie.qcow2 made ready for autotest.sh, the
+# kvm_autotest_trixie.qcow2: trixie.qcow2 made ready for the autotest, the
 # default machine of the autotest. Common part in kvm_autotest_common.sh.
 DISTRO="trixie"
-PKGS="python3 gcc libc6-dev uidmap rsyslog dbus dbus-user-session sudo iperf3"
+PKGS="python3 gcc libc6-dev uidmap rsyslog dbus dbus-user-session sudo iperf3 xz-utils"
 . "$(dirname "$0")/kvm_autotest_common.sh"
 APT="DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
      apt-get -o Dpkg::Options::=--force-confdef \

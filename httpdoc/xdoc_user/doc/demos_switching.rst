@@ -46,12 +46,11 @@ states the algorithm in verse. Bridges elect a root, each keeps its cheapest
 path to it and blocks every other port, so a loop of wires becomes a tree
 without anybody drawing one. IEEE 802.1D adopted it in 1990; the rapid
 version, 802.1w, came in 2001 and is what the kernel runs today. The bridge
-under study is the one of the linux kernel, written by Lennert Buytenhek in
-2000 for the 2.4 series, driven here with the bridge command of iproute2.
+under study is the one of the linux kernel, written by Lennert Buytenhek
+for the 2.4 series, driven here with the bridge command of iproute2.
 
-Today: every managed switch ships with spanning tree enabled, in its rapid
-form 802.1w since 2001; a second cable plugged between two office switches is
-the loop it silently removes.
+Today: every managed switch ships with spanning tree enabled; a second cable
+plugged between two office switches is the loop it removes.
 
 Two containers each running a kernel bridge, two lans between them, image
 *trixie*: a loop. The demo keeps it unprotected for three seconds, counts

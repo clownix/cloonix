@@ -116,10 +116,10 @@ Who may run cloonix
 ===================
 
 In the bundle, as installed, **every account of the machine** may start a
-net: *cloonix-suid-power*, the one setuid binary, lets in anyone. The two
-copies of the configuration, */usr/libexec/cloonix/cloonfs/etc/cloonix.cfg*
-and */usr/bin/cloonix_config.py*, hold every net password and are readable
-by everyone, and so is the key of the https certificate.
+net: *cloonix-suid-power*, the one setuid binary, lets in anyone. The
+configuration, */usr/libexec/cloonix/cloonfs/etc/cloonix.cfg*, which
+*/usr/bin/cloonix_config.py* links to, holds every net password and is
+readable by everyone, and so is the key of the https certificate.
 
 One switch changes that: the existence of the **group cloonix**. Once it
 exists, *cloonix-suid-power* lets in root and its members, nobody else. The
@@ -218,16 +218,11 @@ The web port
   * Every request has its **Origin** compared with its *Host*. A page open
     in the browser on another site cannot drive a cloonix on this machine.
   * The certificate is self-signed, made once at packing time and shipped
-    in the tarball; a net that finds none makes its own at its first
-    start. Its key is as public as the tarball: replace it on anything but
-    a private lab machine::
-
-        sudo cp my_cert.pem /usr/share/cloonix/cert/cloonix_cert.pem
-        sudo cp my_key.pem  /usr/share/cloonix/cert/cloonix_key.pem
-
-    or point *CLOONIX_TLS_DIR* at a directory holding the pair. The
-    installed key is readable by everyone until the post-install step
-    below limits it to the group.
+    in the tarball; a net that finds none makes its own at its first start.
+    Its key is as public as the tarball and readable by everyone: step six
+    of *Hardening after the install* replaces it, or *CLOONIX_TLS_DIR*
+    points at a directory holding the pair, and step three limits it to the
+    group.
 
 Source: *jscloonix/jscloonix/web/web_auth.c*, *web_http.c*.
 
@@ -235,11 +230,11 @@ Source: *jscloonix/jscloonix/web/web_auth.c*, *web_http.c*.
 What a browser cannot do
 ========================
 
-  * **Run bytes it sent.** A demo is played by name; the gui server hands
-    that name to proxymous, which runs the file from */usr/share/cloonix/demos*
-    on the host. A name that is not there, or a net without proxymous, gets
-    a *KO* and nothing runs. The text sent with the name is only looked at
-    for its shebang.
+  * **Run bytes it sent.** A demo is played by name: the browser sends two
+    header lines naming it, the gui server reads that file from its own disk,
+    under */usr/share/cloonix/demos*, and hands its text to proxymous, which
+    runs it on the host. A name that is not there, or a net without
+    proxymous, gets a *KO* and nothing runs.
   * **Write a file.** The pcap recorder writes under */usr/share/cloonix/pcap*
     and nowhere else, and every name a browser sends that becomes part of a
     path is checked by *web_name_ok*: no separator, no *..*, no leading dot.
@@ -342,7 +337,7 @@ Directories
     /usr/share/cloonix/pcap    1777
     /usr/share/cloonix/cert    644, group only after the post-install step
     cloonfs/etc/cloonix.cfg    644, group only after the post-install step
-    /usr/bin/cloonix_config.py 644, same
+    /usr/bin/cloonix_config.py a link to cloonfs/etc/cloonix.cfg
 
 A name that is known in advance under */tmp* is a name another account
 can create first; the main server and proxymous both refuse a directory
@@ -382,7 +377,9 @@ Guests
 ======
 
   * A guest image contains no cloonix: no agent, no library, no binary. The
-    agent comes on a cd-rom built by cloonix, *insider_agent_*.iso*.
+    agent comes on a cd-rom built by cloonix for a kvm,
+    *insider_agent_*.iso*, in a directory copied in for a cnt,
+    *insider_agent_cnt*.
   * A shell into a guest uses no ip address of the guest: the bytes travel
     on a virtio serial port for a kvm, on a shared mount for a cnt.
   * The directory transfer of *cloonix cli <net> scp -r* refuses member names that
@@ -419,9 +416,9 @@ One: change the passwords
 
 The *cloonix_passwd* of every net is in *cloonix_config.py* of the tarball,
 so it is public: the name of the net followed by *clown*. For the net
-*nemo*: user *nemo*, password *nemoclown*. Edit */usr/bin/cloonix_config.py* and
-*/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg*, the same text twice, one
-line per net::
+*nemo*: user *nemo*, password *nemoclown*. Edit
+*/usr/libexec/cloonix/cloonfs/etc/cloonix.cfg*, which
+*/usr/bin/cloonix_config.py* links to, one line per net::
 
     cloonix_passwd   nemoclown
 
@@ -454,11 +451,9 @@ Three: limit the passwords and the key to the group
 
 ::
 
-    sudo chown root:cloonix /usr/bin/cloonix_config.py \
-                            /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg \
+    sudo chown root:cloonix /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg \
                             /usr/share/cloonix/cert/cloonix_key.pem
-    sudo chmod 640          /usr/bin/cloonix_config.py \
-                            /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg \
+    sudo chmod 640          /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg \
                             /usr/share/cloonix/cert/cloonix_key.pem
 
 From then on a local account outside the group sees neither the passwords
@@ -482,7 +477,7 @@ The client says so when it finds *cloonix_config.py* unreadable::
     that group does not have it. Open a new terminal, or run:
       newgrp cloonix
 
-A reinstall rewrites the three files at 644, so the *chown* and *chmod*
+A reinstall rewrites the two files at 644, so the *chown* and *chmod*
 above are redone after one; the group and its members are kept, */etc/group*
 is not touched by *rm -rf /usr/libexec/cloonix*.
 

@@ -4,10 +4,10 @@
     ./phy.py [net]              the net defaults to nemo
 
 A phy is a physical interface of the machine running the net, taken into
-cloonix_<net>. absorb takes it away from that machine; macvlan leaves it
-its interface and makes an instance with a mac of its own. To play both
-without touching the cables of this host, each is done inside a kvm that
-runs a cloonix of its own, the two kvm sharing one lan of the outer net::
+cloonix_<net>: absorb takes it from that machine, macvlan leaves it there
+and makes an instance with a mac of its own. To play both without touching
+the cables of this host, each runs inside a kvm with a cloonix of its own,
+the two kvm on one lan of the outer net::
 
   outer net (nemo)
   .------------------------------------------------------------------.
@@ -21,31 +21,24 @@ runs a cloonix of its own, the two kvm sharing one lan of the outer net::
   '------------------------------------------------------------------'
 
   ACT 1  two kvm on one lan, both python_trixie.qcow2 (trixie plus python3,
-         for the client): mcv, which will macvlan its eth0, and abs, which
-         will absorb it
-  ACT 2  the cloonix tree installed on this host, and the container image
-         trixie, copied into both and installed; a cloonix net started in
-         each, fido in mcv, mito in abs -- both nets of cloonix_config.py
-         with cloonix_ip 127.0.0.1, so no address on eth0 is needed by the
-         server, which matters where eth0 is about to disappear
+         for the client): mcv, which macvlans its eth0, and abs, which
+         absorbs it
+  ACT 2  the cloonix tree of this host and the container image trixie
+         copied into both and installed; a net started in each, fido in mcv,
+         mito in abs, both with cloonix_ip 127.0.0.1, so the server needs no
+         address on an eth0 about to go
   ACT 3  in mcv: 2.2.2.1/24 on eth0, then "add phy eth0 --macvlan" makes
          eth0_1, on lanm with the container c1 at 2.2.2.2/24
-  ACT 4  in abs: "add phy eth0" makes eth0_0 and eth0 is gone from
-         the kvm, ifconfig says so; the container c2 at 2.2.2.3/24 is on
-         lana with it
-  ACT 5  the pings: c2 to 2.2.2.1 and to 2.2.2.2 across the outer lan,
-         c1 to c2, and mcv itself, 2.2.2.1 on eth0, to c1 on the macvlan
-         of that same eth0
+  ACT 4  in abs: "add phy eth0" makes eth0_0, and ifconfig shows eth0 gone
+         from the kvm; the container c2 at 2.2.2.3/24 is on lana with it
+  ACT 5  the pings: c2 to 2.2.2.1 and 2.2.2.2 across the outer lan, c1 to
+         c2, and mcv itself, 2.2.2.1 on eth0, to c1 on the macvlan of that
+         same eth0
 
-The inner nets are driven through the outer one: every inner command is a
-"cloonix cli nemo ssh <kvm>" carrying a "cloonix cli fido ..." or
-"cloonix cli mito ...", printed on two lines, the outer ssh and the inner
-command as it reads from a shell of the kvm.
-
-Needs cloonix INSTALLED on this host (/usr/libexec/cloonix), not only on
-the PATH, python_trixie.qcow2 (vm_create/cnt_kvm_demo/kvm_python_trixie.sh)
-and the container image trixie in /var/lib/cloonix/bulk. Standard library
-only.
+Every inner command is a "cloonix cli nemo ssh <kvm>" carrying a "cloonix
+cli fido ..." or "cloonix cli mito ...", printed as one line to paste on
+this host. cloonix is installed on this host, in /usr/libexec/cloonix, and
+python_trixie.qcow2 is built by vm_create/cnt_kvm_demo/kvm_python_trixie.sh.
 
 Image: python_trixie.qcow2, trixie
 Size:  2 kvm, 1 lan, and inside each kvm a cloonix with 1 cnt, 1 phy, 1 lan
@@ -86,7 +79,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    CLOONIX, NET, erase_net, hold, run, show, step, story)
+    CLOONIX, NET, erase_net, hold, run, show, step, story, unavailable)
 
 USER = "cloonuser"                   # runs the inner nets
 KVM_ROOTFS = "python_trixie.qcow2"   # trixie plus python3, for the client
@@ -123,8 +116,8 @@ def ssh(node, cmd, check=True):
 def inner(kvm, cmd, check=True):
     """One cloonix command of the inner net of that kvm, typed inside it.
 
-    Printed on two lines: the outer ssh that carries it, then the inner
-    command as it reads from a shell of the kvm.
+    Printed as one line to paste on the host: the outer ssh that carries it,
+    the inner command quoted inside it, as it reads from a shell of the kvm.
     """
     print("cloonix cli %s ssh %s '%s'" % (NET, kvm, cmd))
     r = subprocess.run(CLOONIX + ["cli", NET, "ssh", kvm, cmd],
@@ -157,7 +150,7 @@ def wait_inner_cnt(kvm, cnt, timeout=90):
     """A container of an inner net answers its inner ssh."""
     end = time.time() + timeout
     while time.time() < end:
-        r = inner(kvm, "cloonix --wait 3 cli %s ssh %s 'echo yes'"
+        r = inner(kvm, "cloonix --wait 3 cli %s ssh %s \"echo yes\""
                        % (INNER[kvm], cnt), check=False)
         if "yes" in r.stdout:
             return
@@ -174,7 +167,7 @@ def place():
 story(">>> phy.py %s (on the host, outside the crun)" % NET)
 r = run("cloonix cli %s dump commands" % NET)
 if r.returncode:
-    sys.exit("the net %s does not answer:\n  %s\n  start it: cloonix start %s"
+    unavailable("the net %s does not answer:\n  %s\n  start it: cloonix start %s"
              % (NET, (r.stderr + r.stdout).strip(), NET))
 if NET in INNER.values():
     sys.exit("the outer net cannot be %s: that name is an inner net here"
@@ -187,7 +180,7 @@ for d in ("/" + TREE[0] + "/cloonfs", "/" + TREE[1], "/" + TREE[2]):
 bulk_tgz = os.path.join(BULK, CNT_ROOTFS + ".tar.gz")
 bulk_dir = os.path.join(BULK, CNT_ROOTFS)
 if not (os.path.isfile(bulk_tgz) or os.path.isdir(bulk_dir)):
-    sys.exit("no container image %s in %s: the inner nets need it.\n"
+    unavailable("no container image %s in %s: the inner nets need it.\n"
              "  build it: cd vm_create/cnt_kvm && ./cnt_trixie.sh\n"
              "  or fetch: cd %s && wget https://clownix.net/downloads/"
              "cnt_bulk/%s.tar.gz"
@@ -201,7 +194,7 @@ for kvm in (MCV, ABS):
     r = run("cloonix cli %s add kvm %s ram=4000 cpu=2 eth=1 %s"
             % (NET, kvm, KVM_ROOTFS))
     if r.returncode:
-        sys.exit("no virtual machine on %s:\n  %s\n  build it: cd "
+        unavailable("no virtual machine on %s:\n  %s\n  build it: cd "
                  "vm_create/cnt_kvm_demo && ./kvm_python_trixie.sh"
                  % (KVM_ROOTFS, (r.stderr + r.stdout).strip()))
     run("cloonix cli %s plug %s eth0 lan1" % (NET, kvm))
@@ -286,9 +279,9 @@ inner(MCV, icli(MCV, "add cnt %s eth=1 %s" % (CNT[MCV], CNT_ROOTFS)))
 inner(MCV, icli(MCV, "plug %s %s" % (PHY[MCV], LAN[MCV])))
 inner(MCV, icli(MCV, "plug %s eth0 %s" % (CNT[MCV], LAN[MCV])))
 wait_inner_cnt(MCV, CNT[MCV])
-inner(MCV, icli(MCV, "ssh %s 'ip addr add %s/24 dev eth0'"
+inner(MCV, icli(MCV, "ssh %s \"ip addr add %s/24 dev eth0\""
                      % (CNT[MCV], IP_C1)))
-inner(MCV, icli(MCV, "ssh %s 'ip link set eth0 up'" % CNT[MCV]))
+inner(MCV, icli(MCV, "ssh %s \"ip link set eth0 up\"" % CNT[MCV]))
 r = ssh(MCV, "ip -brief link show")
 story("      the interfaces of %s: eth0 is still there, the macvlan "
       "instance went into cloonix_%s" % (MCV, INNER[MCV]))
@@ -310,9 +303,9 @@ inner(ABS, icli(ABS, "add cnt %s eth=1 %s" % (CNT[ABS], CNT_ROOTFS)))
 inner(ABS, icli(ABS, "plug %s %s" % (PHY[ABS], LAN[ABS])))
 inner(ABS, icli(ABS, "plug %s eth0 %s" % (CNT[ABS], LAN[ABS])))
 wait_inner_cnt(ABS, CNT[ABS])
-inner(ABS, icli(ABS, "ssh %s 'ip addr add %s/24 dev eth0'"
+inner(ABS, icli(ABS, "ssh %s \"ip addr add %s/24 dev eth0\""
                      % (CNT[ABS], IP_C2)))
-inner(ABS, icli(ABS, "ssh %s 'ip link set eth0 up'" % CNT[ABS]))
+inner(ABS, icli(ABS, "ssh %s \"ip link set eth0 up\"" % CNT[ABS]))
 
 # ACT 5 the pings
 step("ACT 5  who reaches whom")
@@ -322,7 +315,7 @@ def ping(kvm, who, target, via_cnt=None):
     last lines on the screen and kept there a moment."""
     cmd = "ping -c 5 -W 3 %s 2>&1 | tail -3" % target
     if via_cnt:
-        r = inner(kvm, icli(kvm, "ssh %s '%s'" % (via_cnt, cmd)),
+        r = inner(kvm, icli(kvm, "ssh %s \"%s\"" % (via_cnt, cmd)),
                   check=False)
     else:
         r = ssh(kvm, cmd, check=False)

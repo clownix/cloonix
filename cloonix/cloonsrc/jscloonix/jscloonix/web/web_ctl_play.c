@@ -1,6 +1,6 @@
-/* Websocket /play: two header lines (#!cloonix-play-dir, #!cloonix-play-name)
-   name a demo that proxymous runs from disk; browser bytes are never run.
-   Output streams back as text frames, last one "[DONE ok=<n> ko=<n>]". */
+/* ws /play: two header lines name a demo, read here from disk and run by
+   proxymous (browser bytes never run); output as text frames, last
+   "[DONE ok=<n> ko=<n>]". */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -205,7 +205,7 @@ static int host_runner_connect(void)
   DLOG("trying host runner %s", path);
   if (strlen(path) >= sizeof(addr.sun_path))
     {
-    KERR("DEMOEXEC GUI path too long");
+    KERR("ERROR DEMOEXEC GUI path too long");
     return -1;
     }
   if (access(path, W_OK))
@@ -216,7 +216,7 @@ static int host_runner_connect(void)
   fd = socket(AF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
     {
-    KERR("DEMOEXEC GUI socket %d", errno);
+    KERR("ERROR DEMOEXEC GUI socket: %s", strerror(errno));
     return -1;
     }
   memset(&addr, 0, sizeof(addr));
@@ -224,7 +224,7 @@ static int host_runner_connect(void)
   strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
   if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)))
     {
-    KERR("DEMOEXEC GUI connect %d", errno);
+    KERR("ERROR DEMOEXEC GUI connect: %s", strerror(errno));
     close(fd);
     return -1;
     }
@@ -344,7 +344,7 @@ static int host_play(int browser_fd, const char *path)
       continue;
     if (used >= (int) sizeof(buf))
       {
-      KERR("DEMOEXEC GUI record longer than %d, resynchronising",
+      KERR("WARNING DEMOEXEC GUI record longer than %d, resynchronising",
            (int) sizeof(buf));
       used = 0;
       skipping = 1;

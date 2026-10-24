@@ -3,7 +3,7 @@
 A demo keeps what is its own: the docstring, the topology, the acts, every
 cloonix command written whole. What is here is the plumbing under them:
 run() and ssh() that print a command and give it to the client, the waits,
-erase_net() and place(), story() for the History popup of the canvas.
+erase_net() and place(), story() for the Comments panel of the canvas.
 
 A demo finds this file in demos/lib, the one directory of demos/ that is
 not an area: no demo list shows it. Names in capitals read through DEMO (WIRING, LAYOUT, ETHS,
@@ -12,6 +12,7 @@ Standard library only.
 """
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import threading
@@ -26,7 +27,7 @@ ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 NET = ARGS[0] if ARGS else "nemo"
 # What goes where. The console, a terminal or the log of the Demo panel,
 # carries the cloonix commands and nothing else. The history of the demo,
-# what each step is for and what it proved, belongs to the History popup of
+# what each step is for and what it proved, belongs to the Comments panel of
 # the canvas: the Demo panel asks for it with CLOONIX_DEMO_STORY=1 and takes
 # every line that carries the mark. From a terminal it is not printed.
 STORY = os.environ.get("CLOONIX_DEMO_STORY") == "1"
@@ -35,13 +36,78 @@ HOLD = 0 if os.environ.get("CLOONIX_DEMO_FAST") == "1" else 4
 ACK_FAST = 0.3
 TRACE = True
 TRACE_SSH = False
+# one write per line under a lock: in_parallel threads print at once
+_OUT = threading.Lock()
+
+# A demo that cannot run here, its image, a module or a privilege missing:
+# all.py goes on with the next demo, a failure stops it.
+EXIT_UNAVAILABLE = 3
+
+def unavailable(msg):
+    """Stop the demo, it cannot run here: msg says why and what to do."""
+    sys.stderr.write("%s\n" % msg)
+    sys.exit(EXIT_UNAVAILABLE)
+
+def guarded(main, nodes):
+    """main(); a failure says why, which of nodes are still up, and exits 1.
+    unavailable() and success go through as they are."""
+    try:
+        main()
+    except SystemExit as stop:
+        if stop.code in (None, 0, EXIT_UNAVAILABLE):
+            raise
+        sys.stderr.write("%s\n" % stop.code)
+        up = [n for n in nodes if in_lst(n)]
+        if up:
+            sys.stderr.write("Still running: %s\n" % ", ".join(up))
+        raise SystemExit(1)
+    except RuntimeError as err:
+        sys.stderr.write("%s\n" % err)
+        raise SystemExit(1)
+
+def toy_dir():
+    """The toy whose client runs this demo (<toy>/bin beside <toy>/rootfs),
+    None for a bundle."""
+    client = os.environ.get("CLOONIX_CLIENT") or shutil.which("cloonix")
+    if not client:
+        return None
+    top = os.path.dirname(os.path.dirname(os.path.realpath(client)))
+    return top if os.path.isdir(os.path.join(top, "rootfs", "cloonix",
+                                             "cloonfs")) else None
+
+def needs_subuid():
+    """Unavailable in a toy with a single uid mapping: setgroups is denied
+    there, a daemon that drops its privileges dies."""
+    top = toy_dir()
+    if not top:
+        return
+    try:
+        with open(os.path.join(top, "config", "idmap")) as f:
+            if f.read().startswith("subuid"):
+                return
+    except OSError:
+        pass
+    unavailable("not possible in this toy: it has a single uid mapping, and "
+                "the daemon of this demo drops its privileges.\n"
+                "newuidmap and newgidmap on the host (package uidmap or "
+                "shadow-utils), then ./setup.sh again, give it a second one.")
+
+def shared_dir(name):
+    """(host path, the path the server names) of a directory both touch: a
+    toy sees nothing of the host but its bulk, as /root/bulk_host."""
+    if toy_dir():
+        return ("/var/lib/cloonix/bulk/" + name, "/root/bulk_host/" + name)
+    return ("/tmp/" + name, "/tmp/" + name)
+
 def story(*args):
     if STORY:
-        for line in " ".join(str(a) for a in args).split("\n"):
-            sys.stdout.write("#story# %s\n" % line)
+        with _OUT:
+            for line in " ".join(str(a) for a in args).split("\n"):
+                sys.stdout.write("#story# %s\n" % line)
+            sys.stdout.flush()
 
 def hold(seconds=None):
-    """A proof stays in the History popup a moment; a terminal shows
+    """A proof stays in the Comments panel a moment; a terminal shows
     commands only and waits for nothing."""
     if not STORY:
         return
@@ -62,7 +128,9 @@ def show(line):
     terminal as it stands. A demo is read at least as often as it is run,
     and the commands are the thing being read.
     """
-    print(line)
+    with _OUT:
+        sys.stdout.write(line + "\n")
+        sys.stdout.flush()
 
 def run(line, quiet=False):
     """Give the server the command written in the line.
@@ -165,7 +233,7 @@ def in_parallel(fn, items, what):
 def check_net():
     r = run("cloonix cli %s dump commands" % NET)
     if r.returncode:
-        sys.exit("no answer from a cloonix net called '%s'.\n"
+        unavailable("no answer from a cloonix net called '%s'.\n"
                  "  the client said: %s\n"
                  "  start it:  cloonix start %s"
                  % (NET, (r.stderr + r.stdout).strip() or "nothing", NET))
@@ -180,7 +248,7 @@ def choose_rootfs():
             return cand
         said = (r.stdout + r.stderr).strip() or "nothing"
     first = DEMO.ROOTFS_CHOICES[0]
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -250,7 +318,7 @@ def tools_present(node, *tools):
         r = run('cloonix cli %s ssh %s "command -v %s"' % (NET, node, t))
         if r.returncode:
             first = DEMO.ROOTFS_CHOICES[0]
-            sys.exit("%s has no %s: this is not the %s image.\n"
+            unavailable("%s has no %s: this is not the %s image.\n"
                      "  fetch it:\n"
                      "    cd /var/lib/cloonix/bulk\n"
                      "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -261,9 +329,16 @@ def tools_present(node, *tools):
                      % (node, t, first, first, first))
 
 def cable_all():
+    """A refused plug stops the demo there, with the reason of the server:
+    a machine off its lan fails every check minutes later."""
     for node in DEMO.ALL:
         for num, lan, _ in DEMO.WIRING[node]:
-            run("cloonix cli %s plug %s eth%d %s" % (NET, node, num, lan))
+            r = run("cloonix cli %s plug %s eth%d %s" % (NET, node, num, lan))
+            if r.returncode:
+                sys.exit("plug %s eth%d %s refused, the machines cannot be "
+                         "cabled. The server said: %s"
+                         % (node, num, lan,
+                            (r.stdout + r.stderr).strip() or "nothing"))
 
 def build(rootfs):
     """The seven steps every demo shares: check, image, erase, place,
@@ -370,23 +445,46 @@ def module_on_host(node, mod):
     underscores where modprobe takes either, so both are tried. This is the
     same rule as kvm: the host loads it, cloonix uses it.
     """
-    for name in (mod, mod.replace("-", "_")):
+    for name in dict.fromkeys((mod, mod.replace("-", "_"))):
         if ssh(node, "test -d /sys/module/%s && echo yes" % name,
                check=False).strip() == "yes":
             return True
     return False
 
+def need_host_modules(node, mods):
+    """Stop the demo, unavailable here, when a module it needs is not loaded
+    on the host: a container cannot load one. demo_test.py reads HOST_MODULES
+    and skips."""
+    missing = [m for m in mods if not module_on_host(node, m)]
+    if missing:
+        unavailable(modules_warning(missing))
+
+def modules_warning(missing):
+    """What to do about kernel modules not loaded on the host."""
+    bar = "!" * 72
+    return ("%s\nWARNING: the kernel module(s) %s, not loaded on the host. A "
+            "container cannot\nload a module; on the host, once per boot:\n"
+            "%s\nthen play the demo again.\n%s"
+            % (bar, ", ".join(missing),
+               "\n".join("sudo modprobe %s" % m for m in missing), bar))
+
 FRRINIT = "/usr/lib/frr/frrinit.sh"
 
-def frr_setup(node, daemons, conf):
+def frr_setup(node, daemons, conf, modules=()):
     """Write /etc/frr of one node, start frr, wait for the last daemon named.
-    The daemons stay root, a container having no frr user of the host map."""
+    The daemons stay root, a container having no frr user of the host map.
+    A module <daemon>_<name> (pathd_pcep) is loaded by its daemon."""
     names = ["zebra"] + [d for d in daemons if d != "zebra"]
     lines = ["%s=yes" % d for d in names] + ["vtysh_enable=yes"]
-    lines += ['%s_options="-A 127.0.0.1 -u root -g root"' % d
+    lines += ['%s_options="-A 127.0.0.1 -u root -g root%s"'
+              % (d, "".join(" -M %s" % m for m in modules
+                            if m.split("_")[0] == d))
               for d in names + ["mgmtd", "staticd"]]
     ssh(node, "mkdir -p /etc/frr /var/log/frr /var/lib/frr /var/tmp/frr")
-    ssh(node, "printf 'service integrated-vtysh-config\\n' > /etc/frr/vtysh.conf")
+    # root needs no password: vtysh then skips PAM, which refuses it in an
+    # interactive shell of the container.
+    ssh(node, "printf 'service integrated-vtysh-config\\n"
+              "username root nopassword\\n' > /etc/frr/vtysh.conf")
     ssh(node, "printf '%s\\n' > /etc/frr/daemons" % "\\n".join(lines))
     ssh(node, "printf '%s\\n' > /etc/frr/frr.conf" % conf.replace("\n", "\\n"))
     ssh(node, "grep -q '^frrvty:.*root' /etc/group || "
@@ -395,8 +493,18 @@ def frr_setup(node, daemons, conf):
     ssh(node, "rm -rf /run/frr; mkdir -p /run/frr; chmod 755 /run/frr")
     ssh(node, "%s start </dev/null >/dev/null 2>&1" % FRRINIT)
     ssh(node, "for i in $(seq 1 20); do pgrep -x %s >/dev/null && exit 0; "
-              "sleep 1; done; echo %s did not start, see /var/log/frr; exit 1"
+              "sleep 1; done; echo %s did not start, see /var/log/syslog; exit 1"
               % (names[-1], names[-1]))
+    # frr.conf applied and checked: under load the daemons can come up after
+    # frrinit has run vtysh -b, and watchfrr restarts them empty.
+    marker = next((l.strip() for l in conf.split("\n")
+                   if l.startswith("router ")), None)
+    if marker:
+        ssh(node, "for i in $(seq 1 30); do vtysh -b >/dev/null 2>&1; "
+                  "vtysh -c 'show running-config' 2>/dev/null | "
+                  "grep -qF '%s' && exit 0; sleep 1; done; "
+                  "echo 'frr.conf not applied, see /var/log/syslog'; exit 1"
+                  % marker)
 
 class Grab(Tap):
     """A Tap that also keeps the bytes, to look for a string in them."""

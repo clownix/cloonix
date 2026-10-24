@@ -1,8 +1,8 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* Who may drive the canvas: user = net name, password = cloonix_passwd,    */
-/* the pair of cloonix.cfg. Http basic, because the browser attaches it by  */
-/* itself to the websocket upgrades. The web port is https, so the base64   */
-/* credentials never travel in clear.                                       */
+/* Who may drive the canvas: user = net name, password = cloonix_passwd, */
+/* the pair of cloonix.cfg. Http basic, because the browser attaches it by */
+/* itself to the websocket upgrades. The web port is https, so the base64 */
+/* credentials never travel in clear. */
 
 static char g_auth_user[MAX_NAME_LEN];      /* the net name */
 static char g_auth_pass[MSG_DIGEST_LEN];    /* its cloonix_passwd */
@@ -33,8 +33,8 @@ static void auth_init(const char *net)
     if (cnf)
         snprintf(g_auth_pass, sizeof(g_auth_pass), "%s", cnf->passwd);
     if (!g_auth_pass[0])
-        KERR("WARNING no cloonix_passwd found for net %s, the web ports "
-             "will refuse every browser", net);
+        KERR("WARNING no cloonix_passwd found, the web ports will refuse "
+             "every browser");
 }
 
 static int b64_dec(const char *in, char *out, int outsz)
@@ -75,8 +75,7 @@ static int auth_ok(const char *hdr)
     char value[512], plain[512], *colon;
 
     if (!g_auth_pass[0]) {
-        KERR("ERROR auth: no cloonix_passwd for net %s, refusing everything",
-             g_auth_user);
+        KERR("ERROR auth: no cloonix_passwd, refusing everything");
         return 0;
     }
     if (!hdr_value(hdr, "Authorization:", value, sizeof(value)))
@@ -104,7 +103,7 @@ static int auth_ok(const char *hdr)
         return 0;
     }
     if (!const_time_eq(colon + 1, g_auth_pass)) {
-        KERR("ERROR auth: wrong password for net %s", g_auth_user);
+        KERR("ERROR auth: wrong password");
         sleep(1);
         return 0;
     }

@@ -145,7 +145,10 @@ static int recv_frame(int fd, char **payload, int *plen)
     {
     buf = (char *) malloc(*plen + 1);
     if (!buf)
+      {
+      cxp_log("WARNING recv: no memory for %d bytes", (int) *plen);
       return -1;
+      }
     got = 0;
     while (got < *plen)
       {
@@ -290,9 +293,8 @@ static void child_exec(const char *cmd)
   _exit(127);
 }
 
-/* leg_gone: client vanished, kill the whole setsid session as ssh does.
-   Otherwise the command finished: killing it could win the race over exit,
-   WIFEXITED false, and a correct run be reported as 255. */
+/* leg_gone: kill the setsid session as ssh does; else no kill, which could
+   race the exit and report 255. */
 static void end_child(pid_t pid, int *status, int reaped, int leg_gone)
 {
   int i;
@@ -327,11 +329,13 @@ static void do_exec(int fd, const char *body)
   cxp_json_str(body, "cmd", cmd, sizeof(cmd));
   if (pipe(outp))
     {
+    cxp_log("WARNING exec: pipe: %s", strerror(errno));
     send_txt(fd, OP_ERROR, "{\"txt\":\"pipe failed\"}");
     return;
     }
   if (pipe(errp))
     {
+    cxp_log("WARNING exec: pipe: %s", strerror(errno));
     close(outp[0]); close(outp[1]);
     send_txt(fd, OP_ERROR, "{\"txt\":\"pipe failed\"}");
     return;
@@ -560,6 +564,7 @@ static void do_put(int fd, const char *body)
   if (out < 0)
     {
     int why = errno;
+    cxp_log("WARNING put %s: %s", path, strerror(why));
     swallow_rest(fd);
     send_txt(fd, OP_ERROR, "{\"txt\":\"%s: %s\"}", path, strerror(why));
     return;
@@ -621,7 +626,9 @@ static void do_get(int fd, const char *body)
   in = open(path, O_RDONLY);
   if (in < 0)
     {
-    send_txt(fd, OP_ERROR, "{\"txt\":\"%s: %s\"}", path, strerror(errno));
+    int why = errno;
+    cxp_log("WARNING get %s: %s", path, strerror(why));
+    send_txt(fd, OP_ERROR, "{\"txt\":\"%s: %s\"}", path, strerror(why));
     return;
     }
   send_txt(fd, OP_META, "{\"size\":%ld,\"mode\":%d}",
@@ -733,6 +740,7 @@ static void do_put_tree(int fd, const char *body)
         if (cur < 0)
           {
           int why = errno;
+          cxp_log("WARNING put %s: %s", full, strerror(why));
           free(pl);
           swallow_rest(fd);
           send_txt(fd, OP_ERROR, "{\"txt\":\"%s: %s\"}", full,
@@ -789,7 +797,10 @@ static int send_one_entry(int fd, const char *parent, const char *rel)
       return -1;
     d = opendir(full);
     if (!d)
+      {
+      cxp_log("WARNING get %s: %s", full, strerror(errno));
       return 0;
+      }
     while ((de = readdir(d)) != NULL)
       {
       if ((!strcmp(de->d_name, ".")) || (!strcmp(de->d_name, "..")))
@@ -826,7 +837,10 @@ static int send_one_entry(int fd, const char *parent, const char *rel)
     return -1;
   in = open(full, O_RDONLY);
   if (in < 0)
+    {
+    cxp_log("WARNING get %s: %s", full, strerror(errno));
     return 0;
+    }
   for (;;)
     {
     n = read(in, buf, sizeof(buf));
@@ -906,7 +920,9 @@ static void do_list(int fd, const char *body)
   d = opendir(path);
   if (!d)
     {
-    send_txt(fd, OP_ERROR, "{\"txt\":\"%s: %s\"}", path, strerror(errno));
+    int why = errno;
+    cxp_log("WARNING list %s: %s", path, strerror(why));
+    send_txt(fd, OP_ERROR, "{\"txt\":\"%s: %s\"}", path, strerror(why));
     return;
     }
   while ((de = readdir(d)) != NULL)
@@ -966,6 +982,7 @@ static void serve_one(int fd)
     case OP_GETTREE: do_get_tree(fd, pl); break;
     case OP_LIST: do_list(fd, pl); break;
     default:
+      cxp_log("WARNING unexpected first opcode %d", op);
       send_txt(fd, OP_ERROR, "{\"txt\":\"unexpected first opcode %d\"}", op);
       break;
     }
@@ -980,7 +997,10 @@ static int listen_unix(const char *path)
   unlink(path);
   fd = socket(AF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
+    {
+    cxp_log("WARNING listen socket: %s", strerror(errno));
     return -1;
+    }
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
   snprintf(addr.sun_path, sizeof(addr.sun_path) - 1, "%s", path);

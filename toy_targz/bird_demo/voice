@@ -1,0 +1,17 @@
+# voice - the narration of bird_demo, one line per demo: a general summary of
+# its goal. Appended to demos/voice by create_bird_toy_targz.sh; the clips are
+# bird_demo/audio/<demo>.ogg, made by bird_demo/audio/make_voice.py.
+
+bird_demo/ospf_example.py        O S P F with BIRD. An area border router summarises one network, hides another, and feeds a stub area.
+bird_demo/rip_example.py         R I P with BIRD, on its own port and signed. A wrong password makes the routes time out.
+bird_demo/babel_example.py       Babel with BIRD. One protocol carries the I P v 4 and the I P v 6 routes.
+bird_demo/bfd_example.py         B F D with BIRD. Three sessions, one of them multihop, and a cut seen in a fraction of a second.
+bird_demo/bgp_example.py         B G P with BIRD. A multihop session signed with T C P A O, or with M D 5, and an export filter that tags.
+bird_demo/rpki_example.py        R P K I with BIRD. The router learns the route origins from a cache, and drops the invalid route.
+bird_demo/static_example.py      Static routes with BIRD. Multipath, blackhole and B F D controlled next hops, checked in the kernel.
+bird_demo/kernel_example.py      BIRD and the kernel. Alien routes are learnt, a second table is filled, and routes persist after a stop.
+bird_demo/pipe_example.py        The BIRD pipe. One router holds two routing tables, and each one backs up the other.
+bird_demo/radv_example.py        Router advertisements with BIRD. Three lans read one configuration in three different ways.
+bird_demo/mrt_example.py         M R T dumps with BIRD. The B G P table is written in the format of the routing archives.
+bird_demo/aggregator_example.py  The BIRD aggregator. Routes with the same prefix and the same path length become one.
+bird_demo/l3vpn_example.py       L 3 V P N with BIRD. A customer network is carried in a V R F, across an M P L S core.

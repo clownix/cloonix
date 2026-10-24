@@ -73,6 +73,13 @@ def pack_image():
     not readable from here, the running guest reads it as root."""
     add_cnt(C, "s")
     wait_answer(C)
+    # the tree of the image packed: a bit it lacks would be blamed on the
+    # extraction of the packed one
+    base = os.path.join(BULK, CNT_ROOTFS + "_targz")
+    if os.path.isdir(base):
+        w = modes_wrong(base)
+        if w:
+            raise Fail("the image packed, before any packing: %s" % w)
     # tar answers 1 for a file that changed while read, the syslog here.
     ssh(C, "tar czf /tmp/img.tar.gz --one-file-system "
            "--exclude=./tmp/img.tar.gz --exclude=./cloonixmnt "
@@ -141,7 +148,7 @@ def lower_refuses_writes(name):
         print("      (toy: the mount is inside the toy, not probed from here)")
         return
     lower = "/var/lib/cloonix/%s/cnt/%s/lower" % (NET, name)
-    if not os.path.isfile(os.path.join(lower, ".cloonix_targz_3")):
+    if not os.path.isfile(os.path.join(lower, ".cloonix_targz_4")):
         raise Fail("%s: the image is not mounted there" % lower)
     probe = os.path.join(lower, "write_probe")
     try:
@@ -250,11 +257,11 @@ def act_stale_tree():
     and redoes one without the mark. Made here by chmoding var/tmp of the
     tree and the top to 555, as the old extractions left them, and putting
     the old mark in place of the current one."""
-    marker = os.path.join(EXT, ".cloonix_targz_3")
+    marker = os.path.join(EXT, ".cloonix_targz_4")
     if not os.path.isfile(marker):
         raise Fail("%s: no extraction mark in the tree" % marker)
     os.unlink(marker)
-    open(os.path.join(EXT, ".cloonix_targz_2"), "w").close()
+    open(os.path.join(EXT, ".cloonix_targz_3"), "w").close()
     os.chmod(os.path.join(EXT, "var/tmp"), 0o555)
     os.chmod(EXT, 0o555)
     t0 = time.time()

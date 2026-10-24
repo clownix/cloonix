@@ -1,7 +1,5 @@
-// cr-play.js — on-canvas "Demo / script player" panel, and its History popup.
-// The log of the panel carries the cloonix commands of the demo; the lines a
-// demo marks "#story# " are its history, the description of its steps, and
-// go to the popup instead.
+// cr-play.js — Demo panel (the cloonix commands of a demo) and its Comments
+// panel (the "#story# " lines).
 
 (function () {
   "use strict";
@@ -22,7 +20,26 @@
       "border:1px solid #1f4287;border-radius:4px;cursor:pointer;font:inherit;";
     btn.addEventListener("mouseenter", function () { btn.style.background = "#1f4287"; });
     btn.addEventListener("mouseleave", function () { btn.style.background = "#0f3460"; });
-    btn.addEventListener("click", function () { openDemoPanel(); });
+    btn.addEventListener("click", function () {
+      // One Demo panel: the button brings back the one open, a running demo
+      // and its log with it, rather than a second empty panel on top.
+      for (var k in g_demo_panels) {
+        var st = g_demo_panels[k];
+        if (!/^demo_\d+$/.test(k) || !st) continue;
+        if (st.transferred && st.popup && !st.popup.closed) {
+          st.popup.focus();
+          return;
+        }
+        if (st.panel) {
+          var hs = g_demo_panels[k + "_history"];
+          if (hs && hs.panel && !hs.transferred) raisePanel(hs.panel);
+          raisePanel(st.panel);
+          if (st.showList) st.showList();
+          return;
+        }
+      }
+      openDemoPanel();
+    });
     header.appendChild(btn);
   }
 
@@ -75,7 +92,7 @@
     var playBtn   = mkBtn("Play", "#0f3460");
     var cmdsBtn   = mkBtn("Commands", "#0d3321");
     var clearBtn  = mkBtn("Clear Screen", "#21262d");
-    var histBtn   = mkBtn("History", "#21262d");
+    var histBtn   = mkBtn("Comments on", "#21262d");
     var soundBtn  = mkBtn("sound off", "#21262d");
     var stopBtn   = mkBtn("stop and del", "#5a1e1e");
 
@@ -109,6 +126,7 @@
     term.open(termHost);
     try { fit.fit(); } catch (e) {}
     state.term = term; state.fit = fit;
+    state.focus = function () { focusTerm(state.term); };
     // A key typed in the log while a demo runs goes to the demo: one text
     // frame per key, which the server hands to the demo's stdin as a line.
     term.onData(function (data) {
@@ -171,14 +189,12 @@
       document.addEventListener("mousedown", dismiss);
     });
 
-    // History popup. The log above carries the cloonix commands; this popup
-    // explains the demo: what it is about (About, the docstring of the file),
-    // then the run step by step (Steps): the text the demo marks "#story# ",
-    // the commands each step ran, folded, what the demo said on stderr, and
-    // how it ended. Everything received is kept as a list of events, so the
-    // popup closed and opened again is rebuilt from it.
+    // Comments panel: About (the file docstring), then Steps (story text, folded
+    // commands, stderr, end), rebuilt from the kept events when reopened.
+    // userOff: the reader closed the panel, the next Play leaves it closed
     var hist = { key: key + "_history", state: null, name: "",
-                 about: null, events: [], t0: 0, tick: null, ui: null };
+                 about: null, events: [], t0: 0, tick: null, ui: null,
+                 userOff: false };
 
     function el(tag, css, text) {
       var e = document.createElement(tag);
@@ -212,9 +228,173 @@
       } catch (e) {}
     }
 
+    // The command of an ssh line, its quotes off, and what follows them.
+    function splitCmd(t) {
+      t = t.trim();
+      var q = /^(["'])((?:(?!\1)[\s\S])*)\1\s*(.*)$/.exec(t);
+      return q ? { cmd: q[2], note: q[3] } : { cmd: t, note: "" };
+    }
+
+    // A sniff filter (pcap_filter.c subset) as a webshark display filter; null
+    // if untranslatable (portrange): the capture opens unfiltered.
+    function sniffToDisplay(text) {
+      var tk = (text || "").replace(/([()])/g, " $1 ").trim().split(/\s+/)
+                           .filter(function (w) { return w; });
+      var pos = 0;
+      var PROTO = { ip: "ip", ip6: "ipv6", arp: "arp", tcp: "tcp", udp: "udp",
+                    icmp: "icmp", icmp6: "icmpv6", igmp: "igmp" };
+      var IPV4 = /^\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?$/;
+      function peek() { return tk[pos]; }
+      function eat(w) { if (tk[pos] === w) { pos++; return true; } return false; }
+      function fail() { throw new Error("untranslated"); }
+      function num() {
+        var t = tk[pos++];
+        if (!/^\d+$/.test(t || "")) fail();
+        return t;
+      }
+      function prim(proto) {
+        var dir = "";
+        if (eat("src")) dir = "src"; else if (eat("dst")) dir = "dst";
+        var t = peek();
+        if (t === "host" || t === "net") {
+          pos++;
+          var a = tk[pos++];
+          if (!IPV4.test(a || "")) fail();
+          return "ip." + (dir || "addr") + " == " + a.replace(/\/32$/, "");
+        }
+        if (t === "port") {
+          pos++;
+          var n = num(), f = dir ? dir + "port" : "port";
+          if (proto === "tcp" || proto === "udp") return proto + "." + f + " == " + n;
+          return "(tcp." + f + " == " + n + " || udp." + f + " == " + n + ")";
+        }
+        if (t === "less" || t === "greater") {
+          pos++;
+          return "frame.len " + (t === "less" ? "<=" : ">=") + " " + num();
+        }
+        fail();
+      }
+      function primary() {
+        var t = peek();
+        if ((t === "ip" || t === "ip6") && tk[pos + 1] === "proto") {
+          pos += 2;
+          return (t === "ip" ? "ip.proto == " : "ipv6.nxt == ") + num();
+        }
+        if (t && PROTO[t]) {
+          pos++;
+          var n = peek();
+          if (["src", "dst", "host", "net", "port", "less", "greater"]
+                .indexOf(n) >= 0) {
+            var p = prim(t);
+            return /^(tcp|udp)\./.test(p) ? p : "(" + PROTO[t] + " && " + p + ")";
+          }
+          return PROTO[t];
+        }
+        return prim("");
+      }
+      function factor() {
+        if (eat("not") || eat("!")) return "!" + factor();
+        if (eat("(")) {
+          var e = expr();
+          if (!eat(")")) fail();
+          return e;
+        }
+        return primary();
+      }
+      function term() {
+        var parts = [factor()];
+        for (;;) {
+          if (eat("and") || eat("&&")) { parts.push(factor()); continue; }
+          var t = peek();
+          if (t === undefined || t === "or" || t === "||" || t === ")") break;
+          parts.push(factor());
+        }
+        return parts.length > 1 ? "(" + parts.join(" && ") + ")" : parts[0];
+      }
+      function expr() {
+        var parts = [term()];
+        while (eat("or") || eat("||")) parts.push(term());
+        return parts.length > 1 ? "(" + parts.join(" || ") + ")" : parts[0];
+      }
+      if (!tk.length) return null;
+      try {
+        var out = expr();
+        if (pos !== tk.length) return null;
+        return out.replace(/^\((.*)\)$/, function (all, inner) {
+          // the outer brackets only when they close at the end
+          var d = 0;
+          for (var i = 0; i < inner.length; i++) {
+            if (inner[i] === "(") d++;
+            else if (inner[i] === ")" && --d < 0) return all;
+          }
+          return inner;
+        });
+      } catch (e) { return null; }
+    }
+
+    // A cloonix line a web user cannot type: ssh opens the node terminal, sniff
+    // the cable capture; null otherwise.
+    function webRow(text) {
+      var ind = /^\s*/.exec(text)[0];
+      var m = /^\s*(?:\$\s+)?cloonix\s+cli\s+\S+\s+ssh\s+(\S+)\s+(.+)$/.exec(text);
+      if (m) {
+        var node = m[1], sc = splitCmd(m[2]), cmd = sc.cmd;
+        var r = el("div", "color:#79c0ff;cursor:pointer;border-radius:3px;",
+                   ind + "terminal of " + node + ":  " + cmd +
+                   (sc.note ? "      " + sc.note : ""));
+        r.title = "click: a terminal of " + node +
+                  " opens and runs this command, also put in the clipboard";
+        r.addEventListener("click", function () {
+          copyText(cmd, r);
+          var n = g_nodes.find(function (x) { return x.name === node; });
+          if (n && g_net) openSshPanel(node, g_net, n, "ssh", cmd);
+        });
+        return r;
+      }
+      m = /^\s*(?:\$\s+)?cloonix\s+cli\s+\S+\s+sniff\s+(\S+)(?:\s+eth(\d+))?(?:\s+(.*))?$/.exec(text);
+      if (m) {
+        var who = m[1], eth = m[2];
+        var filt = (m[3] || "").replace(/^--(?:dump|bytes)\b\s*/, "");
+        filt = splitCmd(filt).cmd;
+        var what = eth !== undefined ? who + " eth" + eth : "the air " + who;
+        var disp = sniffToDisplay(filt);
+        var c = el("div", "color:#79c0ff;cursor:pointer;border-radius:3px;",
+                   ind + "capture of " + what + (filt ? ",  " + filt : ""));
+        c.title = "click: the capture of " + what + " opens" +
+                  (disp ? ", filtered on " + disp : "");
+        c.addEventListener("click", function () {
+          // as the sniff verb does, a capture not armed is armed first
+          if (eth !== undefined) {
+            var num = parseInt(eth, 10);
+            var n = g_nodes.find(function (x) { return x.name === who; });
+            if (!n) return;
+            if (n.etype && n.etype[num] === "eths")
+              openWebsharkPanel(who, num, n, undefined, disp);
+            else
+              snfSet(who, num, 1, function () {
+                websharkWhenSniffable(who, num, disp); });
+          } else {
+            var l = g_lans.find(function (x) { return x.name === who; });
+            if (!l) return;
+            if (g_air_snf.has(who)) openAirWebshark(who, l, disp);
+            else snfSet(who, 0, 1, function () {
+                   websharkWhenSniffable(who, null, disp); });
+          }
+        });
+        return c;
+      }
+      m = /^\s*(?:\$\s+)?cloonix\s+cli\s+\S+\s+cnf\s+(\S+)\s+eth(\d+)\s+sniff=on\s*$/.exec(text);
+      if (m)
+        return el("div", "color:#8b949e;", ind + "eth" + m[2] + " of " + m[1] +
+                  ": right-click it in the canvas, \"Sniff on\"");
+      return null;
+    }
+
     // One line of text, styled by what it is.
     function textRow(text) {
       if (text === "") return el("div", "height:.7em;");
+      var web = webRow(text);
+      if (web) return web;
       var cmd = /^\s*(?:\$\s+)?(cloonix\s.*)$/.exec(text);
       if (cmd) {
         var c = el("div", "color:#79c0ff;cursor:copy;border-radius:3px;", text);
@@ -231,9 +411,16 @@
       return el("div", "", text);
     }
 
+    // The button names what a click does: open or close the Comments panel.
+    function historyBtnSync() {
+      histBtn.textContent = hist.state ? "Comments off" : "Comments on";
+    }
+
     function historyClose() {
       var hs = hist.state;
       hist.state = null; hist.ui = null;
+      historyBtnSync();
+      canvasHighlight(null);
       if (!hs) return;
       try { if (hs.panel && hs.panel.parentElement)
               hs.panel.parentElement.removeChild(hs.panel); } catch (e) {}
@@ -267,6 +454,13 @@
     }
 
     function sectionNew(title, when) {
+      var sec = sectionMake(title, when);
+      sec.title = title;
+      historyTitle();
+      return sec;
+    }
+
+    function sectionMake(title, when) {
       var ui = hist.ui, idx = ui.sections.length;
       var prev = idx ? ui.sections[idx - 1] : null;
       if (prev) sectionMark(prev, "ok");
@@ -296,14 +490,19 @@
         "font:600 11px system-ui,sans-serif;line-height:17px;",
         idx ? String(idx) : "i");
       chip.title = title;
+      var sec = { box: box, body: body, badge: badge, chip: chip,
+                  cmds: null, cmdList: null, cmdCount: 0, names: new Set() };
+      // the mouse on a step outlines on the canvas the items it acted on
+      [chip, head].forEach(function (e) {
+        e.addEventListener("mouseenter", function () { canvasHighlight(sec.names); });
+        e.addEventListener("mouseleave", function () { canvasHighlight(null); });
+      });
       chip.addEventListener("click", function () {
         historyTab("steps");
         ui.follow = false;
         ui.steps.scrollTop = box.offsetTop - ui.steps.offsetTop - 4;
       });
       ui.index.appendChild(chip);
-      var sec = { box: box, body: body, badge: badge, chip: chip,
-                  cmds: null, cmdList: null, cmdCount: 0 };
       ui.sections.push(sec);
       sectionMark(sec, "run");
       return sec;
@@ -318,8 +517,9 @@
         sec.box.appendChild(sec.cmds);
       }
       sec.cmdCount++;
+      cmdNames(line).forEach(function (n) { sec.names.add(n); });
       sec.cmdSum.textContent = sec.cmdCount + " cloonix command" +
-        (sec.cmdCount === 1 ? "" : "s") + " run for this, as typed in a shell";
+        (sec.cmdCount === 1 ? "" : "s") + ", as typed in a shell";
       sec.cmdList.appendChild(textRow(line.replace(/^\s+/, "")));
     }
 
@@ -340,6 +540,22 @@
         cur.body.appendChild(el("div",
           "color:" + (ev.bad ? "#ff7b72" : "#e3b341") + ";white-space:pre-wrap;",
           ev.t));
+      } else if (ev.k === "subend") {
+        // all.py: 0 done; 3 (EXIT_UNAVAILABLE of demolib) cannot run here,
+        // anything else a failure: either stops the run
+        var out = (ev.rc === 0) ? "ok" : (ev.rc === 3) ? "na" : "ko";
+        sectionMark(cur, out === "ok" ? "ok" : "ko");
+        ui.steps.appendChild(el("div",
+          "margin:4px 0 10px 0;padding:8px 10px;border-radius:4px;" +
+          "white-space:normal;font:12px system-ui,sans-serif;border:1px solid " +
+          { ok: "#238636;color:#3fb950;", na: "#9e6a03;color:#e3b341;",
+            ko: "#da3633;color:#ff7b72;" }[out],
+          { ok: "End of demo " + ev.path + ".",
+            na: ev.path + " cannot run here, the reason above: the run stops, " +
+                "the network stays for inspection.",
+            ko: ev.path + " failed, exit " + ev.rc + ", the reason above in " +
+                "red: the run stops, the network stays for inspection." }[out]));
+        historyTitle();
       } else if (ev.k === "end") {
         sectionMark(cur, ev.ok ? "ok" : "ko");
         var endBox = el("div",
@@ -348,13 +564,14 @@
           "border:1px solid " + (ev.ok ? "#238636" : "#da3633") + ";" +
           "color:" + (ev.ok ? "#3fb950" : "#ff7b72") + ";",
           ev.ok
-            ? "The demo went to its end. The network is left running: the " +
-              "commands in blue above can be clicked, copied, and tried in a shell."
+            ? "The demo went to its end; its network keeps running. A blue " +
+              "line above acts on a click: a terminal line runs in the " +
+              "terminal of its node, a capture line opens the capture of its " +
+              "cable, a cloonix line is copied for a shell."
             : ev.stopped
-            ? "The demo was stopped and everything was deleted."
-            : "The demo stopped on a failure. What it said is in red above " +
-              "and in the log of the Demo panel; the machines are left as " +
-              "they were for inspection.");
+            ? "The demo was stopped, everything deleted."
+            : "The demo stopped on a failure, the reason in red above and in " +
+              "the log of the Demo panel; the machines stay for inspection.");
         ui.steps.appendChild(endBox);
       }
       if (ui.follow) ui.steps.scrollTop = ui.steps.scrollHeight;
@@ -365,6 +582,7 @@
       var ui = hist.ui;
       if (!ui) return;
       ui.steps.style.display = (which === "steps") ? "block" : "none";
+      ui.head.style.display = (which === "steps") ? "block" : "none";
       ui.index.style.display = (which === "steps") ? "flex" : "none";
       ui.about.style.display = (which === "about") ? "block" : "none";
       [["steps", ui.tabSteps], ["about", ui.tabAbout]].forEach(function (p) {
@@ -373,12 +591,42 @@
       });
     }
 
+    // all.py: the demo it plays and its step in the title, "#demo# n/N path
+    // line" starting a demo, "#demoend# path rc" ending it.
+    function historyTitle() {
+      var st = hist.state, ui = hist.ui;
+      if (!st || !ui) return;
+      var lbl = st.panel.firstElementChild.querySelectorAll("span")[1];
+      if (!lbl) return;
+      var t = "Comments" + (hist.name ? " — " + hist.name : "");
+      if (hist.sub) {
+        t += " · " + hist.sub.n + "/" + hist.sub.of + " " + hist.sub.path;
+        var n = ui.sections.length - 1;
+        if (hist.sub.ended) t += " · end of demo";
+        else if (n > 0) t += " · step " + n + ": " + ui.sections[n].title;
+      }
+      lbl.textContent = t;
+    }
+
+    function headDraw() {
+      var ui = hist.ui;
+      if (!ui) return;
+      var a = hist.sub ? hist.subAbout : hist.about;
+      var where = hist.sub ? hist.sub.n + "/" + hist.sub.of + " " +
+                             hist.sub.path : (hist.name || "demo");
+      ui.head.textContent = "";
+      ui.head.appendChild(el("div", "font-weight:600;font-size:13px;color:#e6edf3;",
+        where));
+      var what = a && a.title ? a.title : hist.sub ? hist.sub.line : "";
+      if (what)
+        ui.head.appendChild(el("div", "margin-top:3px;color:#c9d1d9;", what));
+    }
+
     function historyFill() {
       var ui = hist.ui, a = hist.about;
       ui.steps.textContent = ""; ui.index.textContent = ""; ui.about.textContent = "";
       ui.sections = []; ui.follow = true;
-      var lbl = hist.state.panel.firstElementChild.querySelectorAll("span")[1];
-      if (lbl) lbl.textContent = "History" + (hist.name ? " — " + hist.name : "");
+      headDraw();
       if (a) {
         ui.about.appendChild(el("div",
           "font:600 14px system-ui,sans-serif;color:#e6edf3;white-space:normal;" +
@@ -386,27 +634,26 @@
         a.lines.forEach(function (t) { ui.about.appendChild(textRow(t)); });
       } else {
         ui.about.appendChild(el("div", "color:#8b949e;white-space:normal;",
-          "This file has no docstring: nothing is known about it before it runs."));
+          "No docstring in this file."));
       }
-      var intro = sectionNew(a ? a.title : (hist.name || "demo"), "");
-      intro.body.appendChild(el("div",
-        "color:#8b949e;white-space:normal;font:12px system-ui,sans-serif;" +
-        "margin-bottom:6px;",
-        "About holds the network, the acts and the packet to catch. Here the " +
-        "run is told step by step; each step folds the cloonix commands it " +
-        "ran, the same lines the log of the Demo panel shows."));
+      sectionNew("start", "");
       hist.events.forEach(historyDraw);
       historyStatus();
+      historyTitle();
     }
 
     function historyOpen() {
       if (hist.state) { raisePanel(hist.state.panel); return; }
-      var W = 660, H = 520;
+      var W = 660, H = 600;
       var hs = { panel: null, transferred: false, popup: null };
-      var shell = makePanelShell("History", historyClose, W, H, hs);
+      var shell = makePanelShell("Comments", function () {
+        hist.userOff = true;
+        historyClose();
+      }, W, H, hs);
       hs.panel = shell.panel;
       hs.close = historyClose;
       hist.state = hs;
+      historyBtnSync();
       g_demo_panels[hist.key] = hs;
       var wrapW = shell.panel.parentElement.clientWidth;
       var left = panel.offsetLeft + panel.offsetWidth + 10;
@@ -431,17 +678,33 @@
       var ui = { sections: [], follow: true };
       ui.tabSteps = tab("Steps", "steps");
       ui.tabAbout = tab("About", "about");
+      ui.tabSteps.title = "the run, step by step, each step with its cloonix " +
+                          "commands folded";
+      ui.tabAbout.title = "the whole description of the demo";
+      var save = el("span", "cursor:pointer;padding:2px 8px;margin-left:8px;" +
+                            "border:1px solid #30363d;border-radius:4px;" +
+                            "color:#8b949e;font-size:11px;", "Save");
+      save.title = "download these comments as a markdown file";
+      save.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+      save.addEventListener("click", historySave);
+      tabs.appendChild(save);
       ui.status = el("span", "margin-left:auto;font-size:11px;");
       tabs.appendChild(ui.status);
       ui.index = add(el("div",
         "display:flex;flex-wrap:wrap;gap:4px;padding:5px 8px;flex-shrink:0;" +
         "border-bottom:1px solid #21262d;background:#0d1117;"));
-      var pane = "flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px;" +
-                 "white-space:pre;color:#c9d1d9;" +
+      // the description of the demo stays at the top, the steps scroll under
+      ui.head = add(el("div",
+        "flex-shrink:0;max-height:30%;overflow:auto;padding:8px 12px;" +
+        "border-bottom:1px solid #30363d;background:#111a2e;" +
+        "white-space:normal;font:12px system-ui,sans-serif;color:#c9d1d9;"));
+      var pane = "flex:1 1 auto;min-height:0;overflow-y:scroll;padding:10px 12px;" +
+                 "white-space:pre;color:#c9d1d9;scrollbar-width:thin;" +
+                 "scrollbar-color:#484f58 #0d1117;" +
                  "font:12px 'SF Mono','Fira Code',monospace;line-height:1.4;";
       ui.steps = add(el("div", pane));
       ui.about = add(el("div", pane));
-      [ui.steps, ui.about, ui.index].forEach(function (p) {
+      [ui.steps, ui.about, ui.index, ui.head].forEach(function (p) {
         p.addEventListener("mousedown", function (e) { e.stopPropagation(); });
       });
       // The view follows the run until the reader scrolls up, and again once
@@ -455,15 +718,63 @@
       historyTab("steps");
     }
 
+    // The comments as markdown: About, then each step, its text, its
+    // commands and how the demo ended, the worked example to keep.
+    function historyMarkdown() {
+      var out = [], a = hist.about, cmds = [];
+      function flush() {
+        if (cmds.length) out.push("", "```sh", cmds.join("\n"), "```");
+        cmds = [];
+      }
+      out.push("# " + (a ? a.title : (hist.name || "demo")), "");
+      if (hist.name) out.push("Demo: `" + hist.name + "`", "");
+      if (a && a.lines.length) out.push("```", a.lines.join("\n"), "```", "");
+      hist.events.forEach(function (ev) {
+        if (ev.k === "story") {
+          var m = /^\[\s*(\d+(?:\.\d+)?)s\]\s*(.*)$/.exec(ev.t);
+          var n = m ? null : /^(\d+)\.\s+(.*)$/.exec(ev.t);
+          if (m || n) {
+            flush();
+            out.push("", "## " + (m ? m[2] + "  (" + fmtClock(parseFloat(m[1])) +
+                                      ")" : n[2]), "");
+          } else
+            out.push(ev.t.replace(/\s+$/, "") ? "    " + ev.t : "");
+        } else if (ev.k === "cmd") {
+          cmds.push(ev.t.replace(/^\s+/, ""));
+        } else if (ev.k === "note") {
+          out.push("> " + ev.t);
+        } else if (ev.k === "end") {
+          flush();
+          out.push("", "**" + (ev.ok ? "done" : ev.stopped ? "stopped"
+                                              : "failed") +
+                   "** after " + fmtClock(ev.at));
+        }
+      });
+      flush();
+      return out.join("\n") + "\n";
+    }
+
+    function historySave() {
+      var blob = new Blob([historyMarkdown()], { type: "text/markdown" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = (hist.name || "demo").replace(/\.py$/, "").replace(/\//g, "_") +
+                   "_comments.md";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    }
+
     function historyStart(name, script) {
       hist.name = name || "";
+      hist.sub = null;
       hist.about = parseAbout(script);
       hist.events = [];
       hist.stopped = false;
       hist.t0 = Date.now();
       if (hist.tick) clearInterval(hist.tick);
       hist.tick = setInterval(historyStatus, 1000);
-      if (hist.state) historyFill(); else historyOpen();
+      if (hist.state) historyFill(); else if (!hist.userOff) historyOpen();
       historyTab("steps");
     }
 
@@ -474,6 +785,8 @@
 
     function historyEnd(ok) {
       if (!hist.t0) return;
+      // all.py said the failure at the end of its demo already
+      if (!ok && !hist.stopped && !hist.sub) voiceFailure(hist.name);
       if (hist.tick) { clearInterval(hist.tick); hist.tick = null; }
       historyEvent({ k: "end", ok: ok, stopped: hist.stopped,
                      at: (Date.now() - hist.t0) / 1000 });
@@ -500,16 +813,77 @@
 
     function voiceStop() {
       if (state.clip) { state.clip.pause(); state.clip = null; }
+      try { if (window.speechSynthesis) window.speechSynthesis.cancel(); }
+      catch (e) {}
     }
 
-    // One frame of the play websocket: marked, the history; "cloonix ..." or
-    // "tar ...", a
-    // command, for the log and for the fold of the current step; a verdict
-    // of the server; anything else is the demo on stderr or asking for a key.
+    // Why the demo failed, said: the recorded clip, then the first line of
+    // the reason by the voice of the browser when it has an english one.
+    function failureReason() {
+      var notes = hist.events.filter(function (e) { return e.k === "note"; });
+      var bad = notes.filter(function (e) { return e.bad; });
+      var first = (bad[0] || notes[0] || { t: "" }).t;
+      return first.split("\n")[0].replace(/[_*#]/g, " ").trim().slice(0, 240);
+    }
+
+    function voiceFailure(demo) {
+      voiceStop();
+      if (!state.sound) return;
+      var reason = failureReason();
+      var a = new Audio("/audio/demo_failed.ogg");
+      state.clip = a;
+      a.addEventListener("ended", function () {
+        var ss = window.speechSynthesis;
+        if (!ss || !reason || state.clip !== a) return;
+        var vs = ss.getVoices().filter(function (v) { return /^en/i.test(v.lang); });
+        if (!vs.length) return;
+        var u = new SpeechSynthesisUtterance(
+          (demo ? demo.replace(/\.py$/, "").replace(/[\/_]/g, " ") + ": " : "") +
+          reason);
+        u.voice = vs.filter(function (v) { return /en-GB/i.test(v.lang); })[0] || vs[0];
+        u.rate = 0.95;
+        ss.speak(u);
+      });
+      a.play().catch(function () {});
+    }
+
+    // One play frame: story, "cloonix ..."/"tar ..." command (log and fold),
+    // server verdict, else demo stderr or a key request.
     function playLine(s) {
       if (s.indexOf(STORY_MARK) === 0) {
-        historyEvent({ k: "story",
-                       t: s.slice(STORY_MARK.length).replace(/\r?\n$/, "") });
+        var st = s.slice(STORY_MARK.length).replace(/\r?\n$/, "");
+        var dm = /^#demo# (\d+)\/(\d+) (\S+)\s*(.*)$/.exec(st);
+        var de = /^#demoend# (\S+) (-?\d+)$/.exec(st);
+        if (dm) {
+          // a demo of all.py: its own steps from 1, its own Save
+          hist.sub = { n: dm[1], of: dm[2], path: dm[3], line: dm[4],
+                       ended: false };
+          hist.subAbout = null;
+          hist.events = [];
+          if (hist.ui) historyFill();
+          (function (sub) {
+            var cut = sub.path.lastIndexOf("/");
+            fetch("/files/get?name=" + encodeURIComponent(sub.path.slice(cut + 1)) +
+                  "&dir=" + encodeURIComponent(cut >= 0 ? "demos/" +
+                                               sub.path.slice(0, cut) : "demos"),
+                  { cache: "no-store" })
+              .then(function (r) { return r.ok ? r.text() : null; })
+              .then(function (txt) {
+                if (txt == null || hist.sub !== sub) return;
+                hist.subAbout = parseAbout(txt);
+                headDraw();
+              })
+              .catch(function () {});
+          })(hist.sub);
+          state.voice = "/audio/" + dm[3].replace(/\.py$/, "") + ".ogg";
+          voicePlay();
+        } else if (de && hist.sub) {
+          hist.sub.ended = true;
+          historyEvent({ k: "subend", path: de[1], rc: parseInt(de[2], 10) });
+          var rc = parseInt(de[2], 10);
+          if (rc !== 0) voiceFailure(de[1]);
+        } else
+          historyEvent({ k: "story", t: st });
         return;
       }
       writeLine(s);
@@ -547,8 +921,10 @@
 
       historyStart(name, script);
       var area = (dir || "").replace(/^demos\/?/, "");
-      state.voice = name ? "/audio/" + (area ? area + "/" : "") +
-                           name.replace(/\.py$/, "") + ".ogg" : "";
+      // all.py has no phrase of its own: each demo it plays says its own
+      state.voice = (!name || /^PLAYS_THE_PACKAGES\s*=\s*True\b/m.test(script))
+                    ? "" : "/audio/" + (area ? area + "/" : "") +
+                           name.replace(/\.py$/, "") + ".ogg";
       voicePlay();
       playBtn.disabled = true;
       stateLbl.textContent = "playing…";
@@ -593,7 +969,8 @@
       overlay.appendChild(box);
 
       var titleEl = document.createElement("div");
-      titleEl.textContent = "Open demo";
+      titleEl.textContent = opts.view ? "Demos -- one is playing, the list only"
+                                      : "Open demo";
       titleEl.style.cssText = "font-weight:600;";
       box.appendChild(titleEl);
 
@@ -605,7 +982,7 @@
 
       var btnRow = document.createElement("div");
       btnRow.style.cssText = "display:flex;gap:8px;justify-content:flex-end;";
-      var cancelB = mkBtn("Cancel", "#21262d");
+      var cancelB = mkBtn(opts.view ? "Close" : "Cancel", "#21262d");
       btnRow.appendChild(cancelB);
       box.appendChild(btnRow);
 
@@ -637,8 +1014,9 @@
         var name = path.slice(cut + 1);
         var r = document.createElement("div");
         r.style.cssText =
-          "padding:6px 10px 6px 22px;cursor:pointer;display:flex;gap:14px;" +
-          "border-bottom:1px solid #1a2233;";
+          "padding:6px 10px 6px 22px;display:flex;gap:14px;" +
+          "border-bottom:1px solid #1a2233;" +
+          (opts.view ? "" : "cursor:pointer;");
         var p = document.createElement("span");
         p.textContent = path;
         p.style.cssText = "font-family:monospace;flex:0 0 200px;";
@@ -646,9 +1024,11 @@
         t.textContent = text;
         t.style.cssText = "opacity:.75;";
         r.appendChild(p); r.appendChild(t);
-        r.addEventListener("mouseenter", function () { r.style.background = "#0f3460"; });
-        r.addEventListener("mouseleave", function () { r.style.background = ""; });
-        r.addEventListener("click", function () { destroy(); opts.onPick(name, dir); });
+        if (!opts.view) {
+          r.addEventListener("mouseenter", function () { r.style.background = "#0f3460"; });
+          r.addEventListener("mouseleave", function () { r.style.background = ""; });
+          r.addEventListener("click", function () { destroy(); opts.onPick(name, dir); });
+        }
         listHost.appendChild(r);
       }
 
@@ -670,7 +1050,7 @@
       document.body.appendChild(overlay);
     }
 
-    playBtn.addEventListener("click", function () {
+    function pickAndPlay() {
       browseOpen({
         onPick: function (name, dir) {
           var q = "name=" + encodeURIComponent(name) +
@@ -684,13 +1064,22 @@
             .catch(function () { writeLine("\x1b[31m[could not load " + name + "]\x1b[0m"); });
         }
       });
-    });
+    }
+    playBtn.addEventListener("click", pickAndPlay);
+    // The header button on an open panel: its list, only to read while a
+    // demo plays.
+    state.showList = function () {
+      if (playBtn.disabled) browseOpen({ view: true });
+      else pickAndPlay();
+    };
 
     clearBtn.addEventListener("click", function () { term.clear(); });
-    histBtn.addEventListener("click", historyOpen);
-    // Every demo going on is killed by the server, then the net is erased;
-    // the panel stays for the next demo. Delete all of the header does the
-    // same and closes the panels.
+    histBtn.addEventListener("click", function () {
+      hist.userOff = !!hist.state;
+      if (hist.state) historyClose(); else historyOpen();
+    });
+    // Server kills the running demos and erases the net; the panel stays
+    // (header Delete all also closes the panels).
     stopBtn.addEventListener("click", function () {
       voiceStop();
       fetch("/ctl/rma", { method: "POST", cache: "no-store" })

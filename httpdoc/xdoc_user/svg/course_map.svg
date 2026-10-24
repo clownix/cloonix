@@ -50,7 +50,7 @@ text{fill:#1a1a2e;font-size:11px}
 <rect class="loop" x="20" y="12" width="330" height="84" rx="6"/>
 <text x="30" y="30" font-weight="bold">on every step</text>
 <text class="s" x="30" y="46" style="font-size:11px">1  run the demo</text>
-<text class="s" x="30" y="59" style="font-size:11px">2  read the canvas and the History popup</text>
+<text class="s" x="30" y="59" style="font-size:11px">2  read the canvas and the Comments panel</text>
 <text class="s" x="30" y="72" style="font-size:11px">3  catch the packet with sniff</text>
 <text class="s" x="30" y="85" style="font-size:11px">4  break one thing, watch, repair</text>
 </svg>

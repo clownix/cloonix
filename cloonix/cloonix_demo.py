@@ -78,12 +78,9 @@ def demo_summary(path):
     return head
 
 def demo_target(rest):
-    """The demo name a command line asks for.
-
-    The guide walks demos/ a directory at a time, so the name arrives as
-    words -- routing frr frrmix.py -- while a line typed by hand carries the
-    path in one word. A slash join makes the two the same thing, a single
-    word being its own join.
+    """The demo name a command line asks for: the words of the guide, routing
+    frr frrmix.py, joined with slashes, as a line typed by hand carries it
+    in one word.
     """
     return "/".join(w for w in rest if w)
 
@@ -103,19 +100,10 @@ def demo_place(prefix):
     return DEMO_PLACES[min(depth, len(DEMO_PLACES) - 1)]
 
 def demo_level(prefix):
-    """What lies directly under one place in demos/, as {word: its line}.
-
-    One component at a time: the areas, then the programmes of an area. A
-    directory comes back as a bare word with no slash on it, because the
-    guide adds one word per tab and joins them itself.
-
-    Except where the level holds a single directory, which is no choice at
-    all: the walk goes through it and the words come back with the step it
-    passed in front of them, so no place is ever offered with one word in
-    it, and the name built is still the whole path.
-
-    A directory says what is under it and a programme says what it does, so
-    every step of the walk carries its own line.
+    """What lies directly under one place of demos/, as {word: its line}: the
+    areas, then the programmes of an area, a directory as a bare word. A
+    level holding a single directory is walked through, its name in front of
+    the words, so no place offers one word.
     """
     prefix = prefix.strip("/")
     prefix = (prefix + "/") if prefix else ""
@@ -143,14 +131,9 @@ def demo_level(prefix):
     return out
 
 def demo_find(want):
-    """The file a name asks for, or None, saying nothing either way.
-
-    Three ways, because all three are things people type:
-    "routing/frrmix.py" is the exact path, "routing" is the area and is
-    answerable when it holds one programme, and "frrmix" or "frrmix.py" is
-    the name of the demo alone and is looked for in every area.
-
-    Quiet, because line_is_command asks this of every line the guide sees.
+    """The file a name asks for, or None, quietly, line_is_command asking this
+    of every line: routing/frrmix.py the path, routing an area holding one
+    programme, frrmix or frrmix.py looked for in every area.
     """
     for ext in ("", ".py"):
         cand = os.path.join(DEMO_DIR, want + ext)
@@ -189,15 +172,9 @@ def demo_resolve(want):
 def do_demo(client, net, argv):
     """Play a demo: list them with no name, run one with a name.
 
-    client is the client module, and the only thing wanted of it is the
-    path of the file it was started from.
-
-    It is done here and nowhere else. The client is python already, so any
-    machine able to run cloonix at all can run a demo, and a second player
-    in another language would only be a second thing to keep in step.
-
-    The demo runs on the machine you typed on and drives the server across
-    the network, exactly as the client itself does. The server needs nothing.
+    client is the client module, for the path it was started from. The demo
+    runs on this machine and drives the server across the network, as the
+    client does; the server needs nothing.
     """
     if not argv:
         found = demo_list()

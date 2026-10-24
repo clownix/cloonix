@@ -53,13 +53,11 @@ from demolib import (
     put, ssh, step, story, tools_present)
 
 HISTORY = """\
-Knot DNS is made by CZ.NIC, the Czech domain registry -- the same house as
-the BIRD routing daemon -- with a first release around 2011. It is an
+Knot DNS is made by CZ.NIC, the Czech domain registry, the same house as the
+BIRD routing daemon, with a first release around 2011. It is an
 authoritative-only server: its job is to hold zones and answer for them, not
-to resolve on a client's behalf, which is Unbound's job in the address area
-here. It was written to serve very large and very busy zones, and CZ.NIC runs
-it for the .cz top-level domain. This demo shows the everyday mechanism that
-keeps two authoritative servers holding the same data: notify and transfer.
+to resolve on a client's behalf, and CZ.NIC runs it for the .cz top-level
+domain.
 
 Today: Knot DNS serves the .cz zone and several other top-level domains and
 runs on some root server instances; notify and transfer, shown here, are how
@@ -220,7 +218,7 @@ def main():
                  % (ok_primary, ok_secondary))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   ask each server and compare:
     cloonix cli %s ssh cl "kdig @10.0.0.2 shop.shop.test"

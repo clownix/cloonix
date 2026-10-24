@@ -13,9 +13,19 @@ They are run from the source tree:
 The nets they talk to are the ones already running; nothing here needs
 installing.
 
-## testitall.sh -- the whole non-regression, first failure ends it
+The three global tests are the only scripts named `top_*`, the ones to
+call first:
 
-    ./testitall.sh
+    ./top_testfast.sh                   minutes, a big breakage of a function
+    ./top_testitall.sh                  the whole non-regression, then the endurance
+    ./top_testitalltoy.sh               the whole non-regression on two toys
+
+Every other script here is one phase or one feature of these.
+
+## top_testitall.sh -- the whole non-regression, first failure ends it
+
+    ./top_testitall.sh
+    ./top_testitall.sh start                phase 1 only, the nets up
 
 Nine phases in a row, the short ones first and the long ones last, so a
 failure is known at once: the two nets nemo and mito cleaned and started;
@@ -37,22 +47,35 @@ what it asserts. `TESTITALL_PHY=<iface>` adds and deletes a macvlan on
 that interface; `TESTITALL_CNT` and `TESTITALL_KVM` name other images than
 trixie and trixie.qcow2.
 
-## testitalltoy.sh -- the same on two toys
+## top_testfast.sh -- the fast non-regression, first failure ends it
 
-    ./testitalltoy.sh [cloonix-toy-<num>.tar.gz]        the whole run
-    ./testitalltoy.sh start [cloonix-toy-<num>.tar.gz]  the toys only, left running
-    ./testitalltoy.sh run ./testfailures.py nemo mito   one test on them
-    eval $(./testitalltoy.sh env)                       the same for this shell
-    ./testitalltoy.sh stop
+    ./top_testfast.sh
+    ./top_testitalltoy.sh start && ./top_testitalltoy.sh run ./top_testfast.sh
+
+For a big breakage of a function, in minutes. It starts nemo and mito
+itself (`top_testitall.sh start`: any running ones are erased first), except
+under `top_testitalltoy.sh run`, where the nets are the toys already started.
+Then `testitall.py` (every item
+once), the short `sub_*.py` named in `SUBS`, two demos. Every step is
+timed and the end prints the table of durations, the longest first: what
+to take out of `SUBS` when the budget of `fast_autotest.sh` is not held.
+
+## top_testitalltoy.sh -- the same on two toys
+
+    ./top_testitalltoy.sh [cloonix-toy.tar.xz]        the whole run
+    ./top_testitalltoy.sh start [cloonix-toy.tar.xz]  the toys only, left running
+    ./top_testitalltoy.sh run ./testfailures.py nemo mito   one test on them
+    eval $(./top_testitalltoy.sh env)                       the same for this shell
+    ./top_testitalltoy.sh stop
 
 A test started by hand without `run` or `env` takes the installed client
 and lands on the bundle's nets, not on the toys.
 
-The newest `${HOME}/cloonix-toy-*.tar.gz` when none is given. Any nemo or
+The newest `${HOME}/cloonix-toy.tar.xz` when none is given. Any nemo or
 mito running, bundle or toy, is killed; the tarball is unpacked twice under
 `${HOME}/testitalltoy/nemo` and `/mito` (`TESTITALLTOY_DIR` moves it),
 `setup.sh` names each, both are started, and phases 2 to 8 of
-`testitall.sh` run on them through the toy's own client, config and demos:
+`top_testitall.sh` run on them through the toy's own client, config and demos:
 `CLOONIX_CLIENT`, `TESTITALL_CFG`, `CLOONIX_DEMO_DIR`, `TESTITALL_SYSLOG`.
 `TESTITALL_TOY` tells the tests what is not the toy's: the tap of a toy is
 in its network namespace and is not addressed from the host, a killed net
@@ -63,29 +86,32 @@ and writable by the user. With the toy on a single uid mapping (no subuid
 lines or no `newuidmap`, the toy chapter of the user book has the whole
 of it) `TESTITALL_TOY_SINGLE_IDMAP` is set and `demo_test.py` skips the
 demos whose daemon drops privileges. The endurance is `tst_maxtoy.sh`:
-`testitalltoy.sh start`, then `soak.py` on the toys through the exports of
+`top_testitalltoy.sh start`, then `soak.py` on the toys through the exports of
 `env` (`TESTITALL_TOY` and `CLOONIX_CLIENT`: the toy's client, and its work
 zones and syslogs inside the rootfs of each net, where the soak reads what
 a dead container left). The toys are stopped at the end of the whole run,
 pass or fail.
 
-## autotest/autotest.sh -- both suites in two kvm
+## autotest/slow_autotest.sh, autotest/fast_autotest.sh -- the suites in two kvm
 
     cd autotest
     ./kvm_autotest_trixie.sh            once: bulk/kvm_autotest_trixie.qcow2 (./doitall.sh --all: every distro)
-    ./autotest.sh                       trixie; or: ./autotest.sh rocky
+    ./slow_autotest.sh                  trixie; or: ./slow_autotest.sh rocky
+    ./fast_autotest.sh                  trixie; or: ./fast_autotest.sh rocky
     cloonix cli nemo ssh kvm1 "tail -f /home/user/results_outputs.log"
     cloonix cli nemo ssh kvm2 "tail -f /home/user/results_outputs.log"
     cloonix cli nemo ssh kvm1 "tail -f /home/user/tst_max_output.log"
     cloonix cli nemo ssh kvm2 "tail -f /home/user/tst_max_output.log"
 
-testitall.sh on the bundle in kvm1 and testitalltoy.sh on the toy in kvm2,
-two unconnected kvm of nemo made from kvm_autotest_<distro>.qcow2, with no nat, as user
+slow_autotest.sh: top_testitall.sh on the bundle in kvm1 and top_testitalltoy.sh on
+the toy in kvm2, two unconnected kvm of nemo made from kvm_autotest_<distro>.qcow2, with no nat, as user
 `user`; then tst_max.sh in kvm1 and tst_maxtoy.sh in kvm2. Each writes
 results_outputs.log with a summary at its end, kerr1_outputs.log (the KERR
 lines of syslog during the suite), then tst_max_output.log and
-kerr2_outputs.log for the endurance. The chapter *The autotest* of the
-developer book has the whole of it.
+kerr2_outputs.log for the endurance. fast_autotest.sh: the same two kvm
+with only the images top_testfast.sh needs, top_testfast.sh on the bundle and on
+the toy, no endurance, aimed at 10 minutes from start to verdict. The
+chapter *The autotest* of the developer book has the whole of it.
 
 ## sub_*.py -- one feature each, runnable alone
 
@@ -96,7 +122,7 @@ Each file is one check of one feature testitall.py does not touch, on the
 two nets already up, with the helpers of `testitall.py` (through
 `sublib.py`); it creates what it needs under names starting `tisub`,
 deletes them at its end, and starts by deleting them if a previous run left
-them. Run by testitall.sh as its fourth phase, in the order `ls` gives.
+them. Run by top_testitall.sh as its fourth phase, in the order `ls` gives.
 
   sub_c2c_udp_garbage       malformed datagrams on the udp port of a c2c:
                             dropped, same c2c processes, the ping crosses
@@ -122,6 +148,10 @@ them. Run by testitall.sh as its fourth phase, in the order `ls` gives.
   sub_client_exits          the client into a closed pipe ends quietly with
                             status 0; a wrong verb, net or word ends with a
                             status and a sentence, no traceback
+  sub_del_in_flight         a cnt, a tap and a kvm deleted right behind the
+                            plug of their eth, delay swept: the plug is
+                            answered ok or ko (never NO ANSWER), the delete
+                            succeeds, neither the item nor the lan stays
   sub_fail_bad_images       a zero-byte and a text qcow2, a file as rootfs,
                             a missing added_disk: refused with a reason
   sub_fail_publish_busy     publish= on a host port already held: ko at
@@ -160,6 +190,11 @@ them. Run by testitall.sh as its fourth phase, in the order `ls` gives.
                             by RA when the host has one (skips otherwise)
   sub_position_readback     cnf x= y= and angle= replayed to a topology
                             subscriber, forgotten after del
+  sub_item_note             cnf note= replayed to a topology subscriber with
+                            spaces, accents and quotes, set back by its dump
+                            commands line; too long, a control character, a
+                            line dump commands cannot hold and a missing item
+                            refused; POST /ctl/note; note= removes, del forgets
   sub_rpc                   rpc: a verbatim tap_add and del_name; an
                             unknown fctident and a non-json refused
   sub_sniff_modes           sniff --line, --dump, --count read
@@ -231,7 +266,7 @@ published port; the tap both ways (iperf3 and sudo on the host); then a
 storm of all of it at once for TESTBIGFLOWS_LONG seconds (180) with scp
 and ssh round trips in a loop, memory watched throughout, every path pinged
 after; the rss of every daemon before and after. Figures are printed; the
-failures are health. Also run by testitall.sh as its seventh phase; about
+failures are health. Also run by top_testitall.sh as its seventh phase; about
 25 minutes. Not covered: phy, and the browser hop of webshark.
 
 ## testfailures.sh -- things going wrong on purpose
@@ -240,16 +275,18 @@ failures are health. Also run by testitall.sh as its seventh phase; about
 
 The contract: a fault is refused or reported with a reason, nothing hangs,
 no ghost is left, the rest of the net keeps working, the same name can be
-created again. Forty refusals of bad input with dump topo unmoved, garbage
+created again. Ninety refusals of bad input, each with the exit code of
+who refused, words of its fault and a KERR when the server refused, dump
+topo unmoved, a kvm with every cpu of the host taken; garbage
 on the doors port; kill -9 of the dumpcap, the snf, the a2b, the passt and
-the nat, the c2c on both nets, the qemu of a kvm, the init of a cnt, each
+the nat, the c2c daemon and its two tap children, the qemu of a kvm, the init of a cnt, each
 followed by the object back or gone, no process left, a re-add; clients
 killed mid scp, ssh and sniff with the fds of doorways and proxymous back;
 100 connections held on the doors port and on the web port, oversized and
 random requests; the agent killed inside a kvm and a cnt, an interface
 flapped, a reboot from inside; the image chowned to root (sudo) and
 repaired; a full net killed with no process, namespace or mount left, then
-restarted. Also run by testitall.sh as its sixth phase.
+restarted. Also run by top_testitall.sh as its sixth phase.
 
 ## teststorm.sh -- flows on a moving target
 
@@ -275,11 +312,11 @@ a sniffed and a not sniffed port, no snf, process or bridge left for what was
 deleted, ftopo holds the standing topology only, rss bounded, both nets
 erased. The seed is printed, so a failing run repeats; on a failure the
 last fifteen throws and the last commands are printed and the nets are left
-as they are. Also run by testitall.sh as its eighth phase; about 6 minutes.
+as they are. Also run by top_testitall.sh as its eighth phase; about 6 minutes.
 
 ## The checkers
 
-Eight scripts that answer one question each and exit non-zero when the answer
+Nine scripts that answer one question each and exit non-zero when the answer
 is no. None needs a running net and none writes outside the source tree:
 
     ./check_docs.sh          does every cloonix-* named in the docs exist?
@@ -288,13 +325,14 @@ is no. None needs a running net and none writes outside the source tree:
     ./check_doc_cli.py       does the client take every cli line of the docs?
     ./check_site.py          are the links, the figures and the svgs all there?
     ./check_wire.sh          do the C and the python agree on the wire?
+    ./check_kerr.py          does every path off the normal one log a KERR?
     ./check_cloonfs_bins.sh <rootfs.tar.gz>
                              does that rootfs carry every binary cloonix runs?
     ./deadcode.sh            what does the linker throw away?
 
-The first six run on a checkout and nothing else. The seventh takes the
+The first seven run on a checkout and nothing else. The eighth takes the
 rootfs tarball as its argument, and the tarballs are not in the checkout.
-The eighth builds every daemon, so it needs what a build needs.
+The ninth builds every daemon, so it needs what a build needs.
 
 Each carries the failure that produced it in its own header. In short:
 
@@ -346,10 +384,10 @@ it compares against.
 `--gc-sections`, at `-O0 -fno-inline` so an inlined function is not mistaken
 for a dead one, and prints what the linker discarded: the binary's own dead
 functions, then the library functions that every binary linking the library
-drops. Anything listed is unreachable from main. It leaves the tree clean and
-deletes nothing itself. What it lists today stays: two functions behind
-compile-time trace flags, and the readers of `cxp_wire.c` in `cloonix-cxp-cli`,
-which links the file for its escaper only.
+drops. Anything listed is unreachable from main. The agent counts only what
+is dead in both its kvm and its cnt build, `cxp_wire.c` only what both cxp
+binaries drop. It leaves the tree clean and deletes nothing itself. What it
+lists today stays: two functions behind compile-time trace flags.
 
 ## soak.py — random create and destroy until something breaks
 

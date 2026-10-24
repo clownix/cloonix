@@ -149,6 +149,21 @@ int fct_seqtap_rx(int fd, uint8_t *rx, uint16_t *seq,
   return result;
 }
 
+/* A tap child writes whole frames (< PIPE_BUF): 1 when the header of the
+   next one is already in the pipe. One frame per turn of the loop let a tcp
+   burst overflow the pipe, a turn costing more than a frame. */
+int fct_seqtap_pipe_more(int fd)
+{
+  int avail = 0;
+  if (ioctl(fd, FIONREAD, &avail) < 0)
+    {
+    KERR("WARNING the bytes waiting in tap pipe fd %d cannot be counted: %s",
+         fd, strerror(errno));
+    return 0;
+    }
+  return (avail >= HEADER_TAP_MSG);
+}
+
 /* Which channels are holding queued bytes. */
 /* Queue sizes per channel; two allocations per chunk, so halve the count. */
 void msg_layer_report_queues(char *txt, int txt_len)
@@ -332,7 +347,7 @@ void int_to_ip_string (int addr, char *ip_string)
 
 static void default_err_kill(int llid, int err, int from)
 {
-  KOUT("ERROR %d %d %d\n", llid, err, from);
+  KOUT("ERROR %d %d %d", llid, err, from);
 }
 
 static void default_rx_callback(int llid, int len, char *str_rx) 
@@ -1120,7 +1135,8 @@ void watch_tx(int llid, int len, char *str_tx)
         chain_append_tx(&(dchan[cidx].tx), &(dchan[cidx].last_tx), len, ntx);
         }
       else
-        KERR("%d %d", (int)dchan[cidx].tot_txq_size, MAX_TOT_LEN_QDAT);
+        KERR("WARNING tx queue of %d bytes is full (%d), message dropped",
+             (int)dchan[cidx].tot_txq_size, MAX_TOT_LEN_QDAT);
       }
     }
   else
@@ -1147,9 +1163,10 @@ void string_tx_now(int llid, int len, char *str_tx)
       txlen = write (fd, str_tx + len_sent, len - len_sent);
       if (txlen < 0)
         {
+        KERR("ERROR write: %s, %d bytes not sent, channel closed",
+             strerror(errno), len - len_sent);
         err_dchan_cb(llid, errno, 131);
         msg_delete_channel(llid);
-        KERR("%d %d %d", errno, txlen, len - len_sent);
         break;
         }
       else if (txlen == 0)
@@ -1157,9 +1174,10 @@ void string_tx_now(int llid, int len, char *str_tx)
         count++;
         if (count == 1000)
           {
+          KERR("ERROR write took 0 bytes 1000 times, %d bytes not sent, "
+               "channel closed", len - len_sent);
           err_dchan_cb(llid, errno, 131);
           msg_delete_channel(llid);
-          KERR("%d %d %d", errno, txlen, len - len_sent);
           break;
           }
         }
@@ -1182,22 +1200,20 @@ static void signal_pipe(int no_use)
 #include <execinfo.h>
 static void sigsegv_handler_info(int sig, siginfo_t *info, void *ctx)
 {
-/* syslog and backtrace_symbols are not signal-safe: best effort, we die.  */
+/* syslog and backtrace_symbols are not signal-safe: best effort, we die. */
   void *bt[256];
   int i, bt_size;
   char **bt_syms;
   unsigned long addr = (unsigned long) (info ? info->si_addr : 0);
 
   if (sig == SIGQUIT)
-    KERR("CRASH signal=%d pid=%d net=%s: not a fault, a watchdog found this "
-         "process not answering and asks where it is",
-         sig, (int) getpid(), g_cloonix_name[0] ? g_cloonix_name : "unknown");
-  KERR("CRASH signal=%d pid=%d net=%s faulting_address=0x%lx",
-       sig, (int) getpid(),
-       g_cloonix_name[0] ? g_cloonix_name : "unknown", addr);
+    KERR("ERROR CRASH signal=%d pid=%d: not a fault, a watchdog found this "
+         "process not answering and asks where it is", sig, (int) getpid());
+  KERR("ERROR CRASH signal=%d pid=%d faulting_address=0x%lx",
+       sig, (int) getpid(), addr);
 
   if (addr == 0)
-    KERR("CRASH ADDRESS ZERO: a null function pointer was called, or a null "
+    KERR("ERROR CRASH ADDRESS ZERO: a null function pointer was called, or a null "
          "struct dereferenced. The jump to zero destroys the return chain, "
          "so the frames below are usually few or none -- look for a callback "
          "that can be left unset, and use the core dump for the registers");
@@ -1207,32 +1223,32 @@ static void sigsegv_handler_info(int sig, siginfo_t *info, void *ctx)
     ucontext_t *uc = (ucontext_t *) ctx;
     unsigned long rip = (unsigned long) uc->uc_mcontext.gregs[REG_RIP];
     unsigned long rsp = (unsigned long) uc->uc_mcontext.gregs[REG_RSP];
-    KERR("CRASH rip=0x%lx rsp=0x%lx", rip, rsp);
+    KERR("ERROR CRASH rip=0x%lx rsp=0x%lx", rip, rsp);
     if (rip == 0)
       {
       int k;
-      KERR("CRASH rip is 0, so the CALLER's return address is on the stack. "
+      KERR("ERROR CRASH rip is 0, so the CALLER's return address is on the stack. "
            "Run each of the next lines through addr2line -- the first that "
            "resolves inside a cloonix binary is who made the call:");
       for (k = 0; k < 6; k++)
         {
         unsigned long *slot = ((unsigned long *) rsp) + k;
-        KERR("CRASH   stack[%d] = 0x%lx", k, *slot);
+        KERR("ERROR CRASH   stack[%d] = 0x%lx", k, *slot);
         }
       }
     }
 
   bt_size = backtrace(bt, 256);
-  KERR("CRASH backtrace has %d frame(s):", bt_size);
+  KERR("ERROR CRASH backtrace has %d frame(s):", bt_size);
   bt_syms = backtrace_symbols(bt, bt_size);
   if (!bt_syms)
-    KERR("CRASH cannot symbolise the frames (out of memory in the handler)");
+    KERR("ERROR CRASH cannot symbolise the frames (out of memory in the handler)");
   else
     {
     for (i = 0; i < bt_size; i++)
-      KERR("CRASH frame %d: %s", i, bt_syms[i]);
+      KERR("ERROR CRASH frame %d: %s", i, bt_syms[i]);
     }
-  KERR("CRASH to name an address: addr2line -f -C -i -e <binary> 0x<offset> "
+  KERR("ERROR CRASH to name an address: addr2line -f -C -i -e <binary> 0x<offset> "
        "-- use the offset from the (+0x...) part WITHOUT the plus. If the "
        "installed binary is stripped, use the one in the build tree; the "
        "offsets only match the exact build that crashed.");

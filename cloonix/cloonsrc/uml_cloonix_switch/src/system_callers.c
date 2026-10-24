@@ -107,7 +107,7 @@ void mk_ovs_db_dir(void)
           snprintf(pth,MAX_PATH_LEN+MAX_NAME_LEN,"%s/%s",ovsdb_dir,ent->d_name);
           pth[MAX_PATH_LEN+MAX_NAME_LEN-1] = 0;
           if (unlink(pth))
-            KERR("File: %s could not be deleted\n", pth);
+            KERR("WARNING %s could not be deleted: %s", pth, strerror(errno));
           }
         }
       if (closedir(dirptr))
@@ -157,7 +157,7 @@ int rm_work_dir(char *dir, char *err)
 {
   int result = rm_tree(dir, err);
   if (result)
-    KERR("ERR DEL: %s %s", dir, err);
+    KERR("WARNING %s could not be erased: %s", dir, err);
   return result;
 }
 

@@ -78,13 +78,13 @@ static int get_wake_up_eths(char *name, t_vm **vm,
   *vm = cfg_get_vm(name);
   if (!(*vm))
     {
-    KERR("WAKE ERROR NO VM %s", name);
+    KERR("ERROR wake: no kvm %s", name);
     return -1;
     }
   *wake_up_eths = (*vm)->wake_up_eths;
   if (!(*wake_up_eths))
     {
-    KERR("WAKE ERROR NO ETH %s", name);
+    KERR("ERROR wake: %s has no eth record", name);
     return -1;
     }
   return 0;
@@ -114,7 +114,7 @@ static void cprootfs_clone_death(void *data, int status, char *name)
 
   if (get_wake_up_eths(name, &vm, &wake_up_eths))
     {
-    KERR("POSSIBLE? %s", name);
+    KERR("WARNING %s: no eths waiting to wake", name);
     recv_coherency_unlock();
     }
   else
@@ -477,6 +477,8 @@ static char **create_qemu_argv(t_vm *vm)
                  pthexec_nsenter_bin(), PATH_NAMESPACE, namespace,
                  qemu_bin, qemu_data, ptr1, err_log, err_log) >= MAX_TRACE_LEN)
       KOUT("ERROR qemu command line too long for %s", vm->kvm.name);
+    /* A qemu exit line in it is then of this launch. */
+    unlink(err_log);
     fp = fopen(script, "w");
     if (!fp)
       KOUT("ERROR cannot write qemu launch script %s", script);
@@ -505,7 +507,8 @@ static void timer_launch_end(void *data)
     if (wake_up_eths)
       {
       if (strcmp(wake_up_eths->name, name))
-        KERR(" ");
+        KERR("ERROR the wake record of %s names %s", name,
+                 wake_up_eths->name);
       else
         {
         if (!file_exists(utils_get_dtach_sock_path(name), R_OK))
@@ -667,13 +670,13 @@ void qemu_vm_automaton(void *unused_data, int status, char *name)
   t_wake_up_eths *wake_up;
   if (!vm)
     {
-    KERR("POSSIBLE ? %s", name);
+    KERR("WARNING %s is gone before its eths woke", name);
     return;
     }
   wake_up = vm->wake_up_eths;
   if (!wake_up)
     {
-    KERR("POSSIBLE ? %s", name);
+    KERR("WARNING %s is gone before its eths woke", name);
     return;
     }
   if (strcmp(wake_up->name, name))

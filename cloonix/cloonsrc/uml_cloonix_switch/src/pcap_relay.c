@@ -1,10 +1,10 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* One capture byte stream turned into pcap_traffic messages. The dumpcap  */
-/* beside every snf serves <root>/snf/<n>_<num>_pcap_sock, one connection   */
-/* per subscriber. The record header is parsed so the message carries the   */
-/* timestamp and lengths as fields; a read ending mid record is kept.       */
-/* Past msg_tx_queue_high on the doors connection, packets are dropped for  */
-/* that subscriber and counted.                                             */
+/* One capture byte stream turned into pcap_traffic messages. The dumpcap */
+/* beside every snf serves <root>/snf/<n>_<num>_pcap_sock, one connection */
+/* per subscriber. The record header is parsed so the message carries the */
+/* timestamp and lengths as fields; a read ending mid record is kept. */
+/* Past msg_tx_queue_high on the doors connection, packets are dropped for */
+/* that subscriber and counted. */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -230,7 +230,8 @@ static void pcap_err_cb(int llid, int err, int from)
   (void) from;
   if (cur)
     {
-    KTRC("pcap %s %d: the dumpcap connection ended", cur->name, cur->num);
+    KERR("WARNING pcap %s %d: the dumpcap connection ended", cur->name,
+         cur->num);
     send_status_ko(cur->cli_llid, cur->cli_tid, "pcap stream ended");
     sub_free(cur);
     }
@@ -269,7 +270,7 @@ static int pcap_rx_cb(int llid, int fd)
   len = util_read(g_read_buf, room, fd);
   if (len <= 0)
     {
-    KTRC("pcap %s %d: end of the dumpcap stream", cur->name, cur->num);
+    KERR("WARNING pcap %s %d: end of the dumpcap stream", cur->name, cur->num);
     send_status_ko(cur->cli_llid, cur->cli_tid, "pcap stream ended");
     sub_free(cur);
     return 0;
@@ -278,6 +279,8 @@ static int pcap_rx_cb(int llid, int fd)
   cur->acc_len += len;
   if (consume(cur))
     {
+    KERR("ERROR pcap %s %d: the dumpcap stream is not usable", cur->name,
+         cur->num);
     send_status_ko(cur->cli_llid, cur->cli_tid, "pcap stream not usable");
     sub_free(cur);
     }
@@ -482,7 +485,7 @@ void pcap_relay_snf_gone(char *name, int num)
     }
 }
 
-/* A gone client on a silent interface is only found here.                  */
+/* A gone client on a silent interface is only found here. */
 void pcap_relay_beat(void)
 {
   t_pcap_sub *cur = g_head_sub, *next;

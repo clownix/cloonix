@@ -51,17 +51,17 @@ from demolib import (
     in_parallel, place, put, reached, ssh, step, story, tools_present)
 
 HISTORY = """\
-This is the long-running linux high-availability stack. Corosync, whose
-lineage runs back through OpenAIS to the early 2000s, is the membership and
-messaging layer: it tells every node who is currently in the cluster.
-Pacemaker, led for many years by Andrew Beekhof, is the resource manager that
-sits on top and decides where each service runs and what to do when a node
-leaves. Together they are what keeps a database or a virtual IP available when
-a machine dies, and they are maintained under the ClusterLabs umbrella.
+This is the long-running linux high-availability stack. Corosync, with a
+lineage back through OpenAIS to the early 2000s, is the membership layer: it
+tells every node who is currently in the cluster. Pacemaker, led for many
+years by Andrew Beekhof, is the resource manager on top that decides where
+each service runs and what to do when a node leaves. Both are under
+ClusterLabs.
 
 Today: Pacemaker and Corosync are the high-availability add-on of Red Hat,
-SUSE and Debian, behind clustered databases, NFS heads and SAP installations;
-fencing, absent from this two-node demo, is what production adds.
+SUSE and Debian, behind clustered databases, NFS heads and SAP
+installations; fencing, absent from this two-node demo, is what production
+adds.
 """
 
 ROOTFS_CHOICES = ("cluster_trixie",)
@@ -252,7 +252,7 @@ def main():
                         check=False)))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the live cluster status:
     cloonix cli %s ssh nodeA "crm_mon -1"

@@ -73,18 +73,15 @@ static void *handle_conn(void *arg)
         goto done;
     }
     if (!auth_ok(hdr)) {
-        /* No credentials is how every browser login begins. */
-        char given[512];
-        if (hdr_value(hdr, "Authorization:", given, sizeof(given)))
-            KERR("WARNING http: 401 on %s %s, wrong credentials", method, path);
+        /* auth_ok said why; no credentials is how every login begins. */
         auth_refuse(fd);
         goto done;
     }
 
     if (!origin_is_ours(hdr)) {
-        KERR("WARNING http: refused a request from another origin, %s %s",
-             method, path);
-        http_fail(fd, 403, "origin check", "wrong origin");
+        char why[600];
+        snprintf(why, sizeof(why), "another origin, %s %s", method, path);
+        http_fail(fd, 403, "origin check", why);
         goto done;
     }
 
@@ -211,6 +208,17 @@ static void *handle_conn(void *arg)
                 while (blen < content_len) { ssize_t n = read(fd, body+blen, content_len-blen); if (n<=0) break; blen+=(int)n; }
             }
             handle_position(fd, body, blen);
+        }
+        else if (strncmp(path+5, "note", 4) == 0) {
+            char body[2048] = {0}; int blen = 0; int content_len = 0;
+            const char *cl = strcasestr(hdr, "Content-Length:");
+            if (cl) sscanf(cl+15, "%d", &content_len);
+            if (content_len > 0 && content_len < (int)sizeof(body)-1) {
+                int take = hdr_leftover < content_len ? hdr_leftover : content_len;
+                if (take > 0) { memcpy(body, hdr_leftover_p, take); blen = take; }
+                while (blen < content_len) { ssize_t n = read(fd, body+blen, content_len-blen); if (n<=0) break; blen+=(int)n; }
+            }
+            handle_note(fd, body, blen);
         }
         else if (strncmp(path+5, "poseth", 6) == 0) {
             char body[512] = {0}; int blen = 0; int content_len = 0;
@@ -443,7 +451,7 @@ static int unix_listener(const char *path)
 {
     struct sockaddr_un addr = {0};
     int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (fd < 0) { perror("socket"); return -1; }
+    if (fd < 0) { KERR("ERROR socket %s: %s", path, strerror(errno)); return -1; }
     addr.sun_family = AF_UNIX;
     snprintf(addr.sun_path, sizeof(addr.sun_path) - 1, "%s", path);
 
@@ -462,10 +470,10 @@ static int unix_listener(const char *path)
     }
     unlink(path);
     if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        perror("bind"); close(fd); return -1;
+        KERR("ERROR bind %s: %s", path, strerror(errno)); close(fd); return -1;
     }
     if (listen(fd, 32) < 0) {
-        perror("listen"); close(fd); return -1;
+        KERR("ERROR listen %s: %s", path, strerror(errno)); close(fd); return -1;
     }
     return fd;
 }

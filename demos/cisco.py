@@ -5,9 +5,9 @@
     ./cisco.py [net] --conf <vm> <file>   load one config into one router
     ./cisco.py [net] --show <vm> "<cmd>"  run one show and print it
 
-Every other demo here configures a guest through its cloonix agent. A cisco
-has none and cannot be given one, so this one is the reference for the other
-way in: the serial console every guest already has::
+A cisco has no cloonix agent and cannot be given one, an ios-xe image having
+no place for its binary: this demo drives the serial console every guest
+has::
 
               lan1                              lan7
   trix1 ----------- cisco1 --- lan3 --- cisco2 ----------- trix2
@@ -18,88 +18,55 @@ way in: the serial console every guest already has::
                       +----- cisco3 ------+
                         3.0.0.2   4.0.0.2
 
-A container arrives on a lan ready and answers ssh in a second. A router
-arrives with three interfaces in "shutdown", no addresses, and no way to be
-asked anything except by typing at it -- which is what this does, reading up
-to the prompt and playing a config in one line at a time.
+A router arrives with its three interfaces in shutdown and no address: the
+demo types at it, reading up to the prompt, one config line at a time.
 
   ACT 1  the machines, the lans, the two containers addressed
   ACT 2  the three consoles, waited for one by one
   ACT 3  a config into each router, through its console
   ACT 4  ospf converges, then trix1 pings trix2 across all three
 
-Needs c8000v.qcow2 in bulk, built from a Cisco iso as vm_create/cisco says,
-and the plain trixie container image. Standard library only, like cloonix.
-
 Image: c8000v.qcow2 in bulk, and trixie for the containers
 Size:  3 kvm, 2 containers, 5 lans
 
 THE PACKET TO CATCH
 -------------------
-  Sniff the link between two routers and watch them find each other:
+  The link between two routers:
 
     cloonix cli nemo cnf cisco1 eth1 sniff=on
     cloonix cli nemo sniff cisco1 eth1 --dump "ip and not udp and not tcp"
 
-  The hello goes to 224.0.0.5 every ten seconds whether or not anybody
-  answers, so it is on the capture before the demo reaches ACT 4 and it
-  stays there afterwards. Catch it during ACT 3, between the moment
-  cisco1 is configured and the moment cisco2 is: one router is talking
-  into a lan where nothing yet replies.
+  The hello goes to 224.0.0.5 every ten seconds, answered or not. Caught
+  during ACT 3, cisco1 configured and cisco2 not yet, it is one router
+  talking into a lan where nothing replies: the router says no neighbour
+  for a link down and for a neighbour absent, the capture tells which.
 
-  That is the difference between a link that is down and a neighbour that
-  is not there, and one capture separates them. The router says the same
-  thing in both cases -- no neighbour -- and only the capture says which.
-
-WHY THIS DEMO EXISTS
---------------------
-Every other demo here configures a guest through its cloonix agent. A
-cisco has none, and one cannot be put there: the agent needs a virtio
-serial port and a binary inside the guest, and an ios-xe image gives
-neither. What is left is the serial console every guest already has, and
-this demo is the reference for driving it.
-
-The console is the qemu chardev, wrapped at launch in a dtach session
-whose socket takes a second attach -- which is exactly what the Console
-panel of the canvas does:
+THE CONSOLE
+-----------
+The console is the qemu chardev, wrapped at launch in a dtach session whose
+socket takes a second attach, as the Console panel of the canvas does:
 
     /var/lib/cloonix/<net>/dtach/<vm>
 
-cisco.py attaches the same way and reads up to the prompt instead of
-drawing to a screen. Three things make that work, and all three are worth
-knowing before writing anything else against a console:
+cisco.py attaches the same way and reads up to the prompt:
 
-  * The pty must be RAW. Cooked, the line discipline holds input back
-    until a newline, so the single space that answers --More-- never
-    arrives, and it echoes what is written back into what is read.
-  * A carriage return, not a line feed. That is what a serial terminal
-    sends and what ios answers to.
-  * One line at a time, waiting for the prompt after each. A serial
-    console has no flow control, and that wait is the flow control: a
-    config poured in faster than ios parses it loses characters.
+  * the pty raw: cooked, the line discipline holds input until a newline,
+    so the space that answers --More-- never arrives, and it echoes what is
+    written into what is read;
+  * a carriage return, not a line feed, as a serial terminal sends;
+  * one line at a time, the prompt waited for after each: a serial console
+    has no flow control, and a config poured faster than ios parses it
+    loses characters.
 
-ON YOUR OWN
------------
-  cisco.py carries its console driver, and it is reachable without
-  building anything:
-
-    ./cisco.py nemo --conf cisco1 my.cfg
-    ./cisco.py nemo --show cisco1 "show ip route"
-
-  Both attach to a router that is already up, so they are the way to push
-  a configuration into a machine created by hand.
+--conf and --show attach to a router already up: the way to configure a
+router created by hand.
 
 Important
-  c8000v.qcow2 is not downloadable. Cisco does not redistribute the
-  image and neither does cloonix: it is installed from a Catalyst 8000V
-  iso obtained with a CCO account, and the three steps that turn that iso
-  into the image this demo wants are in *vm_create/cisco/README*. The
-  last of the three is the one that matters here -- it puts the console
-  on the serial port, and without it the router boots and says nothing
-  where this demo is listening. The demo says so if the image is absent.
-
-  The routers stay red on the canvas whatever happens. Red is "no cloonix
-  agent answered", and there is none inside a cisco.
+  c8000v.qcow2 is not downloadable: Cisco does not redistribute the image,
+  installed from a Catalyst 8000V iso obtained with a CCO account. The
+  three steps of vm_create/cisco make it, the last putting the console on
+  the serial port, without which the router says nothing where the demo
+  listens. The routers stay red on the canvas: red is no cloonix agent.
 """
 import os
 
@@ -125,7 +92,8 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    ACK_FAST, ARGS, CLOONIX, NET, erase_net, show, ssh, step, story)
+    ACK_FAST, ARGS, CLOONIX, NET, erase_net, show, ssh, step, story,
+    unavailable)
 
 FLAGS = [a for a in sys.argv[1:] if a.startswith("--")]
 
@@ -374,7 +342,7 @@ def cli(*args, **kw):
                           stdin=subprocess.DEVNULL)
 
 def in_lst(name):
-    """Ask the server what it really has: "dump commands" prints the commands
+    """Ask the server what it has: "dump commands" prints the commands
     that would rebuild the topology, so anything that exists is in it."""
     return name in cli("dump", "commands", quiet=True).stdout.split()
 
@@ -397,7 +365,7 @@ def answers(node, timeout=3):
 
 def check_net():
     if cli("dump", "commands").returncode:
-        sys.exit("no answer from %s\n"
+        unavailable("no answer from %s\n"
                  "  start it:  cloonix start %s" % (NET, NET))
 
 def choose_rootfs():
@@ -412,7 +380,7 @@ def choose_rootfs():
         said = ((r.stdout + r.stderr).strip() if r.returncode else
                 "the add was taken without a word and nothing appeared")
     cli("del", "probe_cisco", ack=ACK_FAST)
-    sys.exit("the server would not start a container on %s.\n"
+    unavailable("the server would not start a container on %s.\n"
              "  it said: %s\n"
              "  fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -430,7 +398,7 @@ def no_image(said):
     nothing to fetch: it is installed from an iso obtained with a CCO
     account, and vm_create/cisco does that in three steps.
     """
-    sys.exit("%s is not in /var/lib/cloonix/bulk.\n"
+    unavailable("%s is not in /var/lib/cloonix/bulk.\n"
              "  the server said: %s\n"
              "\n"
              "  It is not downloadable. It is installed from a Cisco\n"

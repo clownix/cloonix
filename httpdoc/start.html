@@ -6,12 +6,13 @@
 <title>Cloonix &mdash; get started</title>
 <meta name="description" content="Install cloonix as a plain user with the toy tarball, or system-wide with the bundle, and start a first network.">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/png" href="img/cloonix32.png">
 </head>
 <body>
 
 <header>
   <nav>
-    <a class="brand" href="index.html">CLOONIX</a>
+    <a class="brand" href="index.html"><img src="img/cloonix64.png" width="28" height="28" alt="">cloonix</a>
     <a href="index.html">Overview</a>
     <a href="learn.html">Learn</a>
     <a href="demos.html">Demos</a>
@@ -42,10 +43,22 @@ dies. Raise the limit first:</p>
 <pre><code>sudo sysctl -w fs.inotify.max_user_instances=8192</code></pre>
 
 <h2>2. Take the toy</h2>
-<p>The toy is a tarball that carries cloonix inside its own container. Extract it
-as your normal user:</p>
-<pre><code>tar xf cloonix-toy-100.tar.gz
-cd cloonix-toy-100
+<p>The toy is a tarball that carries cloonix inside its own container. First
+put the images it will use in <code>/var/lib/cloonix/bulk</code> of the host:
+<code>setup.sh</code> gives the toy that directory only if it exists when
+<code>setup.sh</code> runs, and a bulk made afterwards is not seen by the toy:</p>
+<pre><code>sudo mkdir -p /var/lib/cloonix/bulk
+sudo chown ${USER}: /var/lib/cloonix/bulk
+cd /var/lib/cloonix/bulk
+wget https://clownix.net/downloads/cnt_bulk/trixie.tar.gz
+cd</code></pre>
+<p>Then take and extract the toy as your normal user; <code>tar</code> reads
+the <code>.tar.xz</code> with <code>xz</code>, from the package
+<code>xz-utils</code> (debian, ubuntu) or <code>xz</code> (the others) on a
+minimal host:</p>
+<pre><code>wget https://clownix.net/downloads/cloonix-toy.tar.xz
+tar xf cloonix-toy.tar.xz
+cd cloonix-toy
 ./setup.sh nemo</code></pre>
 <p><code>setup.sh</code> writes a command script named after the network you
 chose &mdash; <code>./nemocmd</code> &mdash; and reports what the machine can and
@@ -73,27 +86,25 @@ can be changed:</p>
 
 <h2>4. Make something</h2>
 <p>Right-click the empty canvas to create a machine, a container or a lan, or
-play one of the demos from the <b>Demo</b> button of the header:</p>
-<pre><code>./nemocmd demo               # list what is available
-./nemocmd demo security/wg.py      # a wireguard tunnel, and a wire that goes blank</code></pre>
-<p>A demo is a python programme taking the name of the network as its only
-argument. It runs on the machine you typed on and drives the server across the
-network, so the server needs no interpreter. <a href="learn.html">What each one
+play one of the demos from the <b>Demo</b> button of the header: it lists the
+demos by package, plays the one picked, shows each cloonix command in its log
+and tells the steps in its Comments panel. <a href="learn.html">What each one
 shows</a>.</p>
 <p>Then double-click a node for a root shell, or a green interface dot for a
 packet capture.</p>
 
 <h2>5. Stop it</h2>
-<pre><code>./nemocmd cloonix cli nemo del all   # destroy every object, keep the server
-./nemocmd stop                   # stop the server and the container</code></pre>
+<p><b>Delete all</b>, in the header of the canvas, destroys every object and
+keeps the server; then:</p>
+<pre><code>./nemocmd stop                   # stop the server and the container</code></pre>
 
 <hr>
 
 <h2>The bundle instead</h2>
 <p>Use the bundle when the machine is a shared server and several people run
 their own networks on it. It installs once, as root:</p>
-<pre><code>tar xf cloonix-bundle-100.tar.gz
-cd cloonix-bundle-100
+<pre><code>tar xf cloonix-bundle.tar.gz
+cd cloonix-bundle
 sudo ./install_cloonfs</code></pre>
 <p>That puts the run-time under <code>/usr/libexec/cloonix</code>, one command
 <code>cloonix</code> in <code>/usr/bin</code>, the demos in
@@ -105,7 +116,8 @@ cloonix cli nemo ssh c1                   # a root shell inside it</code></pre>
 
 <h2>Guest images</h2>
 <p>A machine needs a root file-system in <code>/var/lib/cloonix/bulk</code>,
-which the toy reads on the host too; every demo asks for one, <code>trixie</code>
+which the toy reads on the host too, when the directory was there before its
+<code>./setup.sh</code>; every demo asks for one, <code>trixie</code>
 for the plain containers. <a href="downloads.html">Download it</a>, or build it:</p>
 <pre><code>cd vm_create/cnt_kvm
 ./doitall.sh --cnt trixie      # a container image
@@ -135,6 +147,17 @@ takes the demo name:</p>
     <p class="note">It authenticates with the same password, and the connection is
     tls, ended by cloonix on the server side.</p>
   </div>
+  <div class="card">
+    <h3>Phone or tablet</h3>
+    <p>The browser of an Android phone or tablet on the network of the host
+    opens the same page: <code>https://&lt;ip&gt;:4444</code>, the warning of
+    the self-signed certificate accepted once, then user <code>nemo</code>,
+    password <code>nemoclown</code>. On the host, <code>ip -4 addr</code>
+    gives the address.</p>
+    <p class="note">The canvas is driven by mouse events: with a USB or
+    Bluetooth mouse on the phone or tablet it works as on a desktop; by touch
+    alone a tap clicks, and items cannot be dragged.</p>
+  </div>
 </div>
 
 <h2>When something does not work</h2>
@@ -144,6 +167,7 @@ takes the demo name:</p>
   <tr><td>The browser refuses the certificate</td><td>an older certificate of that address is remembered; delete it in the browser, reload, accept once</td></tr>
   <tr><td>Demo list is empty</td><td>the demos were not installed; reinstall the bundle</td></tr>
   <tr><td>A demo says an image is not in bulk</td><td>build it, or <a href="downloads.html">download it</a>, into <code>/var/lib/cloonix/bulk</code></td></tr>
+  <tr><td>The toy sees no image of <code>/var/lib/cloonix/bulk</code></td><td>the bulk was made after <code>./setup.sh</code>, which gives the toy the bulk only when it exists: extract the tarball again and run <code>./setup.sh</code> in the new directory</td></tr>
 </table>
 </section>
 

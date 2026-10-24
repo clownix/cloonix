@@ -28,7 +28,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    CLOONIX, NET, STORY, erase_net, show, story)
+    CLOONIX, HOLD, NET, STORY, erase_net, show, story, unavailable)
 
 KVM_ROOTFS = "trixie.qcow2"
 
@@ -78,13 +78,13 @@ erase_net()
 place("kvm1", "kvm2")
 story("2. two virtual machines on the image trixie, one cable each to lan1")
 story("   A virtual machine is a qcow2 of bulk run by qemu/kvm, here with 1000")
-story("   MB and 2 cpus. eth=1 gives it one interface, eth0, of the sniffable")
-story("   kind. plug cables an interface to a lan, which exists from its")
-story("   first cable on: there is no command to create a lan.")
+story("   MB and 2 cpus. eth=1 gives it one interface, eth0, born not")
+story("   capturable, a cyan dot. plug cables an interface to a lan, which")
+story("   exists from its first cable on: no command creates a lan.")
 r = run("cloonix cli %s add kvm kvm1 ram=1000 cpu=2 eth=1 %s"
         % (NET, KVM_ROOTFS))
 if r.returncode:
-    sys.exit("no virtual machine on %s:\n  %s\n  build it: "
+    unavailable("no virtual machine on %s:\n  %s\n  build it: "
              "cd vm_create/cnt_kvm && ./kvm_trixie.sh"
              % (KVM_ROOTFS, (r.stdout + r.stderr).strip()))
 run("cloonix cli %s add kvm kvm2 ram=1000 cpu=2 eth=1 %s" % (NET, KVM_ROOTFS))
@@ -102,6 +102,10 @@ ssh("kvm1", "ip addr add dev eth0 1.1.1.1/24")
 ssh("kvm1", "ip link set dev eth0 up")
 ssh("kvm2", "ip addr add dev eth0 1.1.1.2/24")
 ssh("kvm2", "ip link set dev eth0 up")
+story("   cnf note= writes a comment beside an item on the canvas, here its")
+story("   address; the server keeps it for every browser, note= removes it.")
+run('cloonix cli %s cnf kvm1 note="eth0 1.1.1.1/24"' % NET)
+run('cloonix cli %s cnf kvm2 note="eth0 1.1.1.2/24"' % NET)
 
 story("4. the proof: kvm1 pings kvm2 across lan1")
 story("   Five echo requests cross the open vswitch bridge that is lan1. The")
@@ -111,9 +115,9 @@ story()
 story(r.stdout)
 if r.returncode:
     sys.exit("the ping failed")
-# The result stays in the History popup a moment before the erase.
+# The result stays in the Comments panel a moment before the erase.
 if STORY:
-    time.sleep(4)
+    time.sleep(HOLD)
 story()
 story("kvm1 pings kvm2. Erase everything, the server stays:")
 show("cloonix cli %s del all" % NET)

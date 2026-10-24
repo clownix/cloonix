@@ -16,8 +16,11 @@
 
 static char g_netns_namespace[MAX_NAME_LEN];
 static char g_tap_name[MAX_NAME_LEN];
+/* the tap and its item, for the KERR of the child */
+static char g_tap_label[MAX_PATH_LEN];
+char *get_c2c_name(void);
 
-/* Parent pipe -> tap. EPIPE or ENODEV on the tap means the tap is gone.    */
+/* Parent pipe -> tap. EPIPE or ENODEV on the tap means the tap is gone. */
 static void tx_tap(int fd_tap, int fd_rx_from_parent)
 {
   uint8_t *frame;
@@ -33,7 +36,7 @@ static void tx_tap(int fd_tap, int fd_rx_from_parent)
     KOUT("ERROR WRITE TAP %d %d %d", tx, len, errno);
 }
 
-/* Second child: only the parent pipe -> tap direction.                     */
+/* Second child: only the parent pipe -> tap direction. */
 static void forked_tx_to_tap(int fd_rx_from_parent, int fd_tap)
 {
   int result;
@@ -59,7 +62,7 @@ static void exit_if_child_gone(int pid)
     exit(0);
 }
 
-/* First child: tap -> parent pipe, and every second checks its tx child.   */
+/* First child: tap -> parent pipe, and every second checks its tx child. */
 static void forked_rx_from_tap(int fd_rx_from_parent, int fd_tx_to_parent)
 {
   int pid, fd, result;
@@ -69,7 +72,11 @@ static void forked_rx_from_tap(int fd_rx_from_parent, int fd_tx_to_parent)
   if ((pid = fork()) < 0)
     KOUT("ERROR %s", g_tap_name);
   if (pid == 0)
+    {
+    /* the first child alone writes to the parent: its death closes the pipe */
+    close(fd_tx_to_parent);
     forked_tx_to_tap(fd_rx_from_parent, fd);
+    }
   while(1)
     {
     FD_ZERO(&infd);
@@ -81,7 +88,7 @@ static void forked_rx_from_tap(int fd_rx_from_parent, int fd_tx_to_parent)
       KOUT("ERROR %s %s", g_netns_namespace, g_tap_name);
     if (FD_ISSET(fd, &infd))
       {
-      if (tap_child_to_parent(fd, fd_tx_to_parent, g_tap_name) == 0)
+      if (tap_child_to_parent(fd, fd_tx_to_parent, g_tap_label) == 0)
         exit(0);
       }
     exit_if_child_gone(pid);
@@ -94,6 +101,8 @@ int tun_tap_open(char *net_namespace, char *name, int *fd_rx, int *fd_tx)
   strncpy(g_netns_namespace, net_namespace, MAX_NAME_LEN-1);
   memset(g_tap_name, 0, MAX_NAME_LEN);
   strncpy(g_tap_name, name, MAX_NAME_LEN-1);
+  memset(g_tap_label, 0, MAX_PATH_LEN);
+  snprintf(g_tap_label, MAX_PATH_LEN-1, "c2c %s tap %s", get_c2c_name(), name);
   return tap_fork_open(g_netns_namespace, g_tap_name, 0,
                        forked_rx_from_tap, fd_rx, fd_tx);
 }

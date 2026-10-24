@@ -31,7 +31,7 @@ static int can_increment_index(int val)
   int result = 1;
   if (val >= MAX_LIST_COMMANDS_QTY)
     {
-    KERR("TOO MANY COMMANDS IN LIST");
+    KERR("ERROR dump commands: too many commands, the list is cut");
     result = 0;
     }
   return result;
@@ -362,7 +362,7 @@ static int build_add_c2c_cmd(int offset, t_list_commands *hlist,
   return result;
 }
 
-/* One "plug" line per cabled endpoint; returns the next free index.        */
+/* One "plug" line per cabled endpoint; returns the next free index. */
 static int add_lan_line(int idx, t_list_commands *hlist,
                         char *name, int num, char *lan)
 {
@@ -543,6 +543,19 @@ static int build_layout_cmd(int offset, t_list_commands *hlist)
                    (int) cur[i].eth_deg[num]);
         result += 1;
         }
+      }
+    if (cur[i].note[0] && can_increment_index(result))
+      {
+      list = &(hlist[result]);
+      if (layout_note_cmd(list->cmd, MAX_LIST_COMMANDS_LEN,
+                          cur[i].name, cur[i].note) < 0)
+        {
+        KERR("WARNING the note of %s does not fit in dump commands",
+             cur[i].name);
+        memset(list->cmd, 0, MAX_LIST_COMMANDS_LEN);
+        }
+      else
+        result += 1;
       }
     }
   return result;

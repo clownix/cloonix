@@ -93,7 +93,7 @@ void pcap_record_rx_packet(uint64_t usec, int len, uint8_t *buf)
     }
 }
 
-/* quiet: a probe, no reader yet is the expected answer.                    */
+/* quiet: a probe, no reader yet is the expected answer. */
 static void open_for_reader(int quiet)
 {
   pcap_hdr_s hdr_s;

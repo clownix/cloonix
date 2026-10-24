@@ -10,18 +10,23 @@ shows that does not work, a process of an object that no longer exists),
 the net stays usable for everything it did not touch, and the same name
 can be created again afterwards.
 
-  bad input     thirty-odd refusals: wrong names, wrong numbers, unknown objects,
-                missing images, one port asked twice. Each must come back
-                as a refusal with a reason within 10 s, and dump topo must
-                not have moved. Then garbage on the doors port: random
-                bytes, a huge length, a frame with a wrong hmac: the server
-                still answers
+  bad input     ninety refusals, every verb: wrong names, wrong numbers
+                (above the cpus, ram and swap of the host too), unknown
+                objects, missing images and discs, bad keys and flags. Each
+                comes back within 10 s with the exit code of who refused
+                (1 the server, 2 the client), words of its fault and, from
+                the server, a KERR in the syslog; dump topo must not have
+                moved; a kvm with every cpu of the host is then taken. Then
+                garbage on the doors port: random bytes, a huge length, a
+                frame with a wrong hmac: the server still answers
   killed        kill -9 on the helper of each item in turn: the dumpcap of
-                a sniff, the snf, the a2b, the nat and its passt, the c2c,
-                the qemu of a kvm, the init of a cnt. After each, within
-                60 s: the object is either back and working or gone from
-                the topology, no process of it is left, the rest of the net
-                still pings, and the same name can be added again
+                a sniff, the snf, the a2b, the nat and its passt, the c2c
+                daemon and its two tap children,
+                the qemu of a kvm (its KERR wanted), the init of a cnt.
+                After each, within 60 s: the object is either back and
+                working or gone from the topology, no process of it is
+                left, the rest of the net still pings, and the same name
+                can be added again
   aborted       a client killed in the middle of scp up, scp down, an ssh
                 stream and a sniff: the fds of doorways and proxymous come
                 back to what they were, the next scp is intact
@@ -30,7 +35,7 @@ can be created again afterwards.
                 web port: the daemons answer, the fds come back
   guests        the agent killed inside a kvm and inside a cnt, a reboot
                 from inside a kvm, an interface flapped: ssh comes back
-  image owner   with sudo: the image chowned to root, add cnt still works
+  image owner   with sudo: a copy of the image chowned to root, add cnt works
                 (the tree is idmapped from whatever owner it has)
   net kill      a full topology, cloonix stop: no process, no namespace,
                 no mount of the net left; the net starts again and works
@@ -60,6 +65,18 @@ from testitall import (Fail, cli, must, ssh, answers, wait_answer, wait_topo,
 NET, PEER = ti.NET, ti.PEER
 CNT_ROOTFS, KVM_ROOTFS = ti.CNT_ROOTFS, ti.KVM_ROOTFS
 BULK = os.environ.get("TESTFAILURES_BULK", "/var/lib/cloonix/bulk")
+
+
+def meminfo_mb(key):
+    for line in open("/proc/meminfo"):
+        if line.startswith(key + ":"):
+            return int(line.split()[1]) // 1024
+    return 0
+
+
+# the server bounds a kvm by its host, this host: cpus, ram and swap
+HOST_CPUS = os.cpu_count() or 1
+HOST_RAM = meminfo_mb("MemTotal") + meminfo_mb("SwapTotal")
 T0 = time.time()
 
 
@@ -132,6 +149,28 @@ def kill9(pid, what):
 
 def alive(pid):
     return os.path.exists("/proc/%d" % pid)
+
+
+def c2c_role(victims, what):
+    """The process of a c2c that plays a role, told by the process tree, not
+    by the pids: the second tap child and the daemon fork at the same time,
+    either may get the higher pid. The daemon leads its session (daemon()
+    calls setsid), the second tap child is the child of the first."""
+    stat = {}
+    for p in victims:
+        try:
+            f = open("/proc/%d/stat" % p).read().rsplit(")", 1)[1].split()
+            stat[p] = (int(f[1]), int(f[3]))
+        except (OSError, IndexError, ValueError):
+            stat[p] = (0, 0)
+    roles = {"daemon": [p for p in victims if stat[p][1] == p],
+             "second tap child": [p for p in victims if stat[p][0] in victims]}
+    roles["first tap child"] = [p for p in victims if p not in
+                                roles["daemon"] + roles["second tap child"]]
+    if len(roles[what]) != 1:
+        raise Fail("the c2c %s is not one process of %s (pid: ppid, session):"
+                   " %s" % (what, victims, stat))
+    return roles[what][0]
 
 
 def fds_of(binary):
@@ -256,86 +295,206 @@ def t_setup():
     ping("tfA", "10.11.11.2", 3)
 
 
+class W:
+    """How a refusal comes back: the exit code (1 the server said no, 2 the
+    client did, None any but 0 and 3), words of its fault, and a KERR of the
+    net in the syslog, wanted when the server refused."""
+    def __init__(self, rc, words="", kerr=None):
+        self.rc = (rc,) if isinstance(rc, int) else rc
+        self.words = words
+        self.kerr = (self.rc == (1,)) if kerr is None else kerr
+
+
 BAD = [
     # names
-    ("add", "cnt", "x" * 70, "eth=1", CNT_ROOTFS),
-    ("add", "cnt", "a/b", "eth=1", CNT_ROOTFS),
-    ("add", "cnt", "a b", "eth=1", CNT_ROOTFS),
-    ("add", "cnt", "", "eth=1", CNT_ROOTFS),
-    ("add", "cnt", "tfA", "eth=1", CNT_ROOTFS),            # twice
-    ("add", "cnt", "tflan", "eth=1", CNT_ROOTFS),          # a lan's name
-    ("add", "nat", "tfA"),                                  # a cnt's name
-    ("add", "a2b", "tfA"),
-    ("add", "tap", "x" * 20),                               # ifname limit
-    ("add", "tap", "tfA"),
+    ("add", "cnt", "x" * 70, "eth=1", CNT_ROOTFS, W(1, "bad name")),
+    ("add", "cnt", "a/b", "eth=1", CNT_ROOTFS, W(1, "bad name")),
+    ("add", "cnt", "a b", "eth=1", CNT_ROOTFS, W(1, "bad name")),
+    ("add", "cnt", "", "eth=1", CNT_ROOTFS, W(1, "bad name")),
+    ("add", "cnt", "tfA", "eth=1", CNT_ROOTFS, W(1, "tfA is a container")),
+    ("add", "cnt", "tflan", "eth=1", CNT_ROOTFS, W(1, "tflan is a lan")),
+    ("add", "nat", "tfA", W(1, "tfA is a container")),
+    ("add", "a2b", "tfA", W(1, "tfA is a container")),
+    ("add", "tap", "x" * 20, W(1, "15 chars at most")),   # ifname limit
+    ("add", "tap", "tfA", W(1, "tfA is a container")),
     # numbers and words
     # eth= with nothing after it is a guest with no interface, allowed
-    ("add", "cnt", "tfbad", "eth=xyz", CNT_ROOTFS),
-    ("add", "cnt", "tfbad", "eth=%d" % 40, CNT_ROOTFS),
+    ("add", "cnt", "tfbad", "eth=xyz", CNT_ROOTFS, W(2, "eth=xyz: a whole number")),
+    ("add", "cnt", "tfbad", "eth=%d" % 40, CNT_ROOTFS, W(1)),
     # ram=0 and cpu=0 are taken as defaults by the server, on purpose
-    ("add", "kvm", "tfbad", "ram=99999999", "cpu=1", "eth=1", KVM_ROOTFS),
-    ("add", "kvm", "tfbad", "ram=abc", "cpu=1", "eth=1", KVM_ROOTFS),
-    ("add", "kvm", "tfbad", "ram=1024", "cpu=999", "eth=1", KVM_ROOTFS),
+    ("add", "kvm", "tfbad", "ram=99999999", "cpu=1", "eth=1", KVM_ROOTFS,
+     W(1, "the ram and swap of this host")),
+    ("add", "kvm", "tfbad", "ram=%d" % (HOST_RAM + 1024), "cpu=1", "eth=1",
+     KVM_ROOTFS, W(1, "the ram and swap of this host")),
+    ("add", "kvm", "tfbad", "ram=abc", "cpu=1", "eth=1", KVM_ROOTFS,
+     W(2, "megabytes")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=999", "eth=1", KVM_ROOTFS,
+     W(1, "those of this host")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=%d" % (HOST_CPUS + 1), "eth=1",
+     KVM_ROOTFS, W(1, "those of this host")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=-1", "eth=1", KVM_ROOTFS,
+     W(2, "cpu=-1: a whole number")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=abc", "eth=1", KVM_ROOTFS,
+     W(2, "cpu=abc: a whole number")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=2.5", "eth=1", KVM_ROOTFS,
+     W(2, "cpu=2.5: a whole number")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=1", "eth=1", "wlan=x", KVM_ROOTFS,
+     W(2, "wlan=x: a whole number")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=1", "eth=1", "wlan=99",
+     KVM_ROOTFS, W(1, "radios at most")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=1", "eth=1", "--no_such_flag",
+     KVM_ROOTFS, W(2, "does not take --no_such_flag")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=1", "eth=1",
+     "mac_addr=eth3:02:00:00:00:00:01", KVM_ROOTFS,
+     W(2, "names an interface this machine has not got")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=1", "eth=1",
+     "mac_addr=eth0:zz:00:00:00:00:01", KVM_ROOTFS, W(2, "wants hex bytes")),
+    ("add", "cnt", "tfbad", "eth=1", "wlan=x", CNT_ROOTFS,
+     W(2, "wlan=x: a whole number")),
+    ("add", "cnt", "tfbad", "eth=1", "wlan=99", CNT_ROOTFS,
+     W(1, "radios asked")),
+    ("add", "cnt", "tfbad", "eth=1", "--no_such_flag", CNT_ROOTFS,
+     W(2, "does not take --no_such_flag")),
+    ("add", "cnt", "tfbad", "eth=1", "vmount=/no/such/dir:/mnt", CNT_ROOTFS,
+     W(1, "not a directory the server")),
+    ("add", "nat", "tfnat2", "publish=8080", W(2, "hostport:guestport")),
+    ("add", "nat", "tfnat2", "publish=0:80", W(2, "0 is not a port")),
+    ("add", "nat", "tfnat2", "publish=8080:80/sctp", W(2, "tcp or udp")),
     # images
-    ("add", "cnt", "tfbad", "eth=1", "no_such_image"),
-    ("add", "cnt", "tfbad", "eth=1", "../../etc"),
-    ("add", "kvm", "tfbad", "ram=1024", "cpu=1", "eth=1", "no_such.qcow2"),
+    ("add", "cnt", "tfbad", "eth=1", "no_such_image", W(1, "is not in|not found")),
+    ("add", "cnt", "tfbad", "eth=1", "../../etc", W(1)),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=1", "eth=1", "no_such.qcow2",
+     W(1, "is not in|not found")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=1", "eth=1",
+     "install_cdrom=no_such.iso", KVM_ROOTFS, W(1, "not found")),
+    ("add", "kvm", "tfbad", "ram=1024", "cpu=1", "eth=1",
+     "added_disk=no_such.qcow2", KVM_ROOTFS, W(1, "not found")),
+    ("add", "win", "tfbad", "ram=1024", "cpu=1", "eth=1", "no_such.qcow2",
+     W(1, "is not in|not found")),
+    ("add", "freebsd", "tfbad", "ram=1024", "cpu=1", "eth=1", "no_such.qcow2",
+     W(1)),
+    ("add", "cisco", "tfbad", "ram=1024", "cpu=1", "eth=1", "no_such.qcow2",
+     W(1, "is not in|not found")),
+    ("add", "phy", "tfnosuchif0", W(1, "no host interface")),
     # cabling
-    ("plug", "nosuch", "tflan"),
-    ("plug", "tfA", "eth9", "tflan"),
-    ("plug", "tfA", -1, "tflan"),
-    ("plug", "tfA", "eth0", "x" * 70),
-    ("plug", "tfA", "eth0", "eth1"),                       # an interface word
-    ("plug", "tfA", "eth0", "B"),
-    ("unplug", "tfA", "eth1", "tflan"),
-    ("unplug", "nosuch", "tflan"),
-    ("del", "nosuch"),
-    ("del", "tflan"),
+    ("plug", "nosuch", "tflan", W(1, "nothing has that name")),
+    ("plug", "tfA", "eth9", "tflan", W(1, "eth does not exist")),
+    ("plug", "tfA", -1, "tflan", W(2, "is not an interface")),
+    ("plug", "tfA", "eth0", "x" * 70, W(1, "bad name")),
+    ("plug", "tfA", "eth0", "eth1", W(2, "word of an interface")),
+    ("plug", "tfA", "eth0", "B", W(2, "word of an interface")),
+    ("unplug", "tfA", "eth1", "tflan", W(1, "eth does not exist")),
+    ("unplug", "nosuch", "tflan", W(1)),
+    ("unplug", "tfA", "eth0", "tfnolan", W(1)),            # not its lan
+    ("plug", "tflan", "tfA", W(1, "tfA is a container")),  # a cnt as a lan
+    ("plug", "tfA", "wlan0", "cntwifi", W(1, "has no wlan0")),
+    ("del", "nosuch", W(1, "NOT FOUND")),
+    ("del", "tflan", W(1, "goes away with the unplug")),
+    ("del", "cntwifi", W(1, "NOT FOUND|goes away")),
     # cnf
-    ("cnf", "nosuch", "A2B", "delay=1"),
-    ("cnf", "tfA", "eth9", "sniff=on"),
-    ("cnf", "nosuch", "sniff=on"),
-    ("cnf", "tfA", "cpu=-1", "ram=0"),
-    ("cnf", "tfA", "cpu=abc"),
-    ("cnf", "nosuch", "publish=1:1"),
-    ("cnf", "nosuch", "rstp=on"),
-    ("cnf", "tflan", "rstp=maybe"),
+    ("cnf", "nosuch", "A2B", "delay=1", W(1, "no a2b of that name")),
+    ("cnf", "tfA", "eth9", "sniff=on", W(1)),
+    ("cnf", "nosuch", "sniff=on", W(1)),
+    ("cnf", "tfA", "cpu=-1", "ram=0", W(2, "cpu=-1: a whole number")),
+    ("cnf", "tfA", "cpu=abc", W(2, "cpu=abc: a whole number")),
+    ("cnf", "nosuch", "publish=1:1", W(1, "no nat of that name")),
+    ("cnf", "nosuch", "rstp=on", W(1, "no lan of that name")),
+    ("cnf", "tflan", "rstp=maybe", W(2, "rstp=on or rstp=off")),
+    ("cnf", "tfA", "x=1", W(2, "together")),
+    ("cnf", "tfA", "x=a", "y=1", W(2, "whole numbers")),
+    ("cnf", "tfA", "eth0", "angle=abc", W(2, "whole numbers")),
+    ("cnf", "tfA", "note=" + "n" * 101, W(2, "100 bytes at most")),
+    ("cnf", "tfA", "eth0", "cpu=10", W(2, "sniff= and angle= only")),
+    ("cnf", "tfA", "sniff=maybe", W(2, "sniff=on or sniff=off")),
+    ("cnf", "tfA", "cpu=10", "rstp=on", W(2, "not a setting cloonix knows")),
+    ("cnf", "tfA", "bogus=1", W(2, "not a setting cloonix knows")),
+    ("cnf", "tfA", "ram=abc", W(2, "megabytes")),
+    ("cnf", "nosuch", "A2B", "delay=abc", W(2, "one of delay=")),
+    ("cnf", "nosuch", "publish=0:80", W(2, "0 is not a port")),
+    ("cnf", "tflan", "mac_mangle=zz", W(1, "mac_mangle=zz")),
     # c2c
-    ("add", "c2c", "tfc2c", "no_such_net"),
-    ("add", "c2c", "tfA", PEER),
+    ("add", "c2c", "tfc2c", "no_such_net", W(2, "unknown c2c destination")),
+    ("add", "c2c", "tfA", PEER, W(1, "tfA is a container")),
     # the rest (x= y= and angle= take any name: a layout may be filed
     # before its object exists)
-    ("save", "nosuch", "/tmp/x.qcow2"),
-    ("save", "tfA", "/tmp/x.qcow2"),                        # a cnt
-    ("scp", "/etc/hostname", "nosuch:/tmp/"),
-    ("scp", "nosuch:/etc/hostname", "/tmp/"),
-    ("scp", "/no/such/file", "tfA:/tmp/"),
-    ("ssh", "nosuch", "true"),
+    ("save", "nosuch", "/tmp/x.qcow2", W(1, "MACHINE NOT FOUND")),
+    ("save", "tfA", "/tmp/x.qcow2", W(1, "save writes the disk of a kvm")),
+    ("scp", "/etc/hostname", "nosuch:/tmp/", W(None)),
+    ("scp", "nosuch:/etc/hostname", "/tmp/", W(None)),
+    ("scp", "/no/such/file", "tfA:/tmp/", W(2, "No such file")),
+    ("ssh", "nosuch", "true", W(None)),
+    ("dump", "nosuchkind", W(2, "cannot map that")),
+    ("dump", "ip", "nosuch", "tfA", W(1, "no nat of that name")),
+    ("trace", "nosuchkind", W(2, "no trace called")),
+    ("sniff", "tfA", "eth0", "--count", "--bytes", W(2, "pick one of")),
+    ("save", "tfA", W(2, "cannot map that")),
+    ("scp", "/etc/hostname", "/tmp/x", W(2, "one of the two paths")),
+    ("scp", "-r", "/no/such/dir", "tfA:/tmp/", W(2, "is not a directory")),
 ]
+
+
+def kerr_since(mark, what, net=NET, timeout=5):
+    """A KERR of the net in its syslog since mark: a path that leaves the
+    normal one says so."""
+    stamp = ("KERR: %s " % net).encode()
+    end = time.time() + timeout
+    while stamp not in ti.syslog_after(mark):
+        if time.time() > end:
+            raise Fail("%s: no KERR of %s in the syslog since" % (what, net))
+        time.sleep(0.3)
 
 
 def t_bad_input():
     before = topo()
-    for cmd in BAD:
-        t = time.time()
-        # a kvm qemu refuses to start is refused after the 20 s pid wait
-        r = cli(*[str(x) for x in cmd], timeout=10, ack=40)
-        dt = time.time() - t
+    for line in BAD:
+        cmd, want = [str(x) for x in line[:-1]], line[-1]
+        said = " ".join(cmd)
+        busy_end = time.time() + 30
+        while True:
+            mark = ti.syslog_mark() if want.kerr else 0
+            t = time.time()
+            r = cli(*cmd, timeout=10, ack=40)
+            dt = time.time() - t
+            out = (r.stderr + r.stdout).strip()
+            # a qemu dying at its start keeps the name tfbad while it is
+            # deleted: the next tfbad line waits, refused for its own fault
+            if not ("tfbad" in cmd and "is a kvm" in out
+                    and time.time() < busy_end):
+                break
+            time.sleep(1)
         if r.returncode == 0:
             raise Fail("accepted, should have been refused: %s\n%s"
-                       % (" ".join(str(x) for x in cmd), r.stdout))
-        if not (r.stderr + r.stdout).strip():
-            raise Fail("refused with no reason: %s" % " ".join(str(x)
-                                                              for x in cmd))
+                       % (said, r.stdout))
+        if r.returncode == 3:
+            raise Fail("the client broke instead of refusing: %s\n%s"
+                       % (said, out))
+        if not out:
+            raise Fail("refused with no reason: %s" % said)
+        if want.rc and r.returncode not in want.rc:
+            raise Fail("refused with exit %d, %s wanted (1 the server said "
+                       "no, 2 the client did): %s\n%s"
+                       % (r.returncode, " or ".join(str(c) for c in want.rc),
+                          said, out))
+        if want.words and not re.search(want.words, out):
+            raise Fail("refused, but not for its fault (%r wanted): %s\n%s"
+                       % (want.words, said, out))
         if dt > 45:
-            raise Fail("took %.0fs to refuse: %s" % (dt, " ".join(str(x)
-                                                                  for x in cmd)))
+            raise Fail("took %.0fs to refuse: %s" % (dt, said))
+        if want.kerr:
+            kerr_since(mark, said)
+            # one KERR site lets 10 lines through in 10 s: stay under that
+            time.sleep(max(0.0, 1.1 - (time.time() - t)))
     time.sleep(2)
     after = topo()
     if after != before:
         raise Fail("dump topo moved under refused requests:\nbefore:\n%s\n"
                    "after:\n%s" % (before, after))
     server_answers("after the refusals")
+    # the bound itself is taken: a kvm with every cpu of the host
+    must(cli("add", "kvm", "tfmax", "ram=512", "cpu=%d" % HOST_CPUS, KVM_ROOTFS,
+             ack=60), "add kvm with the %d cpus of the host" % HOST_CPUS)
+    must(cli("del", "tfmax", ack=60), "del tfmax")
+    wait_topo("tfmax", False, timeout=60)
     # garbage on the doors port
     ip = cfg_value(NET, "cloonix_ip") or "127.0.0.1"
     port = int(cfg_value(NET, "cloonix_port") or 45211)
@@ -485,20 +644,23 @@ def t_killed():
     while not ping("tfA", "10.11.11.9", 1, check=False) and time.time() < end:
         time.sleep(1)
     ping("tfA", "10.11.11.9", 3)
-    for net in (NET, PEER):
+    # a c2c is three processes, the daemon and two tap children, each killed
+    for net, what in ((NET, "daemon"), (PEER, "first tap child"),
+                      (NET, "second tap child")):
         victims = [p for p in pgrep("cloonix-ovs-c2c %s " % net)
                    if name in cmdline(p)]
-        if not victims:
-            raise Fail("no cloonix-ovs-c2c process for %s on %s" % (name, net))
-        # a c2c is one daemon and two tap children, the daemon has the
-        # highest pid (it daemonizes after the fork): the main on one net,
-        # a child on the other
-        victim = max(victims) if net == NET else min(victims)
-        kill9(victim, "the c2c %s on %s" % ("daemon" if victim == max(victims)
-                                            else "tap child", net))
+        if len(victims) != 3:
+            raise Fail("%d cloonix-ovs-c2c process(es) for %s on %s, 3 wanted"
+                       % (len(victims), name, net))
+        mark = ti.syslog_mark()
+        kill9(c2c_role(victims, what), "the c2c %s on %s" % (what, net))
+        # a side lost is seen by the other after 20 s of silence, then the
+        # master starts again and peers
         state = settle(name, lambda: c2c_peered(name, NET) and
-                       ping("tfA", "10.11.11.9", 2, check=False), timeout=90)
-        print("      c2c process killed on %s: c2c is %s" % (net, state))
+                       ping("tfA", "10.11.11.9", 2, check=False), timeout=150)
+        print("      c2c %s killed on %s: c2c is %s" % (what, net, state))
+        if what != "daemon":
+            kerr_since(mark, "the c2c %s on %s killed" % (what, net), net=net)
         server_answers("after the c2c kill on %s" % net)
         if state == "gone":
             wait_topo(name, False, net=PEER, timeout=60)
@@ -529,8 +691,12 @@ def t_killed():
     if not qemus:
         qemus = [p for p in pgrep("cloonix-qemu-system") if " tfK" in
                  cmdline(p)]
+    if not qemus:
+        raise Fail("no qemu process found for tfK")
+    mark = ti.syslog_mark()
     kill9(qemus[0], "the qemu of tfK")
     state = settle("tfK", lambda: answers("tfK", timeout=3), timeout=90)
+    kerr_since(mark, "the qemu of tfK killed")
     print("      qemu killed: kvm is %s" % state)
     if state == "gone":
         no_process_left("tfK", "qemu killed")
@@ -598,10 +764,8 @@ def t_aborted():
             fds_back(before, "after an aborted %s" % label)
             server_answers("after an aborted %s" % label)
         time.sleep(3)
-        # Match the exact commands aborted above, not any cat/head/sleep: a
-        # guest runs its own sleeps (systemd, services), and grepping the bare
-        # word caught an unrelated "sleep 5" and called it a leak. "sleep 1000"
-        # and "head -c 800M" are what this test launched and what must be gone.
+        # The exact aborted commands ("sleep 1000", "head -c 800M"), not the bare
+        # words: guests run their own sleeps.
         left = ssh("tfA",
                    "pgrep -af 'sleep 1000|head -c 800M' | grep -v pgrep; true",
                    check=False).strip()
@@ -718,23 +882,25 @@ def t_image_owner():
     if not ti.sudo_ok():
         print("      (no passwordless sudo: the owner of the image is not changed)")
         return
-    path = os.path.join(BULK, CNT_ROOTFS)
-    if not os.path.isdir(path):
-        # The image is a tar.gz: its extracted tree, made by the first add,
-        # is what another user's net would find. Chowned to root it is that
-        # other user's tree.
+    src = os.path.join(BULK, CNT_ROOTFS)
+    if not os.path.isdir(src):
+        # the extracted tree of the tar.gz image
         add_cnt("tfO", "s")
         wait_answer("tfO", timeout=240)
         must(cli("del", "tfO"), "del")
         wait_topo("tfO", False)
-        path = path + "_targz"
-    if not os.path.isdir(path):
-        print("      (%s is not a directory here: not changed)" % path)
+        src = src + "_targz"
+    if not os.path.isdir(src):
+        print("      (%s is not a directory here: not changed)" % src)
         return
-    me = "%d:%d" % (os.getuid(), os.getgid())
-    must(ti.sudo("chown", "-R", "root:root", path), "chown the image to root")
+    # A copy owned by root, what another user's net would find. The image
+    # itself is never chowned: a chown clears the setuid bits of its files.
+    path = os.path.join(BULK, "tforoot")
+    ti.sudo("rm", "-rf", path)
+    must(ti.sudo("cp", "-a", src, path), "copy the image")
     try:
-        add_cnt("tfO", "s")
+        must(ti.sudo("chown", "-R", "root:root", path), "chown the copy to root")
+        ti.add_cnt("tfO", "s", rootfs="tforoot")
         wait_answer("tfO")
         must(cli("del", "tfO"), "del")
         wait_topo("tfO", False)
@@ -742,7 +908,7 @@ def t_image_owner():
         print("      %s chowned to root: add cnt worked (the tree is "
               "idmapped from its owner, uid %d)" % (path, st.st_uid))
     finally:
-        ti.sudo("chown", "-R", me, path)
+        ti.sudo("rm", "-rf", path)
 
 
 def t_net_kill():
@@ -760,13 +926,10 @@ def t_net_kill():
     s.stop()
     end = time.time() + 90
     while time.time() < end:
-        # in a toy, proxymous and the container init outlive the net: they
-        # are the toy, restarted by its cmd
+        # in a toy, proxymous and the container init go with the server
         left = [p for p in pgrep("cloonix-") if " %s" % NET in
                 cmdline(p)
-                and "testfailures" not in cmdline(p)
-                and not (ti.TOY and ("cloonix-proxymous" in cmdline(p) or
-                                     "cloonix-init-" in cmdline(p)))]
+                and "testfailures" not in cmdline(p)]
         if not left:
             break
         time.sleep(2)

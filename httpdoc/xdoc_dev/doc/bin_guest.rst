@@ -48,15 +48,21 @@ The insider agents
     cloonix_cxp_srv_win    mingw
     init_starter           cloonixsbininit, pid 1 of a cnt
 
-Three discs, one per kind of guest, each checked to carry its own set and
-not the others'::
+Three discs, one per kind of kvm, and a directory for the cnt, each checked
+to carry its own set and not the others'::
 
-    insider_agent_x86_64.iso
+    insider_agent_x86_64.iso        SIDE="main_kvm.c wifi.c"
     insider_agent_win_x86_64.iso
-    insider_agent_bsd_x86_64.iso
+    insider_agent_bsd_x86_64.iso    SIDE="main_kvm.c wifi_none.c"
+    insider_agent_cnt/              SIDE="main_cnt.c wifi_none.c"
+
+*SIDE* is the variable of the agent Makefile: *main_kvm.c* opens the virtio
+port, *main_cnt.c* accepts on */cloonixmnt/mountbear/sock*; *wifi.c* is the
+hwsim medium of a linux kvm, *wifi_none.c* answers that there is no radio.
 
 *pthexec.c* has a function per disc and *utils_get_cdrom_path_name* picks
-on the vm flags. *build_cloonfs* checks every tool the tree needs before
+on the vm flags. For a cnt, suid-power copies *insider_agent_cnt* into
+*cnf_fs* with *cp*; no iso is read and no *xorriso* runs. *build_cloonfs* checks every tool the tree needs before
 compiling, *gcc-mingw-w64-x86-64* and *clang* among them, and reports every
 miss in one pass; *cmd_mk_iso* refuses to produce a disc with a missing
 agent. What is checked is the binary, the package column says what to

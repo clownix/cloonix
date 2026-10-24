@@ -70,7 +70,7 @@ wifi/cnt_bridge.py
 ==================
 
 A home box: its radio and its ethernet are one Linux bridge (Lennert
-Buytenhek, 1999), hostapd putting *wlan0* in *br0* with *bridge=*. The ping
+Buytenhek, kernel 2.4), hostapd putting *wlan0* in *br0* with *bridge=*. The ping
 of the station is counted on the cable of the server::
 
     cloonix cli nemo demo wifi/cnt_bridge.py
@@ -123,6 +123,12 @@ The frames on the air are the frames of the container version.
 wifi/cntkvm_home.py
 ===================
 
+The home box joins three inventions. The Linux bridge, 1999, Lennert Buytenhek,
+makes the radio and the ethernet one lan. hostapd, Jouni Malinen since 2002, is
+the access point, WPA2 since 802.11i in 2004. DHCP, RFC 2131 of 1997, Ralph
+Droms, gives the address: here kea, the server ISC wrote to follow its dhcpd of
+1997.
+
 The box of a home: a kvm access point bridges its radio to lan1, where a
 container runs kea, the DHCP server. A container station and a kvm station,
 their radios on *cntwifi*, join with WPA2 and have no address: sta1 asks
@@ -138,6 +144,13 @@ protects the air, not the lan behind the box. Images *dhcp_trixie* and
 wifi/cntkvm_enterprise.py
 =========================
 
+802.1X, from 2001, carries EAP, RFC 3748, between a supplicant and an
+authenticator, which hands it to a RADIUS server, RFC 2865, written by Carl
+Rigney in 1991 for the modem banks. 802.11i of 2004 made it the enterprise mode
+of WPA2. PEAP, by Microsoft, Cisco and RSA in 2002, wraps the password exchange
+in TLS. hostapd and wpa_supplicant are Jouni Malinen's, freeradius was begun in
+1999 and long led by Alan DeKok.
+
 WPA2-Enterprise and the three roles of 802.1X: each station is a
 supplicant, the kvm access point the authenticator, freeradius in a
 container on the cable the authentication server. *alice* (container) and
@@ -151,6 +164,12 @@ never sees a password. Images *radius_trixie* and *trixie.qcow2*::
 
 wifi/cntkvm_roaming.py
 ======================
+
+Roaming came with the cells of 802.11 in 1997: a station keeps its network by
+changing access point, the ESS of the standard. 802.11r of 2008 made the change
+fast for voice. hostapd and wpa_supplicant, Jouni Malinen since 2002, do it
+here the plain way: lose one access point, find the next with the same SSID and
+key.
 
 One SSID on two cells, a container access point on *cell1*, a kvm access
 point on *cell2*, both bridged to lan1. The kvm station pings the server
@@ -166,6 +185,13 @@ and *trixie.qcow2*::
 
 wifi/cntkvm_monitor.py
 ======================
+
+A radio hears every frame on its channel: monitor mode only stops it from
+throwing away those not for it. WEP, 1997, was broken by Fluhrer, Mantin and
+Shamir in 2001 from such listening; WPA2, 802.11i of 2004, keeps the payload
+secret with CCMP, but no encryption hides who talks, when and how much. tcpdump
+was written at Lawrence Berkeley Laboratory in 1988 by Van Jacobson, Craig
+Leres and Steven McCanne.
 
 Two containers run a network, a kvm listens with a monitor interface,
 *mon0*, beside its *wlan0*, tcpdump inside the guest: the view of an

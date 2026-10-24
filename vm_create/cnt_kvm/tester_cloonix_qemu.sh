@@ -1,5 +1,4 @@
 #!/bin/bash
-HERE=`pwd`
 CLOONIX_QEMU_BIN="/usr/libexec/cloonix/cloonfs/bin/cloonix-qemu-system"
 CLOONIX_QEMU_DIR="/usr/libexec/cloonix/cloonfs/bin/qemu"
 QCOW2="/var/lib/cloonix/bulk/tumbleweed.qcow2"

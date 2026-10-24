@@ -12,8 +12,8 @@ Nothing here runs when a net is up.
 cloonix-patchelf
 ================
 
-*cloonsrc/patchelf* aside qemu is the smallest external project, a *cmd*
-around NixOS's patchelf. The one binary never shipped: it runs once in
+*cloonsrc/patchelf* is a *cmd* around NixOS's patchelf, the one binary
+never shipped: it runs once in
 *pack_cloonfs* over every other binary and library and rewrites the
 interpreter to the loader inside *cloonfs* and the rpath to the library
 directories inside *cloonfs*.
@@ -34,9 +34,44 @@ The scripts that make a delivery
                                    the demos, makes the certificate, keeps make_cloonix_cert in bin
     create_toy_targz.sh            the rootless tarball from an installed bundle: the crun that
                                    wraps cloonix, the init starter, the <net>cmd script
+    create_<name>_toy_targz.sh     a specialised toy, through lib/special_toy.sh: the toy without
+                                   kvm, the image of its project merged into its root,
+                                   <name>_trixie, dns_trixie for bind
+    lib/special_needs.py           what of that image the demos use
+    lib/pack_toy.sh                the .tar.xz of a toy
+    toy_drop                       the demos the toy leaves out, read by demo_test.py too
 
 A package in the *LIST* of *rootfs_targz_store.sh* is not shipped unless a
 copy list names it.
+
+
+The specialised toys
+====================
+
+*lib/special_toy.sh* unpacks the toy, takes kvm and qemu out, and merges
+into its root what *lib/special_needs.py* selects of the image::
+
+    the commands the demo strings run       a word in command position that is an executable
+                                            of the image
+    the packages of <name>_demo/needs       whole: dpkg names or globs
+    the scripts and libraries they need     transitively
+
+The lines of a *needs* file::
+
+    frr                         a package, taken whole
+    !import                     a word of a configuration that is not a command
+    ?usr/lib/frr/sharpd         a file of those packages, taken only when a demo names it
+    @python                     of the python of the image, the modules the scripts written
+                                into the containers import
+    @python:<module>            one more module, imported at run time only
+
+Python test files (*test_\*.py*, *tests/*) are never taken. Then every elf
+added must load in the root of the toy; with *@python*, the interpreter
+must start silently and every selected module import, and a
+*sitecustomize.py* writes a module missing at run time as a KERR line.
+*lib/pack_toy.sh* writes the .tar.xz: directories first, then the files
+sorted by name, so that a library and its twin sit side by side for xz,
+*-9e* on one thread.
 
 
 Reading a build failure

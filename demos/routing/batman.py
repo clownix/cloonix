@@ -7,41 +7,37 @@ Four nodes cabled in a chain, so not every node hears every other::
 
   n1 -- lanA -- n2 -- lanB -- n3 -- lanC -- n4
 
-  Every node runs batman-adv (B.A.T.M.A.N. advanced), a routing protocol
-  that lives in the kernel and forwards ETHERNET frames. On top of the mesh
-  each node has a single interface, bat0, and to the IP layer the four nodes
-  look like one flat switch even though no node is cabled to more than two
-  others.
+Every node runs batman-adv, B.A.T.M.A.N. advanced, a routing protocol in
+the kernel that forwards ethernet frames. Each node has one interface on
+top of the mesh, bat0, and to the IP layer the four look like one flat
+switch, though no node is cabled to more than two others.
 
-  ACT 1  the mesh forms. n1 and n4, which share no lan, reach each other
-         over bat0 -- their frames are carried hop by hop by n2 and n3, and
-         neither end has an IP route pointing at a middle node.
-  ACT 2  batctl shows the originator table: who each node can reach and
-         through which neighbour, the mesh's own map.
-  ACT 3  n2 is taken out of the mesh. n1 and n4 lose their only path and
-         cannot reach each other -- a chain has no spare -- which proves the
-         traffic was riding the mesh, not going around it.
+  ACT 1  the mesh forms: n1 and n4, sharing no lan, reach each other over
+         bat0, their frames carried hop by hop by n2 and n3, with no IP
+         route through a middle node.
+  ACT 2  batctl shows the originator table: who each node reaches, through
+         which neighbour.
+  ACT 3  n2 taken out of the mesh: n1 and n4 lose their only path, a chain
+         having no spare.
 
 Image: batman_trixie (batctl, batman-adv)
 Size:  4 containers, 3 lans
 
 THE PACKET TO CATCH
 -------------------
-  batman-adv speaks its own ethertype, 0x4305, carrying OGMs, the messages
-  nodes broadcast to advertise themselves. There is no IP in them, so the
-  capture is unfiltered and read by eye:
+  batman-adv has its own ethertype, 0x4305, carrying the OGMs nodes
+  broadcast to announce themselves, with no IP in them: the capture is
+  unfiltered, read by eye:
 
     cloonix cli nemo cnf n2 eth0 sniff=on
     cloonix cli nemo sniff n2 eth0 --dump
 
 Important
-  batman-adv is a kernel module. A container run as your normal user cannot
-  load a module, but it can use one already loaded on the host. On the host,
-  once per boot, load it as yourself:
+  batman-adv is a kernel module, used by a container of a user and not
+  loaded by it: on the host, once per boot, then the demo as a user, the net
+  not run as root:
 
     sudo modprobe batman-adv
-
-  then run this demo as your normal user -- no need to run the net as root.
 """
 import os
 import sys
@@ -55,17 +51,15 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
     NET, cable_all, check_net, choose_rootfs, count_on, create, cut_off,
-    erase_net, hold, in_parallel, place, reached, run, ssh, step, story,
-    tools_present, wait_answer)
+    erase_net, hold, in_parallel, need_host_modules, place, reached, run, ssh,
+    step, story, tools_present, wait_answer)
 
 HISTORY = """\
-B.A.T.M.A.N. -- Better Approach To Mobile Ad-hoc Networking -- came out of
-the Freifunk community wireless movement in Germany around 2006, an answer to
-how a town's worth of rooftop radios could route among themselves with no
-central authority. Its advanced form, batman-adv, moved the whole protocol
-into the linux kernel and down to layer 2: the mesh carries ethernet frames,
-so anything above -- IP, DHCP, whatever -- runs across it none the wiser. It
-is maintained with the kernel by the Open-Mesh project.
+B.A.T.M.A.N., Better Approach To Mobile Ad-hoc Networking, came out of the
+Freifunk community wireless movement in Germany around 2006. Its advanced
+form, batman-adv, moved the whole protocol into the linux kernel and down to
+layer 2: the mesh carries ethernet frames, so anything above runs across it
+none the wiser. It is maintained with the kernel by the Open-Mesh project.
 
 Today: batman-adv carries the Freifunk city meshes of Germany, with tens of
 thousands of nodes, and is part of the mainline kernel since 2.6.38; OpenWrt
@@ -73,6 +67,7 @@ routers run it unchanged.
 """
 
 ROOTFS_CHOICES = ("batman_trixie",)
+HOST_MODULES = ("batman-adv",)
 
 N1, N2, N3, N4 = "n1", "n2", "n3", "n4"
 ALL = (N1, N2, N3, N4)
@@ -90,12 +85,6 @@ GATEWAY = {}
 BAT_IP = {N1: "10.7.0.1/24", N2: "10.7.0.2/24",
           N3: "10.7.0.3/24", N4: "10.7.0.4/24"}
 MESH_IFACES = {N1: [0], N2: [0, 1], N3: [0, 1], N4: [0]}
-
-def batman_ready(node):
-    # A user-run container cannot load the module; it uses the host's. The
-    # module, once loaded on the host, is visible here as /sys/module.
-    return ssh(node, "test -d /sys/module/batman_adv && echo yes",
-               check=False).strip() == "yes"
 
 def mesh_up(node):
     for num in MESH_IFACES[node]:
@@ -158,13 +147,7 @@ def main():
 
     step("act 1: the mesh forms, n1 and n4 reach each other over it")
     story()
-    if not all(batman_ready(n) for n in ALL):
-        sys.exit("batman-adv is not loaded.\n"
-                 "  a container run as your normal user cannot load a kernel\n"
-                 "  module, but it can use one already on the host. On the\n"
-                 "  host, once per boot, run as yourself:\n"
-                 "    sudo modprobe batman-adv\n"
-                 "  then start this demo again as your normal user.")
+    need_host_modules(N1, HOST_MODULES)
     in_parallel(mesh_up, list(ALL), "mesh up")
     if not mesh_ready():
         sys.exit("the mesh did not form: n1 never reached n4 over bat0")
@@ -211,7 +194,7 @@ def main():
         sys.exit("a check failed: reach=%s broken=%s" % (ok_reach, ok_broken))
 
     story("""
-the network is left up. Things worth trying:
+the network is left up. Things to try:
 
   the mesh tables on any node:
     cloonix cli %s ssh n1 "batctl o"

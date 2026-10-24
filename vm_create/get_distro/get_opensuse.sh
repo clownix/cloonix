@@ -93,7 +93,7 @@ if [ "${RC}" = "0" ] && [ ! -e "${DEST}/opensuse/tumbleweed/repo/oss/repodata/re
   echo "  ${DEST}/opensuse/tumbleweed/repo/oss/repodata/repomd.xml"
   echo "This almost always means the rsync include paths don't match the"
   echo "server's module layout. Re-run with VERIFY_LAYOUT=1 to inspect it:"
-  echo "  VERIFY_LAYOUT=1 ${0}"
+  echo "VERIFY_LAYOUT=1 ${0}"
 fi
 
 echo

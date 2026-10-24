@@ -6,7 +6,7 @@ ospf in area 0. Between them, ebgp on the border routers. And inside each
 one, ibgp between the two borders so that what one learns from outside is
 known to the other.
 
-The point of the arrangement, and the reason it is worth having as a demo:
+What the arrangement shows:
 
   * ospf carries only what belongs to the operator -- the internal links and
     the loopbacks. It never sees an external route.
@@ -14,14 +14,13 @@ The point of the arrangement, and the reason it is worth having as a demo:
     not interfaces. A loopback does not go down when a cable does, so an
     ibgp session survives any failure ospf can route around.
   * that only works because ospf advertises the loopbacks, which is what
-    makes the two protocols depend on each other rather than merely coexist.
+    makes the two protocols depend on each other rather than coexist.
   * the border routers set next-hop-self on the ibgp sessions: an internal
     router has no route to a peer in a foreign AS, so the next hop has to be
     rewritten to something ospf knows.
 
     ./frrmix.py [net]              the net defaults to nemo
 
-Needs cloonix on the PATH, nothing else.
 
 Topology, with n the AS number from 1 to 4:
 
@@ -32,41 +31,28 @@ Topology, with n the AS number from 1 to 4:
     ebgp to AS n-1                                        ebgp to AS n+1
 
 Image: frr_trixie
-Size:  60 containers and 45 lans (spider) / 16 containers (mix)
+Size:  60 containers and 35 lans (spider) / 16 containers (mix)
 
 THE PACKET TO CATCH
 -------------------
-  Sixty routers make a lot of traffic and the filter is what keeps a
-  capture readable.
+  bgp is tcp 179, on a border:
 
-  ospf, which is IP protocol 89 and so is reached by exclusion:
-
-    cloonix cli nemo cnf cod1 eth0 sniff=on
-    cloonix cli nemo sniff cod1 eth0 --dump ip and not udp and not tcp
-
-  The packet to catch is one LSA flooding outwards after a link is taken
-  down: the same LSA arrives on several interfaces of the same router,
-  which is the mechanism people describe as "flooding" and rarely see.
-
-  bgp, in frrspider_bgp.py and frrmix.py, is tcp 179:
-
+    cloonix cli nemo cnf b11 eth0 sniff=on
     cloonix cli nemo sniff b11 eth0 --dump tcp port 179
 
-  In frrmix.py the packet to catch is on the ibgp session, because of
-  where it is addressed: between two loopbacks, over a wire whose own
-  addresses appear nowhere in it.
+  The packet to catch is on the ibgp session, addressed between two
+  loopbacks over a wire whose own addresses appear nowhere in it:
 
+    cloonix cli nemo cnf i11 eth0 sniff=on
     cloonix cli nemo sniff i11 eth0 --dump host 10.1.0.1
 
-  That is the demo's whole argument in one filter -- the session
-  survives a link failure because it was never bound to the link, and
-  the capture shows the packets riding whichever wire ospf chose.
+  The session survives a link failure because it is not bound to a link:
+  its packets ride whichever wire ospf chose.
 
 Important
-  No configuration is baked into the image: frr is installed and everything
-  else is written at run time. The cloonix rootfs itself carries no routing
-  daemon -- frr is one piece of software to test with cloonix among many.
-  The bird and babel demos are the deliberate counterweight.
+  No configuration is in the image: frr is installed, everything else is
+  written at run time. The cloonix rootfs carries no routing daemon; the
+  bird and babel demos run other ones.
 """
 import concurrent.futures
 import math
@@ -82,7 +68,7 @@ sys.path[:0] = [os.path.join(_d, "lib") for _d in (
     _HERE, os.path.dirname(_HERE),
     os.environ.get("CLOONIX_DEMO_DIR", "/usr/share/cloonix/demos"))]
 from demolib import (
-    CLOONIX, NET, erase_net, show, story)
+    CLOONIX, NET, erase_net, show, story, unavailable)
 
 NB_AS = 4
 ASN_BASE = 65000
@@ -91,14 +77,11 @@ ASN_BASE = 65000
 ROOTFS_CHOICES = ("frr_trixie",)
 
 HISTORY = """\
-Two protocols with two authors. OSPF, John Moy, RFC 1131 in 1989: an
-interior protocol where every router holds the map of its own network.
-BGP, Kirk Lougheed and Yakov Rekhter, RFC 1105 the same year: an
-exterior protocol where an autonomous system tells the next what it can
-reach and nothing more. The split is the architecture of the internet
-since the early 1990s. FRRouting runs both in one process family,
-descended from GNU Zebra begun by Kunihiro Ishiguro in 1996, Quagga
-from 2002, forked as FRR in 2017 under the Linux Foundation.
+The two protocols of the section above, with their authors: OSPF, the
+interior protocol, where every router holds the map of its own network, and
+BGP, the exterior one, where an autonomous system tells the next what it can
+reach and nothing more. The split is the architecture of the internet since
+the early 1990s, and FRRouting runs both in one process family.
 
 Today: the pair shown here is the usual shape of a real network: an interior
 protocol inside each site, BGP between sites and toward providers, and
@@ -246,7 +229,7 @@ def frr_conf(name):
 # Where the debian package puts it.
 FRRINIT = "/usr/lib/frr/frrinit.sh"
 
-VTYSH_CONF = "service integrated-vtysh-config"
+VTYSH_CONF = "service integrated-vtysh-config\\nusername root nopassword"
 
 # The daemons are told to stay root, and root is put in the vty group.
 DAEMON_OPTS = ('zebra_options="-A 127.0.0.1 -u root -g root"\\n'
@@ -271,15 +254,25 @@ def frr_setup(node, daemons, conf, expect):
     ssh(node, "%s start </dev/null >/dev/null 2>&1" % FRRINIT)
     ssh(node, "for i in $(seq 1 20); do pgrep -x %s >/dev/null && exit 0; "
               "sleep 1; done; "
-              "echo '%s did not start, see /var/log/frr'; exit 1"
+              "echo '%s did not start, see /var/log/syslog'; exit 1"
               % (expect, expect))
+    # frr.conf applied and checked: under load the daemons can come up after
+    # frrinit has run vtysh -b, and watchfrr restarts them empty.
+    marker = next((l.strip() for l in conf.split("\n")
+                   if l.startswith("router ")), None)
+    if marker:
+        ssh(node, "for i in $(seq 1 30); do vtysh -b >/dev/null 2>&1; "
+                  "vtysh -c 'show running-config' 2>/dev/null | "
+                  "grep -qF '%s' && exit 0; sleep 1; done; "
+                  "echo 'frr.conf not applied, see /var/log/syslog'; exit 1"
+                  % marker)
 
 def frr_present(node):
     """Fail early and clearly rather than at the first missing file."""
     r = subprocess.run(CLOONIX + ["cli", NET, "ssh", node, "test -x " + FRRINIT],
                        capture_output=True, stdin=subprocess.DEVNULL)
     if r.returncode:
-        sys.exit("%s has no %s: the image carries no frr.\n"
+        unavailable("%s has no %s: the image carries no frr.\n"
                  "  fetch it:\n"
                  "    cd /var/lib/cloonix/bulk\n"
                  "    wget https://clownix.net/downloads/cnt_demo_bulk/"
@@ -303,7 +296,7 @@ def cli(*args, **kw):
                           capture_output=True, text=True)
 
 def verify_created(names):
-    """Count what the server actually has, and name anything missing.
+    """Count what the server has, and name anything missing.
 
     create_cnt catches a refusal, and a refusal is not the only way to lose
     a container: a request the server drops without answering looks exactly
@@ -366,7 +359,7 @@ def choose_rootfs():
         if cli("add", "cnt", "probe_rootfs", "eth=1", cand, ack=240).returncode == 0:
             cli("del", "probe_rootfs")
             return cand
-    sys.exit("%s is not in /var/lib/cloonix/bulk\n"
+    unavailable("%s is not in /var/lib/cloonix/bulk\n"
              "  build it:   cd vm_create/cnt_kvm_demo && ./cnt_frr_trixie.sh\n"
              "  or fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
@@ -450,7 +443,7 @@ def main():
     story('  cloonix cli %s ssh b11 vtysh -c "show ip route bgp"' % NET)
     story("  # ospf inside AS 1, complete, with a default from each border")
     story('  cloonix cli %s ssh i11 vtysh -c "show ip route ospf"' % NET)
-    story("  # the whole point: a router that runs no bgp, in AS 4,")
+    story("  # the result: a router that runs no bgp, in AS 4,")
     story("  # reaching a loopback in AS 1")
     story('  cloonix cli %s ssh i41 ping -c 5 10.1.0.1' % NET)
 

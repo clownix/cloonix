@@ -1,8 +1,9 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
 
-/* tcpdump-syntax capture filter of the pcap relay. Understood: ip ip6 arp tcp
-   udp icmp icmp6, [src|dst] host, net <ip>/<len>, [src|dst] port, portrange,
-   less, greater, and/or/not (&& || !), parentheses. No offsets/vlan/state. */
+/* tcpdump-syntax filter: ip ip6 arp tcp udp icmp icmp6 igmp, mpls [label]
+   (each mpls one label deeper), ip proto <n>, ip6 proto <n>, [src|dst] host
+   and net of ipv4 or ipv6, [src|dst] port, portrange, less, greater,
+   and/or/not, (). No offsets/vlan. */
 #ifndef PCAP_FILTER_H
 #define PCAP_FILTER_H
 

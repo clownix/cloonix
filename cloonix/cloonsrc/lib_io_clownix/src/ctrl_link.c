@@ -1,8 +1,6 @@
 /* Copyright (C) 2006-2026 clownix@clownix.net  SPDX-License-Identifier: AGPL-3.0-or-later */
-/* Control link of an ovs satellite (a2b, c2c, snf, nat) to the server:    */
-/* listening unix socket, one live connection, watchdog on pid_req (first   */
-/* within CTRL_LINK_GRACE_MS, then one per CTRL_LINK_BEAT_MS), stop on      */
-/* kil_req. Every stop is one KERR line then exit(0).                       */
+/* Ovs satellite ctrl link: one unix connection, pid_req watchdog (grace,
+   then each beat), kil_req stops; every stop is one KERR then exit(0). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,8 +11,8 @@
 #include "io_clownix.h"
 #include "stall_detect.h"
 
-/* 10 ms beats on the monotonic clock. A late server is a busy host (a loop
-   storm in a guest can hold it for seconds): 20 s of silence means gone. */
+/* 10 ms beats, monotonic. A busy host delays the server for seconds: 20 s
+   silent means gone. */
 #define CTRL_LINK_BEAT_MS  20000
 #define CTRL_LINK_POLL_BEATS 20
 #define CTRL_LINK_MAX_PATH 4
@@ -52,16 +50,16 @@ void ctrl_link_stop(void)
   exit(0);
 }
 
-/* A path left behind means the previous holder was killed, not stopped.   */
+/* a path left behind: the previous holder was killed */
 void ctrl_link_add_path(char *path)
 {
   if (g_nb_path >= CTRL_LINK_MAX_PATH)
     KOUT("ERROR %s %s too many paths", g_kind, g_name);
   if (!access(path, R_OK))
     {
-    KERR("WARNING %s %s %s: the previous one left %s behind, so it was "
+    KERR("WARNING %s %s: the previous one left %s behind, so it was "
          "killed rather than stopped. Erasing and carrying on",
-         g_net, g_kind, g_name, path);
+         g_kind, g_name, path);
     g_said_killed = 1;
     unlink(path);
     }
@@ -70,17 +68,16 @@ void ctrl_link_add_path(char *path)
   g_nb_path += 1;
 }
 
-/* A fifo left behind is kept: a reader started for this snf may already  */
-/* hold it, and erasing it would leave that reader on an orphaned inode.   */
+/* a fifo left behind is kept: a reader may hold it already */
 void ctrl_link_keep_path(char *path)
 {
   if (g_nb_path >= CTRL_LINK_MAX_PATH)
     KOUT("ERROR %s %s too many paths", g_kind, g_name);
   /* the kill is said once, by ctrl_link_add_path */
   if ((!access(path, R_OK)) && (!g_said_killed))
-    KERR("WARNING %s %s %s: the previous one left %s behind, so it was "
-         "killed rather than stopped. Kept, its reader may be waiting on it",
-         g_net, g_kind, g_name, path);
+    KERR("WARNING %s %s: the previous one left %s behind, so it was "
+         "killed rather than stopped. Kept, its reader may be waiting "
+         "on it", g_kind, g_name, path);
   memset(g_path[g_nb_path], 0, MAX_PATH_LEN);
   strncpy(g_path[g_nb_path], path, MAX_PATH_LEN-1);
   g_nb_path += 1;
@@ -97,11 +94,11 @@ void ctrl_link_add_child(int pid)
 void ctrl_link_pid_req(int llid, int tid, char *name, int num)
 {
   if (llid != g_llid)
-    KERR("ERROR %s %s %s %d %d", g_net, g_kind, name, llid, g_llid);
+    KERR("ERROR %s %s %d %d", g_kind, name, llid, g_llid);
   if (tid != g_type_hop)
-    KERR("ERROR %s %s %s %d %d", g_net, g_kind, name, tid, g_type_hop);
+    KERR("ERROR %s %s %d %d", g_kind, name, tid, g_type_hop);
   if (strcmp(g_name, name))
-    KERR("ERROR %s %s %s %s", g_net, g_kind, name, g_name);
+    KERR("ERROR %s %s %s", g_kind, name, g_name);
   rpct_send_pid_resp(llid, tid, name, num, cloonix_get_pid(), getpid());
   g_fed_ms = stall_now_ms();
   stall_answered(&g_stall);
@@ -110,24 +107,24 @@ void ctrl_link_pid_req(int llid, int tid, char *name, int num)
 
 static void err_ctrl_cb(int llid, int err, int from)
 {
-  KERR("WARNING %s %s %s: the ctrl connection to the main server closed, "
-       "stopping", g_net, g_kind, g_name);
+  KERR("WARNING %s %s: the ctrl connection to the main server closed, "
+       "stopping", g_kind, g_name);
   ctrl_link_stop();
 }
 
 static void rx_ctrl_cb(int llid, int len, char *buf)
 {
   if (rpct_decoder(llid, len, buf))
-    KOUT("ERROR %s %s %s %s", g_net, g_kind, g_name, buf);
+    KOUT("ERROR %s %s %s", g_kind, g_name, buf);
 }
 
-/* The listener is kept, a second connection replaces the first.           */
+/* listener kept, a second connection replaces the first */
 static void connect_from_ctrl_client(int llid, int llid_new)
 {
   if ((g_llid) && (g_llid != llid_new) && (msg_exist_channel(g_llid)))
     {
-    KERR("WARNING %s %s %s: a new connection from the main server replaces "
-         "the previous one", g_net, g_kind, g_name);
+    KERR("WARNING %s %s: a new connection from the main server replaces "
+         "the previous one", g_kind, g_name);
     msg_delete_channel(g_llid);
     }
   msg_mngt_set_callbacks(llid_new, err_ctrl_cb, rx_ctrl_cb);
@@ -141,33 +138,31 @@ static void timeout_watchdog(void *data)
   int limit = (g_nb_pid_req == 0) ? CTRL_LINK_GRACE_MS : CTRL_LINK_BEAT_MS;
   int gap = stall_beat(&g_stall);
   int i;
-  /* The child carries the tap side of the data path: without it this
-     process must go too so the main server sees it. */
+  /* the child holds the tap side: gone, this process goes too */
   for (i=0; i<g_nb_child; i++)
     {
     if ((g_child[i] > 0) && (kill(g_child[i], 0)) && (errno == ESRCH))
       {
-      KERR("ERROR %s %s %s: its child process %d is gone, stopping so the "
-           "main server starts a whole one again", g_net, g_kind, g_name,
-           g_child[i]);
+      KERR("ERROR %s %s: its child process %d is gone, stopping", g_kind,
+           g_name, g_child[i]);
       g_child[i] = 0;
       ctrl_link_stop();
       }
     }
   if (gap > 0)
-    KERR("WARNING %s %s %s: this loop did not beat for %d ms (%s), not "
-         "counted against the main server", g_net, g_kind, g_name, gap,
+    KERR("WARNING %s %s: this loop did not beat for %d ms (%s), not "
+         "counted against the main server", g_kind, g_name, gap,
          stall_why(&g_stall));
   limit += stall_credit_ms(&g_stall);
   if (silence > limit)
     {
     if (g_nb_pid_req == 0)
-      KERR("WARNING %s %s %s: never heard from the main server within %d ms, "
+      KERR("WARNING %s %s: never heard from the main server within %d ms, "
            "so it was deleted while still starting, stopping",
-           g_net, g_kind, g_name, limit);
+           g_kind, g_name, limit);
     else
-      KERR("WARNING %s %s %s: the main server said nothing for %d ms after "
-           "%lu pid_req, stopping", g_net, g_kind, g_name, limit,
+      KERR("WARNING %s %s: the main server said nothing for %d ms after "
+           "%lu pid_req, stopping", g_kind, g_name, limit,
            g_nb_pid_req);
     ctrl_link_stop();
     }

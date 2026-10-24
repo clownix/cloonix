@@ -6,12 +6,13 @@
 <title>Cloonix &mdash; downloads</title>
 <meta name="description" content="The cloonix tarballs, source, bundle and toy, and the guest images, containers and virtual machines, ready for /var/lib/cloonix/bulk.">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/png" href="img/cloonix32.png">
 </head>
 <body>
 
 <header>
   <nav>
-    <a class="brand" href="index.html">CLOONIX</a>
+    <a class="brand" href="index.html"><img src="img/cloonix64.png" width="28" height="28" alt="">cloonix</a>
     <a href="index.html">Overview</a>
     <a href="learn.html">Learn</a>
     <a href="demos.html">Demos</a>
@@ -25,27 +26,32 @@
 
 <section class="wrap top">
 <h1>Downloads</h1>
-<p class="lead">The toy, the bundle, the sources with the store they compile
+<p class="lead">The toy, <a href="#specialised">the toy specialised</a> for each of frr, BIRD, Suricata and BIND, the bundle, the sources with the store they compile
 from, and four directories of guest images to put in
 <code>/var/lib/cloonix/bulk</code>.</p>
 
 <h2>Cloonix</h2>
 <table>
-  <tr><td><a href="downloads/cloonix-toy-100.tar.gz"><code>cloonix-toy-100.tar.gz</code></a></td>
-      <td>cloonix inside its own container. No root, nothing installed: extract,
-      <code>./setup.sh nemo</code>, <code>./nemocmd start</code>.
+  <tr><td><a href="downloads/cloonix-toy.tar.xz"><code>cloonix-toy.tar.xz</code></a></td>
+      <td>23 MB, 111 MB extracted. cloonix inside its own container. No root, nothing installed: extract,
+      <code>./setup.sh nemo</code>, <code>./nemocmd start</code>. The images
+      go in <code>/var/lib/cloonix/bulk</code> before <code>./setup.sh</code>:
+      a bulk made after it is not seen by the toy.
       <a href="start.html">Get started</a> uses this one.</td></tr>
-  <tr><td><a href="downloads/cloonix-bundle-100.tar.gz"><code>cloonix-bundle-100.tar.gz</code></a></td>
-      <td>the compiled run-time for a machine several people share. Installed once
+  <tr><td><a href="downloads/cloonix-bundle.tar.gz"><code>cloonix-bundle.tar.gz</code></a></td>
+      <td>35 MB. The compiled run-time for a machine several people share. Installed once
       as root by <code>sudo ./install_cloonfs</code>, under
       <code>/usr/libexec/cloonix</code>.</td></tr>
-  <tr><td><a href="downloads/cloonix-source-100.tar.gz"><code>cloonix-source-100.tar.gz</code></a></td>
+  <tr><td><a href="downloads/cloonix-source-101.tar.gz"><code>cloonix-source-101.tar.gz</code></a></td>
       <td>the source tree: cloonix, the demos, the image builders of
       <code>vm_create</code>, the tests, the two books. The same tree as
       <a href="https://github.com/clownix/cloonix">github.com/clownix/cloonix</a>;
       <code>./doitall</code> at its root builds the bundle,
-      <code>toy_targz/create_toy_targz.sh</code> the toy.</td></tr>
-  <tr><td><a href="downloads/cloonix-targz_store-100.tar.gz"><code>cloonix-targz_store-100.tar.gz</code></a></td>
+      <code>toy_targz/create_toy_targz.sh</code> the toy,
+      <code>toy_targz/create_&lt;name&gt;_toy_targz.sh</code> the specialised
+      toys; <code>build_tools/vmbuild/doitall.sh</code> makes all of them in
+      a builder machine.</td></tr>
+  <tr><td><a href="downloads/cloonix-targz_store-101.tar.gz"><code>cloonix-targz_store-101.tar.gz</code></a></td>
       <td>goes with the sources, and is needed before anything compiles: the
       open sources cloonix rebuilds, qemu, open vswitch, crun, passt and
       patchelf, each at the commit this version was made with, and the base
@@ -53,19 +59,55 @@ from, and four directories of guest images to put in
       <code>targz_store</code> directory, which <code>./doitall</code> reads
       instead of the internet.</td></tr>
 </table>
+
+<h2 id="specialised">The toy, specialised for one project</h2>
+<p>The same toy, for one open source project, containers only: no kvm, and
+the project installed in the root of the toy itself, which its containers run
+on as <code>self_rootfs</code>, so nothing else is to fetch. Only its demos,
+among them the examples of its own documentation. Each one is used like the
+toy: extract, <code>./setup.sh nemo</code>, <code>./nemocmd start</code>, then
+the <b>Demo</b> button of the canvas. Any other container image goes in
+<code>/var/lib/cloonix/bulk</code> before <code>./setup.sh</code>: a bulk made
+after it is not seen by the toy. Of the image of its project, such a toy
+takes the commands its demos run, the packages they need and the libraries
+of both, nothing else: frr without python, BIRD and Suricata with only the
+python modules their demos import, and BIND without python.</p>
+<table>
+  <tr><td><a href="downloads/cloonix-frr-toy.tar.xz"><code>cloonix-frr-toy.tar.xz</code></a></td>
+      <td>frr, from the <code>frr_trixie</code> image: the three demos of
+      <code>routing/</code> (frrspider, frrspider_bgp, frrmix) and, in
+      <code>frr_demo/</code>, 26 examples of the FRR User Guide, segment
+      routing, SR-TE driven by the Pola PCE and L3VPN over SR-MPLS and SRv6
+      among them.</td></tr>
+  <tr><td><a href="downloads/cloonix-bird-toy.tar.xz"><code>cloonix-bird-toy.tar.xz</code></a></td>
+      <td>BIRD, from the <code>bird_trixie</code> image: the demo of
+      <code>routing/</code> (bird) and, in <code>bird_demo/</code>, 13 examples
+      of the BIRD User's Guide.</td></tr>
+  <tr><td><a href="downloads/cloonix-suricata-toy.tar.xz"><code>cloonix-suricata-toy.tar.xz</code></a></td>
+      <td>Suricata, from the <code>suricata_trixie</code> image: the demo of
+      <code>security/</code> (suricata) and, in <code>suricata_demo/</code>,
+      7 examples of the Suricata User Guide, the sensor as a router or inline
+      as an IPS.</td></tr>
+  <tr><td><a href="downloads/cloonix-bind-toy.tar.xz"><code>cloonix-bind-toy.tar.xz</code></a></td>
+      <td>BIND 9, from the <code>dns_trixie</code> image: the demo of
+      <code>address/</code> (dns) and, in <code>bind_demo/</code>, 12 examples
+      of the BIND 9 Administrator Reference Manual, from a primary and its
+      secondary to a resolver walking a lab internet from its root, DNSSEC,
+      catalog zones and a DNS firewall.</td></tr>
+</table>
 <p>To compile, the two together:</p>
-<pre><code>wget https://clownix.net/downloads/cloonix-source-100.tar.gz
-wget https://clownix.net/downloads/cloonix-targz_store-100.tar.gz
-tar xf cloonix-source-100.tar.gz
-cd cloonix-source-100
-tar xf ../cloonix-targz_store-100.tar.gz
+<pre><code>wget https://clownix.net/downloads/cloonix-source-101.tar.gz
+wget https://clownix.net/downloads/cloonix-targz_store-101.tar.gz
+tar xf cloonix-source-101.tar.gz
+cd cloonix-source-101
+tar xf ../cloonix-targz_store-101.tar.gz
 ./doitall</code></pre>
 <p>The build runs inside a debian trixie machine made by
 <code>build_tools/vmbuild/doitall.sh</code>; the chapter on building of the
 <a href="build_user/user.html">documentation</a> has the steps. To run cloonix and not
 compile it, the toy alone:</p>
-<pre><code>wget https://clownix.net/downloads/cloonix-toy-100.tar.gz
-tar xf cloonix-toy-100.tar.gz</code></pre>
+<pre><code>wget https://clownix.net/downloads/cloonix-toy.tar.xz
+tar xf cloonix-toy.tar.xz</code></pre>
 
 <h2>Guest images</h2>
 <p>A guest needs an image in <code>/var/lib/cloonix/bulk</code>, the same
@@ -139,7 +181,7 @@ nothing else. The third column names the demos of <code>demos/</code> that ask
 for it.</p>
 <table>
   <tr><th>image</th><th>trixie plus</th><th>demos</th></tr>
-  <tr><td><a href="downloads/cnt_demo_bulk/frr_trixie.tar.gz"><code>frr_trixie.tar.gz</code></a></td><td>frr</td><td><code>routing/frrspider.py frrspider_bgp.py frrmix.py isis.py address/ipv6.py switching/vxlan.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/frr_trixie.tar.gz"><code>frr_trixie.tar.gz</code></a></td><td>frr, the Pola PCE</td><td><code>routing/frrspider.py frrspider_bgp.py frrmix.py isis.py address/ipv6.py switching/vxlan.py</code></td></tr>
   <tr><td><a href="downloads/cnt_demo_bulk/bird_trixie.tar.gz"><code>bird_trixie.tar.gz</code></a></td><td>bird</td><td><code>routing/bird.py</code></td></tr>
   <tr><td><a href="downloads/cnt_demo_bulk/babel_trixie.tar.gz"><code>babel_trixie.tar.gz</code></a></td><td>babeld</td><td><code>routing/babel.py</code></td></tr>
   <tr><td><a href="downloads/cnt_demo_bulk/batman_trixie.tar.gz"><code>batman_trixie.tar.gz</code></a></td><td>batctl</td><td><code>routing/batman.py</code></td></tr>
