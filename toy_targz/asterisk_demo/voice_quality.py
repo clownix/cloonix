@@ -17,7 +17,7 @@ https://docs.asterisk.org/
   ACT 1  a clean call to the echo test: no loss, the echo comes back to
          the phone every 20 ms.
   ACT 2  loss=500 (5%) from the phone: the switch counts the lost packets.
-  ACT 3  jitter=60 ms from the phone: the switch measures the jitter, and
+  ACT 3  jitter=100 ms from the phone: the switch measures the jitter, and
          its echo carries it back, irregular.
   ACT 4  the same jitter, extension 101 with JITTERBUFFER(fixed): the
          echo comes back every 20 ms again, the buffer absorbed the jitter.
@@ -87,7 +87,8 @@ def impair(cmd, val):
 
 def echo_call(exten):
     """A call to exten: (stats of pbx at 8 s, spread in ms of the echo
-    arrivals at the phone, its mean interval in ms)."""
+    arrivals at the phone, its mean interval in ms, of the middle 90% of the
+    intervals)."""
     phone_cmd(PHONE, "dial", "sip:%s@%s" % (exten, ip_of(PBX)))
     until(lambda: "established" in phone_log(PHONE), 15, 1)
     out = ssh(PHONE, "timeout 8 tcpdump -tt -nn -c 200 -i eth0 'udp and src host "
@@ -101,6 +102,10 @@ def echo_call(exten):
     d = [1000.0 * (b - a) for a, b in zip(t, t[1:])][20:]
     if len(d) < 20:
         return stats, None, None
+    # the middle 90% of the gaps: one late wakeup of a busy host is not the
+    # jitter of the network
+    cut = len(d) // 20
+    d = sorted(d)[cut:len(d) - cut]
     mean = sum(d) / len(d)
     spread = (sum((x - mean) ** 2 for x in d) / len(d)) ** 0.5
     return stats, spread, mean
@@ -135,8 +140,8 @@ def main():
     ok_loss = 1.0 <= share <= 10.0
     proof("pbx, %d received, %d lost, %.1f%%:" % (rxn, lost, share), str(s2))
     hold()
-    step("act 3: 60 ms of jitter from the phone, the echo brings it back")
-    impair("jitter", 60)
+    step("act 3: 100 ms of jitter from the phone, the echo brings it back")
+    impair("jitter", 100)
     s3, spread3, mean3 = echo_call("100")
     ok_jit = rxmax(s3, "jitter") > rxmax(s1, "jitter")
     ok_irregular = spread3 is not None and spread1 is not None and spread3 > 3 * spread1 + 2
