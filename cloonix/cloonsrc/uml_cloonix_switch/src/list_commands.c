@@ -294,7 +294,7 @@ static int build_cnf_cmd(int result, t_list_commands *hlist)
     for (d = 0; d < 2; d++)
       {
       for (i = 0; i < A2B_NB_CNF; i++)
-        if ((a2b->cnf_set[d][i]) && (a2b->cnf_val[d][i] || (i >= 4)) &&
+        if ((a2b->cnf_set[d][i]) && (a2b->cnf_val[d][i] || (i >= 5)) &&
             can_increment_index(result))
           {
           cmd_append(&(hlist[result]), 0, "cloonix cli %s cnf %s %s %s=%d",

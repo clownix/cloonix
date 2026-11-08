@@ -98,6 +98,7 @@ the books name the same tarballs:
     downloads/cloonix-bird-toy.tar.xz         toy_targz/create_bird_toy_targz.sh
     downloads/cloonix-suricata-toy.tar.xz     toy_targz/create_suricata_toy_targz.sh
     downloads/cloonix-bind-toy.tar.xz         toy_targz/create_bind_toy_targz.sh
+    downloads/cloonix-asterisk-toy.tar.xz     toy_targz/create_asterisk_toy_targz.sh
     downloads/cnt_bulk/<image>.tar.gz         the four directories that
     downloads/kvm_bulk/<image>.qcow2.gz       vm_create/allbulk.sh --go
     downloads/cnt_demo_bulk/<image>.tar.gz    leaves in the home: copy them

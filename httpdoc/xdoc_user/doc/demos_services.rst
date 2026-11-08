@@ -142,10 +142,10 @@ Today: SIP carries business telephony and the voice of 4G and 5G networks
 (VoLTE); Asterisk and its FreePBX distribution run the switchboards of small
 companies and call centres worldwide.
 
-Three containers on one lan, image *asterisk_alpine* (asterisk, sipp,
-sngrep)::
+Three containers on one lan, image *asterisk_trixie* (asterisk compiled for
+it, sipp, sngrep)::
 
-    cd vm_create/cnt_kvm_demo && ./cnt_asterisk_alpine.sh
+    cd vm_create/cnt_kvm_demo && ./cnt_asterisk_trixie.sh
     cloonix cli nemo demo services/asterisk.py
 
 Call A: phone1 dials 100, asterisk plays a tone and the rtp counters prove

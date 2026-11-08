@@ -13,6 +13,8 @@ pkg_install()
 {
   vm "cat > /etc/apt/sources.list << EOF2
 deb [ trusted=yes allow-insecure=yes ] http://${MIRROR}/${DISTRO} ${DISTRO} main contrib non-free non-free-firmware
+deb [ trusted=yes allow-insecure=yes ] http://${MIRROR}/${DISTRO} ${DISTRO}-updates main contrib non-free non-free-firmware
+deb [ trusted=yes allow-insecure=yes ] http://${MIRROR}/${DISTRO}-security ${DISTRO}-security main contrib non-free non-free-firmware
 EOF2"
   vm "${APT} update"
   vm "${APT} install --no-install-recommends ${PKGS}"

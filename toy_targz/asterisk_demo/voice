@@ -1,0 +1,18 @@
+# voice - the narration of asterisk_demo, one line per demo: a general summary
+# of its goal. Appended to demos/voice by create_asterisk_toy_targz.sh; the
+# clips are asterisk_demo/audio/<demo>.ogg, made by asterisk_demo/audio/make_voice.py.
+
+asterisk_demo/hello_world.py          Hello world. A phone registers with its password, dials one hundred, and Asterisk plays a greeting.
+asterisk_demo/secure_calling.py       Secure calling. T L S hides the signalling, S R T P the voice, and a clear call is refused.
+asterisk_demo/nat.py                  A phone behind NAT. One way audio first, then symmetric R T P brings the voice back.
+asterisk_demo/voicemail.py            Voicemail. A message left on no answer, a waiting lamp, a password typed as D T M F.
+asterisk_demo/confbridge.py           A conference bridge. Eight phones, eight tones, all found again in the recording.
+asterisk_demo/queues.py               A call queue. Four callers, two agents, and the queue in between.
+asterisk_demo/transfers.py            Transfer and parking. A blind transfer by feature code, a call parked and taken back.
+asterisk_demo/iax2.py                 I A X 2. Two sites, one trunk, signalling and voice in a single port.
+asterisk_demo/paging.py               Paging. One voice sent once, to every phone of the network, by multicast.
+asterisk_demo/ami.py                  The manager interface. A program logs in, places a call, and reads its events.
+asterisk_demo/codecs.py               Codecs. One call in two codecs, and the bytes each one costs on the wire.
+asterisk_demo/voice_quality.py        Voice quality. Loss and jitter measured by R T C P, jitter absorbed by a buffer.
+asterisk_demo/load.py                 Load test. Three hundred calls with voice, sixty at once, through the switch.
+asterisk_demo/load_balancing.py       Load balancing. A Kamailio proxy spreads the calls, one switch dies, no call is lost.

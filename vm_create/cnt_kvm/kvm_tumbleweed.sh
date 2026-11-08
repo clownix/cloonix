@@ -231,7 +231,7 @@ else
 fi
 WANTS=${WK}/etc/systemd/system/multi-user.target.wants
 mkdir -p ${WANTS}
-for svc in sshd wickedd dhcpcd; do
+for svc in sshd dhcpcd; do
   if [ -f ${WK}/usr/lib/systemd/system/${svc}.service ]; then
     ln -sf /usr/lib/systemd/system/${svc}.service ${WANTS}/${svc}.service
     echo "enabled: ${svc}.service"
@@ -241,7 +241,7 @@ for svc in sshd wickedd dhcpcd; do
 done
 # Mask the *-wait-online units.
 for u in NetworkManager-wait-online systemd-networkd-wait-online \
-         systemd-networkd-wait-online@ wicked-wait-online; do
+         systemd-networkd-wait-online@; do
   for d in usr/lib lib; do
     if [ -f ${WK}/${d}/systemd/system/${u}.service ]; then
       ln -sf /dev/null ${WK}/etc/systemd/system/${u}.service

@@ -37,7 +37,8 @@ published port, a2b, c2c to mito, save, the web port, del all) and the flows
 (iperf3 between two perf_trixie, under a sniff read and unread, scp of 48 MB
 through the agent alone and under load, an a2b rate, tcp and udp across the
 c2c, the nat with iperf3 on the host, 32 MB by scp to a kvm); then every
-`sub_*.py` (below); then `demo_test.py` on every demo, nemo and mito each
+`sub_*.py` (below); then `demo_test.py` on every demo, then on the 14 of
+`toy_targz/asterisk_demo` with the asterisk_trixie of bulk, nemo and mito each
 taking the next one, the long ones last (`LONG` in it) and the ones that
 drive other nets themselves or boot a kvm (`ALONE`) at the very end, alone; then `testfailures.py`, `testbigflows.py` and
 `teststorm.py` (below), the two stress ones run long there (a 600 s
@@ -223,6 +224,12 @@ them. Run by top_testitall.sh as its fourth phase, in the order `ls` gives.
                             of beacon, joins, EAPOL, encrypted data, ARP and
                             ICMP, the labels of the tree, the filters eapol,
                             ip and the one of the button Data only
+  sub_webshark_voip         webshark on a written pcap of a SIP call: SIP over
+                            udp, the SDP of the INVITE and its 200 setting
+                            up the RTP and RTCP streams, the voice decoded as
+                            G.711, a DTMF key as an RTP event, a sender
+                            report, the labels of the tree and the filters
+                            of the asterisk toy
   sub_web_items             every other /ctl route of the canvas by its effect:
                             add-tap add-nat add-a2b add-c2c, cnf-a2b on a
                             ping, snf with webshark start stop and its 409,

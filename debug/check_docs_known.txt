@@ -19,6 +19,7 @@ cloonix-frr-toy
 cloonix-bird-toy
 cloonix-suricata-toy
 cloonix-bind-toy
+cloonix-asterisk-toy
 # Build-time helpers, never delivered:
 cloonix-kvm-build
 # A running process is named "cloonix-proxymous-<net>", so the docs show one

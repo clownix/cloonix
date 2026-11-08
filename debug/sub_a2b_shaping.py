@@ -2,8 +2,9 @@
 """sub_a2b_shaping - an a2b cable actually shapes the traffic it carries, not
 just accepts the setting. Two hosts on one wire made of two lans joined by an
 a2b: a clean baseline ping, then delay added in both directions lifts the
-round trip, then loss added in both directions drops a measurable share, and
-clearing the cable brings the baseline back.
+round trip, then loss added in both directions drops a measurable share,
+then jitter added in both directions spreads the round trips and is given
+back by dump commands, and clearing the cable brings the baseline back.
 
 The thresholds are deliberately wide and every one is an env var, so a run
 that comes out just outside a bound is tuned without touching the code:
@@ -16,6 +17,9 @@ that comes out just outside a bound is tuned without touching the code:
     A2B_LOSS_MIN     least loss percent accepted             (default 15)
     A2B_LOSS_MAX     most loss percent accepted              (default 99)
     A2B_LOSS_PINGS   pings for the loss measure              (default 100)
+    A2B_JITTER_MS    jitter set each direction, ms           (default 100)
+    A2B_JITTER_SPREAD least max-min round trip accepted, ms  (default 30)
+    A2B_JITTER_PINGS pings for the jitter measure            (default 20)
     A2B_BASE_PINGS   pings for the baseline and the recovery (default 10)
 """
 import os
@@ -41,6 +45,9 @@ LOSS_VAL = env_i("A2B_LOSS_VAL", 5000)
 LOSS_MIN = env_i("A2B_LOSS_MIN", 15)
 LOSS_MAX = env_i("A2B_LOSS_MAX", 99)
 LOSS_PINGS = env_i("A2B_LOSS_PINGS", 100)
+JITTER_MS = env_i("A2B_JITTER_MS", 100)
+JITTER_SPREAD = env_i("A2B_JITTER_SPREAD", 30)
+JITTER_PINGS = env_i("A2B_JITTER_PINGS", 20)
 BASE_PINGS = env_i("A2B_BASE_PINGS", 10)
 
 
@@ -51,8 +58,23 @@ def impair(cmd, val):
              "cnf %s %s %s=%d" % (CABLE, way, cmd, val))
 
 
+def ping_spread(node, target, count):
+    """(loss percent, rtt min ms or None, rtt max ms or None)."""
+    out = ssh(node, "ping -c %d -i 0.2 -W 3 %s" % (count, target), check=False)
+    loss, lo, hi = None, None, None
+    for line in out.splitlines():
+        if "packet loss" in line:
+            loss = int(round(float(line.split("%")[0].split()[-1])))
+        if "rtt min/avg/max" in line:
+            f = line.split("=")[1].split("/")
+            lo, hi = float(f[0]), float(f[2])
+    if loss is None:
+        raise Fail("ping %s -> %s printed no statistics:\n%s" % (node, target, out))
+    return loss, lo, hi
+
+
 def clean_cable():
-    for cmd in ("delay", "loss", "rate", "silentms"):
+    for cmd in ("delay", "loss", "rate", "silentms", "jitter"):
         for d in (0, 1):
             cli("cnf", CABLE, ("A2B", "B2A")[d], "%s=0" % cmd,
                 quiet=True)
@@ -103,6 +125,29 @@ def sub_a2b_shaping():
             raise Fail("loss val=%d each way dropped %d%%, wanted %d..%d%%"
                        % (LOSS_VAL, l_loss, LOSS_MIN, LOSS_MAX))
         impair("loss", 0)
+
+        print("      jitter: up to %d ms each direction" % JITTER_MS)
+        impair("jitter", JITTER_MS)
+        dump = cli("dump", "commands", quiet=True).stdout
+        for way in ("A2B", "B2A"):
+            line = "cnf %s %s jitter=%d" % (CABLE, way, JITTER_MS)
+            if line not in dump:
+                raise Fail("dump commands lacks %r:\n%s" % (line, dump))
+        print("      dump commands keeps jitter=%d both ways" % JITTER_MS)
+        j_loss, j_lo, j_hi = ping_spread(A, "10.60.0.2", JITTER_PINGS)
+        if j_lo is None:
+            raise Fail("with the jitter set the ping got no reply (%d%% loss)"
+                       % j_loss)
+        print("      jittered: round trips from %.1f to %.1f ms, a spread of "
+              "%.1f ms (%d%% loss)" % (j_lo, j_hi, j_hi - j_lo, j_loss))
+        if j_loss != 0:
+            raise Fail("jitter alone lost %d%% of the pings" % j_loss)
+        if j_hi - j_lo < JITTER_SPREAD:
+            raise Fail("jitter %d ms each way spread the round trips by %.1f ms, "
+                       "%d at least wanted" % (JITTER_MS, j_hi - j_lo, JITTER_SPREAD))
+        impair("jitter", 0)
+        if "jitter=" in cli("dump", "commands", quiet=True).stdout:
+            raise Fail("dump commands still names a jitter once it is 0")
 
         clean_cable()
         r_loss, r_avg = ping_stats(A, "10.60.0.2", BASE_PINGS)

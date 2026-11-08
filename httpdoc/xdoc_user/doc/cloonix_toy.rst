@@ -317,10 +317,10 @@ systemd user manager and a user bus::
 asks that manager for a delegated cgroup; the first
 line of the start says which was used.
 
-The toys for frr, BIRD, Suricata and BIND
-=========================================
+The toys for frr, BIRD, Suricata, BIND and Asterisk
+===================================================
 
-Four more toys carry one open source project each, containers only::
+Five more toys carry one open source project each, containers only::
 
     cloonix-frr-toy.tar.xz         frr: routing/frrspider.py, frrspider_bgp.py, frrmix.py
                                    and 26 examples of the FRR User Guide in frr_demo/
@@ -330,6 +330,9 @@ Four more toys carry one open source project each, containers only::
                                    Suricata User Guide in suricata_demo/
     cloonix-bind-toy.tar.xz        BIND 9: address/dns.py and 12 examples of the BIND 9
                                    Administrator Reference Manual in bind_demo/
+    cloonix-asterisk-toy.tar.xz    Asterisk: services/asterisk.py and 14 demos of the
+                                   Asterisk documentation, SIPp and Kamailio, in
+                                   asterisk_demo/
 
 Each one is used as the toy::
 
@@ -376,6 +379,60 @@ time is a KERR line in the syslog of the toy, with its name.
 The demos of *bind_demo/* start named without *-u*: it stays uid 0 of its
 container and calls no *initgroups*, so they play with the single mapping
 too. *address/dns.py* starts it with *-u root* and needs the second one.
+
+The asterisk toy
+----------------
+
+.. image:: /svg/toy_asterisk.svg
+   :align: center
+   :width: 100%
+
+Debian trixie carries no asterisk: *asterisk_trixie* holds an Asterisk 22 LTS
+compiled by *vm_create/cnt_kvm_demo/asterisk_build.sh* from the asterisk tree
+of the mirror (*get_distro/get_asterisk.sh*), with only the modules the demos
+load, packed as a .deb. The demos of *asterisk_demo/* write *modules.conf*
+with *autoload = no*, so the toy keeps only the modules they name, all the
+english prompts (voicemail, queues and conferences play many) with
+*sounds/en*, the link the package makes to them, the baresip and kamailio
+modules their configurations load, the NSS that the SRTP of libsrtp2 loads
+at run time, and no python. The phones are baresip, driven over its JSON
+interface on 127.0.0.1:4444, and SIPp; the keys a SIPp caller types are
+RFC 4733 events the demo writes into one pcap that SIPp plays. Each demo
+plays a page of the Asterisk documentation, or of SIPp or Kamailio, and
+checks at its end that it worked::
+
+    hello_world.py      Hello World: a phone registers with its password, the
+                        challenge 401 between, dials 100 and hears hello-world
+    secure_calling.py   Secure Calling Tutorial: SIP over TLS on 5061, the voice
+                        in SRTP keyed by SDES, a call in clear RTP refused (488)
+    nat.py              Configuring res_pjsip to work through NAT: one-way audio
+                        behind an nftables masquerade, then rtp_symmetric
+    voicemail.py        Voicemail: a message on no answer, the NOTIFY with
+                        Messages-Waiting, the mailbox opened by a password in DTMF
+    confbridge.py       ConfBridge: eight phones, eight tones, each found again by
+                        its frequency in the recording of the conference
+    queues.py           Building Queues: four callers and two agents, music on hold
+                        as early media for the callers who wait
+    transfers.py        Feature Code Call Transfers and Call Parking: #1 for a
+                        blind transfer, a call parked on 701 and taken back
+    iax2.py             IAX2: two switches joined by a trunk, signalling and voice
+                        in UDP 4569 only
+    paging.py           Paging and Intercom: one multicast stream that every phone
+                        of the lan receives
+    ami.py              Asterisk Manager Interface (AMI): a login, an Originate and
+                        the events of the call, over TCP 5038
+    codecs.py           Codecs and transcoding: G.722, G.711 and GSM in one call,
+                        the bytes each costs on the wire
+    voice_quality.py    RTCP and the jitter buffer: the loss and the jitter of an
+                        a2b measured by RTCP, the jitter absorbed by JITTERBUFFER
+    load.py             SIPp: 300 calls with voice, 60 at once, through the switch
+    load_balancing.py   Kamailio Dispatcher: three switches behind one proxy, one
+                        drained, no call lost
+
+The webshark of a lan decodes the calls: SIP, the SDP of each call, the RTP
+of the voice on the ports the SDP gave, the DTMF events and the RTCP reports
+(*the dissection engine of wireshark, the capture*, in the chapter on
+the open sources, gives display filters).
 
 
 Case of qemu-kvm

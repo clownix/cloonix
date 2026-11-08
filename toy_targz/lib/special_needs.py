@@ -326,6 +326,17 @@ def main():
     if left:
         sys.stderr.write("  TOY-NEEDS left out, no demo names them: %s\n"
                          % " ".join(sorted(left)))
+    # the alternatives a package taken whole set up in its postinst: links no
+    # .list of dpkg holds (/usr/share/asterisk/sounds/en -> en_US_f_Allison)
+    alts = os.path.join(ROOT, "var/lib/dpkg/alternatives")
+    for name in sorted(os.listdir(alts)) if os.path.isdir(alts) else ():
+        lines = open(os.path.join(alts, name)).read().split("\n")
+        etc = "etc/alternatives/" + name
+        if len(lines) < 2 or not os.path.islink(os.path.join(ROOT, etc)):
+            continue
+        target = os.readlink(os.path.join(ROOT, etc)).strip("/")
+        if any(t == target or t.startswith(target + "/") for t in take):
+            take.update(ln for ln in (lines[1].strip("/"), etc) if wanted(ln))
     def drain():
         while todo:
             rel = todo.pop()

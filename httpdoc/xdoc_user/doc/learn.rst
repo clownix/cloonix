@@ -362,7 +362,7 @@ What clients connect to, once the network works.
    :align: center
    :width: 100%
 
-**Needs:** *proxy_trixie*, *squid_trixie*, *smtp_trixie*, *mqtt_trixie*, *asterisk_alpine*.
+**Needs:** *proxy_trixie*, *squid_trixie*, *smtp_trixie*, *mqtt_trixie*, *asterisk_trixie*.
 
 **The demos, in this order**::
 

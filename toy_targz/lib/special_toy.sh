@@ -20,6 +20,14 @@ if [ ! -d ${SPEC_DEMO} ] || [ -z "$(ls ${SPEC_DEMO}/*.py 2>/dev/null)" ]; then
   echo "no demo in ${SPEC_DEMO}"
   exit 1
 fi
+# every demo has its narration clip, checked before the long part
+for f in ${SPEC_DEMO}/*.py; do
+  if [ ! -s ${SPEC_DEMO}/audio/$(basename ${f} .py).ogg ]; then
+    echo "${SPEC_DEMO}/audio/$(basename ${f} .py).ogg missing: make it with"
+    echo "${SPEC_DEMO}/audio/make_voice.py $(basename ${f})"
+    exit 1
+  fi
+done
 if [ ! -r ${IMAGE_TARGZ} ]; then
   echo "${IMAGE_TARGZ} not found, fetch it:"
   echo "cd /var/lib/cloonix/bulk"

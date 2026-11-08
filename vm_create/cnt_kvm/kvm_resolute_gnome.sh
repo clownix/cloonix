@@ -18,6 +18,7 @@ desk_start
 desk_ssh "sources.list could not be written" "cat > /etc/apt/sources.list << EOF
 deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} ${COMPONENTS}
 deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates ${COMPONENTS}
+deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-security ${COMPONENTS}
 EOF"
 # snapd pinned out: on ubuntu firefox and chromium-browser are snap transitional
 # debs, and snapd retries the store for 30 minutes.
@@ -35,7 +36,8 @@ desk_install "the install of gnome-core gdm3 failed" \
   "${APT} install ubuntu-desktop-minimal rsyslog"
 desk_session gnome-session
 desk_dm gdm3.service
-desk_opt "console keymap fr not set" "localectl set-keymap fr"
+# The console keymap is the fr of /etc/default/keyboard, from kvm_resolute.sh;
+# localectl set-keymap wants kbd keymaps ubuntu does not ship.
 desk_opt "x11 keymap fr not set" "localectl set-x11-keymap fr"
 # Only epiphany (webkitgtk) is a real deb on ubuntu: firefox and chromium are
 # snaps, gecko and blink are covered by the other images.

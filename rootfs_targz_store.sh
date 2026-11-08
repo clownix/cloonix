@@ -56,7 +56,10 @@ unshare --map-root-user --user --map-auto --mount -- /bin/bash -c \
                       --variant=minbase \
                       --include=${LIST} \
                       ${DISTRO} \
-                      ${SRC_ROOTFS} ${REPO}"
+                      ${SRC_ROOTFS} \
+                      \"deb ${REPO} ${DISTRO} main\" \
+                      \"deb ${REPO} ${DISTRO}-updates main\" \
+                      \"deb ${REPO}-security ${DISTRO}-security main\""
 set -e
 mkdir -p ${SRC_ROOTFS}/root
 cp -f ${HERE}/build_tools/toolbox/fill_common.c ${SRC_ROOTFS}/root

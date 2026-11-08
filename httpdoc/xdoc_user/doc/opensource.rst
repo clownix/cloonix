@@ -79,6 +79,21 @@ stayed behind. Cloonix compiles its dissectors without the Qt interface:
 webshark shows the result in the browser, and PcapRec records the captures
 as pcap files.
 
+For the calls of the asterisk toy, webshark carries five dissectors reduced
+from those of Wireshark, with the same field names: SIP, SDP, RTP with SRTP,
+RTCP and the events of RFC 4733, the DTMF keys. The SDP of a call sets up
+its RTP and RTCP streams, so the voice is decoded on the ports the call
+negotiated, with the names its dynamic payload types were given; SIP is
+found on any port by its first line. Display filters in the webshark of a
+lan::
+
+    sip.Method == "INVITE"         the calls
+    sip.Status-Code == 401         the challenges of the registrations
+    sip.from.user == "6001"        what phone 6001 sends
+    rtp.p_type == 0                the voice in G.711 mu-law
+    rtpevent.event_id == 11        the key # typed as DTMF
+    rtcp.ssrc.fraction > 0         the receiver reports that saw a loss
+
 
 openssl, the two ports
 ======================

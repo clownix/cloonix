@@ -212,6 +212,11 @@ EPAN_C := \
 	epan/dissectors/packet-ip.c \
 	epan/dissectors/packet-media-type.c \
 	epan/dissectors/packet-media.c \
+	epan/dissectors/packet-rtcp.c \
+	epan/dissectors/packet-rtp-events.c \
+	epan/dissectors/packet-rtp.c \
+	epan/dissectors/packet-sdp.c \
+	epan/dissectors/packet-sip.c \
 	epan/dissectors/packet-smtp.c \
 	epan/dissectors/packet-tcp.c \
 	epan/dissectors/packet-text-media.c \

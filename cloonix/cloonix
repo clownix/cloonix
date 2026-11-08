@@ -678,7 +678,7 @@ def iface_num(word):
                      "guest, A or B of an a2b\n" % word)
     sys.exit(EXIT_LOCAL)
 
-A2B_SETTINGS = ("delay", "loss", "rate", "silentms", "qsize", "bsize")
+A2B_SETTINGS = ("delay", "loss", "rate", "silentms", "jitter", "qsize", "bsize")
 
 def a2b_cmd(words):
     """cnf <a2b> A2B|B2A delay=50, or replace_ipsrc <ip> with <ip>, or
@@ -717,7 +717,7 @@ CNF_SYNTAX = ("cnf <name> [eth<i>|A|B] sniff=on|off\n"
               "it\n"
               "cnf <name> [eth<i>|wlan<i>|A|B] angle=<degrees>, 0 top, 90 "
               "right\n"
-              "cnf <a2b> A2B|B2A delay|loss|rate|silentms|qsize|bsize=<n>\n"
+              "cnf <a2b> A2B|B2A delay|loss|rate|silentms|jitter|qsize|bsize=<n>\n"
               "cnf <nat> publish=hostport:guestport[/udp]|none\n"
               "cnf <cnt> [cpu=<percent of a core>] [ram=<megabytes>], 0 lifts "
               "a cap\n"

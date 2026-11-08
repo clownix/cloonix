@@ -39,6 +39,8 @@ sleep 5
 cloonix cli ${NET} plug nat lan1
 cloonix cli ${NET} ssh ${NAME} "cat > /etc/apt/sources.list << EOF
 deb ${REPO} ${DISTRO} main contrib non-free non-free-firmware
+deb ${REPO} ${DISTRO}-updates main contrib non-free non-free-firmware
+deb ${REPO}-security ${DISTRO}-security main contrib non-free non-free-firmware
 EOF"
 cloonix cli ${NET} ssh ${NAME} "dhcpcd eth0"
 cloonix cli ${NET} ssh ${NAME} "DEBIAN_FRONTEND=noninteractive \
@@ -65,7 +67,11 @@ cloonix cli ${NET} ssh ${NAME} "DEBIAN_FRONTEND=noninteractive \
   python3-setuptools python3-wheel python3-pyparsing python3-six \
   arping iproute2 tcpdump iputils-tracepath iperf3 daemonize gcc-14-plugin-dev \
   gcc-mingw-w64-x86-64 \
-  clang lld llvm mmdebstrap"
+  clang lld llvm mmdebstrap \
+  binutils libedit-dev libjansson-dev libxml2-dev libsqlite3-dev uuid-dev \
+  libsrtp2-dev"
+# The last line: what vm_create/cnt_kvm_demo/asterisk_build.sh deps prints,
+# asterisk being compiled here for asterisk_trixie, trixie carrying none.
 # The two cross toolchains: gcc-mingw-w64-x86-64 (windows agent), clang lld llvm
 # (freebsd agent: only its linker and strip read a freebsd elf). build_cloonfs
 # checks for them and stops rather than build an agent iso without its agent.
@@ -89,6 +95,8 @@ case ${IMAGE} in
   suricata_trixie) LIST+="suricata,curl,python3" ; EXTRA="netcat-openbsd psmisc ethtool jq" ;;
   dns_trixie)      LIST+="frr,frr-pythontools,bind9,bind9-utils,bind9-dnsutils"
                    EXTRA="ldnsutils knot-dnsutils dnstracer whois netcat-openbsd python3" ;;
+  asterisk_trixie) LIST+="asterisk-core-sounds-en,asterisk-core-sounds-en-gsm,baresip-core,sip-tester,sngrep,"
+                   LIST+="kamailio,nftables,netcat-openbsd,openssl,python3" ; EXTRA="" ;;
   *)               echo "ERROR unknown image ${IMAGE}" ; exit 1 ;;
 esac
 fct_chroot() {
@@ -106,10 +114,35 @@ mkdir -p /var/lib/cloonix/bulk
       --aptopt='Acquire::AllowInsecureRepositories "true"' \
       --aptopt='APT::Get::AllowUnauthenticated "true"' \
       ${DISTRO} ${ROOTFS} \
-      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main"
+      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main" \
+      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main" \
+      "deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main"
 if [ ! -x ${ROOTFS}/usr/bin/bash ]; then
   echo "ERROR mmdebstrap did not produce a usable rootfs in ${ROOTFS}"
   exit 1
+fi
+# asterisk_trixie: the .deb compiled in the builder (/root/asterisk.deb),
+# installed through apt for its Depends; a failure stops the build.
+if [ "${IMAGE}" = "asterisk_trixie" ]; then
+  cp -f /root/asterisk.deb ${ROOTFS}/tmp/asterisk.deb
+  fct_chroot "cat > /etc/apt/sources.list <<END
+deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main
+END"
+  fct_chroot "printf \"#!/bin/sh\nexit 101\n\" > /usr/sbin/policy-rc.d ; chmod 755 /usr/sbin/policy-rc.d"
+  APT="DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::AllowInsecureRepositories=true"
+  APT="${APT} -o APT::Get::AllowUnauthenticated=true -o APT::Sandbox::User=root -y"
+  if ! fct_chroot "${APT} update && ${APT} --no-install-recommends install /tmp/asterisk.deb"; then
+    echo "ERROR asterisk_trixie: /root/asterisk.deb does not install"
+    exit 1
+  fi
+  fct_chroot "rm -f /tmp/asterisk.deb /usr/sbin/policy-rc.d ; apt-get clean"
+  # sounds/en is the alternative the postinst of asterisk-core-sounds-en makes
+  if ! fct_chroot "test -e /usr/share/asterisk/sounds/en/hello-world.gsm"; then
+    echo "ERROR asterisk_trixie: the prompts are not in /usr/share/asterisk/sounds/en"
+    exit 1
+  fi
 fi
 # Optional packages: one by one, a missing one is reported, not fatal.
 GOT=""
@@ -117,6 +150,8 @@ MISSING=""
 if [ -n "${EXTRA}" ]; then
   fct_chroot "cat > /etc/apt/sources.list <<END
 deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main
 END"
   # policy-rc.d exit 101: no init in this chroot, postinsts must not start daemons.
   fct_chroot "printf \"#!/bin/sh\nexit 101\n\" > /usr/sbin/policy-rc.d ; chmod 755 /usr/sbin/policy-rc.d"
@@ -138,6 +173,8 @@ END"
 fi
 fct_chroot "cat > /etc/apt/sources.list <<END
 deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO}-security ${DISTRO}-security main
 END"
 rm -rf ${ROOTFS}/var/lib/apt/lists/partial ${ROOTFS}/var/cache/apt/archives/partial
 ln -sf /usr/bin/bash ${ROOTFS}/usr/bin/sh
@@ -176,7 +213,7 @@ esac
 case ${IMAGE} in
   frr_trixie)
     . /root/cnt_pola.sh
-    cnt_pola ${ROOTFS}
+    cnt_pola ${ROOTFS} http://10.117.0.1/pola
     ;;
   bird_trixie)
     mkdir -p ${ROOTFS}/etc/bird ${ROOTFS}/var/log/bird ${ROOTFS}/run/bird
@@ -189,6 +226,10 @@ case ${IMAGE} in
     ;;
   dns_trixie)
     CLAIM="/etc/bind /var/cache/bind /var/lib/bind /var/log/named"
+    ;;
+  asterisk_trixie)
+    CLAIM="/etc/asterisk /var/lib/asterisk /var/spool/asterisk /var/log/asterisk"
+    CLAIM+=" /var/run/asterisk /etc/kamailio"
     ;;
 esac
 for i in ${CLAIM}; do
@@ -208,11 +249,21 @@ cloonix cli ${NET} scp ${TMPD}/cnt_build.sh ${NAME}:/root || exit 1
 rm -rf ${TMPD}
 cloonix cli ${NET} scp ${HERE}/../../vm_create/cnt_kvm_demo/cnt_pola.sh \
   ${NAME}:/root || exit 1
-for IMAGE in frr_trixie bird_trixie suricata_trixie dns_trixie; do
+# asterisk: compiled here from the asterisk tree of the mirror (get_asterisk.sh)
+cloonix cli ${NET} scp ${HERE}/../../vm_create/cnt_kvm_demo/asterisk_build.sh \
+  ${NAME}:/root || exit 1
+cloonix cli ${NET} ssh ${NAME} "wget -q -O /root/asterisk.tar.gz http://10.117.0.1/asterisk/asterisk.tar.gz && \
+  wget -q -O /root/pjproject.tar.bz2 http://10.117.0.1/asterisk/pjproject.tar.bz2" || \
+  { echo "ERROR the asterisk tree of the mirror: run get_asterisk.sh then check_www_links.sh"; exit 1; }
+cloonix cli ${NET} ssh ${NAME} "bash /root/asterisk_build.sh /root/asterisk.tar.gz \
+  /root/pjproject.tar.bz2 /root/asterisk.deb" || \
+  { echo "ERROR asterisk not compiled in ${NAME}"; exit 1; }
+for IMAGE in frr_trixie bird_trixie suricata_trixie dns_trixie asterisk_trixie; do
   cloonix cli ${NET} ssh ${NAME} "bash /root/cnt_build.sh ${IMAGE} ${REPO}" || \
     { echo "ERROR ${IMAGE}.tar.gz not built in ${NAME}"; exit 1; }
 done
-cloonix cli ${NET} ssh ${NAME} "rm -f /root/cnt_build.sh /root/cnt_pola.sh"
+cloonix cli ${NET} ssh ${NAME} "rm -f /root/cnt_build.sh /root/cnt_pola.sh \
+  /root/asterisk_build.sh /root/asterisk.tar.gz /root/pjproject.tar.bz2 /root/asterisk.deb"
 cloonix cli ${NET} ssh ${NAME} "sync"
 cloonix cli ${NET} ssh ${NAME} "sync"
 # Stopped from the host: poweroff in the guest cannot reach systemd from an

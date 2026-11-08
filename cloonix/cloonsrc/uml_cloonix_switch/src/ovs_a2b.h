@@ -11,7 +11,7 @@ typedef struct t_side_a2b
 } t_side_a2b;
 
 /* the settings of an a2b, per direction, for dump commands */
-#define A2B_NB_CNF 6
+#define A2B_NB_CNF 7
 #define A2B_NB_ASKED 8
 typedef struct t_a2b_asked
 {

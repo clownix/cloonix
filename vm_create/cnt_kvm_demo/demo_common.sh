@@ -6,12 +6,14 @@
 # Guest userns: uid 0 is the cloonix user, 1..n subuids; files of an unmapped
 # owner are claimed for uid 0.
 
-# Root of the rootfs in a user namespace, /proc and /sys bound, chrooted.
+# Root of the rootfs in a user namespace, /proc, /sys and /dev bound, chrooted.
+# /dev: without it /dev/null is a plain file that keeps what is written to it.
 fct_unshare_chroot() {
 unshare --map-root-user --user --mount --wd "${TRIXIE}" \
         -- /bin/bash -c \
         "mount --rbind /proc proc ; \
          mount --rbind /sys sys ; \
+         mount --rbind /dev dev ; \
          /sbin/chroot . /bin/bash -c '$1'"
 }
 # Same, with the whole subuid window mapped instead of root alone.
@@ -53,7 +55,9 @@ unshare --map-root-user --user --map-auto --mount -- /bin/bash -c \
                --aptopt='Acquire::AllowInsecureRepositories \"true\"' \
                --aptopt='APT::Get::AllowUnauthenticated \"true\"' \
                ${DISTRO} ${TRIXIE} \
-               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main\""
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main\""
 if [ ! -d "${TRIXIE}" ] || [ ! -x "${TRIXIE}/usr/bin/bash" ]; then
   echo "ERROR: mmdebstrap did not produce a usable rootfs in ${TRIXIE}"
   exit 1
@@ -66,6 +70,8 @@ demo_apt()
 {
 build_srcs="cat > /etc/apt/sources.list <<EOF
 deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main
 EOF"
 fct_unshare_chroot "${build_srcs}"
 # policy-rc.d exit 101: no init in this chroot, postinsts must not start daemons.
@@ -110,6 +116,8 @@ fct_unshare_chroot "rm -f /usr/sbin/policy-rc.d"
 fct_unshare_chroot "apt-get clean >/dev/null 2>&1"
 cmd="cat > /etc/apt/sources.list <<EOF
 deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO}-security ${DISTRO}-security main
 EOF"
 fct_unshare_chroot "rm -rf /var/lib/apt/lists/partial"
 fct_unshare_chroot "rm -rf /var/cache/apt/archives/partial"

@@ -1985,7 +1985,7 @@ def is_win_image(name):
 
 KVM_IMAGES = ("alpine.qcow2",
               "arch.qcow2",
-              "fedora44.qcow2",
+              "fedora45.qcow2",
               "resolute.qcow2",
               "rocky.qcow2",
               "trixie.qcow2",

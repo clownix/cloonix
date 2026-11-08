@@ -125,6 +125,7 @@ of the project as */var/lib/cloonix/bulk/<image>.tar.gz*::
     ./create_bird_toy_targz.sh        ${HOME}/cloonix-bird-toy.tar.xz, from bird_trixie.tar.gz
     ./create_suricata_toy_targz.sh    ${HOME}/cloonix-suricata-toy.tar.xz, from suricata_trixie.tar.gz
     ./create_bind_toy_targz.sh        ${HOME}/cloonix-bind-toy.tar.xz, from dns_trixie.tar.gz
+    ./create_asterisk_toy_targz.sh    ${HOME}/cloonix-asterisk-toy.tar.xz, from asterisk_trixie.tar.gz
 
 
 Building this documentation

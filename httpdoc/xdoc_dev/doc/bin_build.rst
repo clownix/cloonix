@@ -54,6 +54,8 @@ into its root what *lib/special_needs.py* selects of the image::
     the commands the demo strings run       a word in command position that is an executable
                                             of the image
     the packages of <name>_demo/needs       whole: dpkg names or globs
+    the alternatives of those packages      the master link and its /etc/alternatives link,
+                                            when it leads into them: sounds/en of asterisk
     the scripts and libraries they need     transitively
 
 The lines of a *needs* file::
@@ -65,7 +67,10 @@ The lines of a *needs* file::
                                 into the containers import
     @python:<module>            one more module, imported at run time only
 
-Python test files (*test_\*.py*, *tests/*) are never taken. Then every elf
+Before the long part, *lib/special_toy.sh* checks that every demo of
+*<name>_demo/* has its narration clip, *audio/<demo>.ogg*, and names the
+*make_voice.py* line that makes a missing one. Python test files
+(*test_\*.py*, *tests/*) are never taken. Then every elf
 added must load in the root of the toy; with *@python*, the interpreter
 must start silently and every selected module import, and a
 *sitecustomize.py* writes a module missing at run time as a KERR line.

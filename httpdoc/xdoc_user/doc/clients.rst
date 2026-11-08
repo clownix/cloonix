@@ -499,6 +499,7 @@ read one way only::
     cloonix cli nemo cnf cable B2A loss=100
     cloonix cli nemo cnf cable A2B rate=100
     cloonix cli nemo cnf cable A2B silentms=200
+    cloonix cli nemo cnf cable A2B jitter=20
     cloonix cli nemo cnf lan1 rstp=on                  the bridge runs rapid spanning tree
     cloonix cli nemo cnf nat1 publish=9090:80
     cloonix cli nemo cnf nat1 publish=none

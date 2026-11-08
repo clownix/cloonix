@@ -26,7 +26,7 @@
 
 <section class="wrap top">
 <h1>Downloads</h1>
-<p class="lead">The toy, <a href="#specialised">the toy specialised</a> for each of frr, BIRD, Suricata and BIND, the bundle, the sources with the store they compile
+<p class="lead">The toy, <a href="#specialised">the toy specialised</a> for each of frr, BIRD, Suricata, BIND and Asterisk, the bundle, the sources with the store they compile
 from, and four directories of guest images to put in
 <code>/var/lib/cloonix/bulk</code>.</p>
 
@@ -42,7 +42,7 @@ from, and four directories of guest images to put in
       <td>35 MB. The compiled run-time for a machine several people share. Installed once
       as root by <code>sudo ./install_cloonfs</code>, under
       <code>/usr/libexec/cloonix</code>.</td></tr>
-  <tr><td><a href="downloads/cloonix-source-101.tar.gz"><code>cloonix-source-101.tar.gz</code></a></td>
+  <tr><td><a href="downloads/cloonix-source-102.tar.gz"><code>cloonix-source-102.tar.gz</code></a></td>
       <td>the source tree: cloonix, the demos, the image builders of
       <code>vm_create</code>, the tests, the two books. The same tree as
       <a href="https://github.com/clownix/cloonix">github.com/clownix/cloonix</a>;
@@ -51,7 +51,7 @@ from, and four directories of guest images to put in
       <code>toy_targz/create_&lt;name&gt;_toy_targz.sh</code> the specialised
       toys; <code>build_tools/vmbuild/doitall.sh</code> makes all of them in
       a builder machine.</td></tr>
-  <tr><td><a href="downloads/cloonix-targz_store-101.tar.gz"><code>cloonix-targz_store-101.tar.gz</code></a></td>
+  <tr><td><a href="downloads/cloonix-targz_store-102.tar.gz"><code>cloonix-targz_store-102.tar.gz</code></a></td>
       <td>goes with the sources, and is needed before anything compiles: the
       open sources cloonix rebuilds, qemu, open vswitch, crun, passt and
       patchelf, each at the commit this version was made with, and the base
@@ -94,13 +94,19 @@ python modules their demos import, and BIND without python.</p>
       of the BIND 9 Administrator Reference Manual, from a primary and its
       secondary to a resolver walking a lab internet from its root, DNSSEC,
       catalog zones and a DNS firewall.</td></tr>
+  <tr><td><a href="downloads/cloonix-asterisk-toy.tar.xz"><code>cloonix-asterisk-toy.tar.xz</code></a></td>
+      <td>Asterisk, from the <code>asterisk_trixie</code> image: the demo of
+      <code>services/</code> (asterisk) and, in <code>asterisk_demo/</code>,
+      14 demos of the Asterisk documentation with baresip phones, SIPp and
+      Kamailio, from a first registered call to TLS and SRTP, NAT, voicemail,
+      conferences, queues, IAX2, load tests and a load-balancing proxy.</td></tr>
 </table>
 <p>To compile, the two together:</p>
-<pre><code>wget https://clownix.net/downloads/cloonix-source-101.tar.gz
-wget https://clownix.net/downloads/cloonix-targz_store-101.tar.gz
-tar xf cloonix-source-101.tar.gz
-cd cloonix-source-101
-tar xf ../cloonix-targz_store-101.tar.gz
+<pre><code>wget https://clownix.net/downloads/cloonix-source-102.tar.gz
+wget https://clownix.net/downloads/cloonix-targz_store-102.tar.gz
+tar xf cloonix-source-102.tar.gz
+cd cloonix-source-102
+tar xf ../cloonix-targz_store-102.tar.gz
 ./doitall</code></pre>
 <p>The build runs inside a debian trixie machine made by
 <code>build_tools/vmbuild/doitall.sh</code>; the chapter on building of the
@@ -149,13 +155,15 @@ cloonix cli nemo add kvm k1 ram=1000 cpu=2 eth=1 trixie.qcow2</code></pre>
   <tr><td><a href="downloads/cnt_bulk/resolute.tar.gz"><code>resolute.tar.gz</code></a></td><td>ubuntu 26.04</td></tr>
   <tr><td><a href="downloads/cnt_bulk/rocky.tar.gz"><code>rocky.tar.gz</code></a></td><td>rocky linux</td></tr>
   <tr><td><a href="downloads/cnt_bulk/fedora44.tar.gz"><code>fedora44.tar.gz</code></a></td><td>fedora 44</td></tr>
+  <tr><td><a href="downloads/cnt_bulk/fedora45.tar.gz"><code>fedora45.tar.gz</code></a></td><td>fedora 45</td></tr>
   <tr><td><a href="downloads/cnt_bulk/arch.tar.gz"><code>arch.tar.gz</code></a></td><td>arch linux</td></tr>
   <tr><td><a href="downloads/cnt_bulk/tumbleweed.tar.gz"><code>tumbleweed.tar.gz</code></a></td><td>opensuse tumbleweed</td></tr>
+  <tr><td><a href="downloads/cnt_bulk/openwrt.tar.gz"><code>openwrt.tar.gz</code></a></td><td>openwrt 25.12</td></tr>
   <tr><td><a href="downloads/cnt_bulk/trixie_systemd.tar.gz"><code>trixie_systemd.tar.gz</code></a></td><td>debian 13 started with systemd as its init</td></tr>
 </table>
 
 <h2><a href="downloads/kvm_bulk/">kvm_bulk</a> &mdash; the distributions, as virtual machines</h2>
-<p>Seven base machines with a serial console, then the desktops, each built from
+<p>Nine base machines with a serial console, then the desktops, each built from
 the base of its distribution and shown by the canvas in a noVNC panel.</p>
 <table>
   <tr><td><a href="downloads/kvm_bulk/alpine.qcow2.gz"><code>alpine.qcow2.gz</code></a></td><td>alpine linux</td></tr>
@@ -163,14 +171,16 @@ the base of its distribution and shown by the canvas in a noVNC panel.</p>
   <tr><td><a href="downloads/kvm_bulk/resolute.qcow2.gz"><code>resolute.qcow2.gz</code></a></td><td>ubuntu 26.04</td></tr>
   <tr><td><a href="downloads/kvm_bulk/rocky.qcow2.gz"><code>rocky.qcow2.gz</code></a></td><td>rocky linux</td></tr>
   <tr><td><a href="downloads/kvm_bulk/fedora44.qcow2.gz"><code>fedora44.qcow2.gz</code></a></td><td>fedora 44</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/fedora45.qcow2.gz"><code>fedora45.qcow2.gz</code></a></td><td>fedora 45</td></tr>
   <tr><td><a href="downloads/kvm_bulk/arch.qcow2.gz"><code>arch.qcow2.gz</code></a></td><td>arch linux</td></tr>
   <tr><td><a href="downloads/kvm_bulk/tumbleweed.qcow2.gz"><code>tumbleweed.qcow2.gz</code></a></td><td>opensuse tumbleweed</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/openwrt.qcow2.gz"><code>openwrt.qcow2.gz</code></a></td><td>openwrt 25.12</td></tr>
   <tr><td><a href="downloads/kvm_bulk/alpine_xfce.qcow2.gz"><code>alpine_xfce.qcow2.gz</code></a></td><td>alpine with the xfce desktop</td></tr>
   <tr><td><a href="downloads/kvm_bulk/trixie_lxde.qcow2.gz"><code>trixie_lxde.qcow2.gz</code></a></td><td>debian 13 with the lxde desktop</td></tr>
   <tr><td><a href="downloads/kvm_bulk/trixie_gnome.qcow2.gz"><code>trixie_gnome.qcow2.gz</code></a></td><td>debian 13 with the gnome desktop</td></tr>
   <tr><td><a href="downloads/kvm_bulk/resolute_gnome.qcow2.gz"><code>resolute_gnome.qcow2.gz</code></a></td><td>ubuntu 26.04 with the gnome desktop</td></tr>
   <tr><td><a href="downloads/kvm_bulk/rocky_gnome.qcow2.gz"><code>rocky_gnome.qcow2.gz</code></a></td><td>rocky with the gnome desktop</td></tr>
-  <tr><td><a href="downloads/kvm_bulk/fedora44_gnome.qcow2.gz"><code>fedora44_gnome.qcow2.gz</code></a></td><td>fedora 44 with the gnome desktop</td></tr>
+  <tr><td><a href="downloads/kvm_bulk/fedora45_gnome.qcow2.gz"><code>fedora45_gnome.qcow2.gz</code></a></td><td>fedora 45 with the gnome desktop</td></tr>
   <tr><td><a href="downloads/kvm_bulk/arch_plasma.qcow2.gz"><code>arch_plasma.qcow2.gz</code></a></td><td>arch with the plasma desktop</td></tr>
   <tr><td><a href="downloads/kvm_bulk/tumbleweed_plasma.qcow2.gz"><code>tumbleweed_plasma.qcow2.gz</code></a></td><td>tumbleweed with the plasma desktop</td></tr>
 </table>
@@ -201,7 +211,7 @@ for it.</p>
   <tr><td><a href="downloads/cnt_demo_bulk/squid_trixie.tar.gz"><code>squid_trixie.tar.gz</code></a></td><td>squid</td><td><code>services/squid.py</code></td></tr>
   <tr><td><a href="downloads/cnt_demo_bulk/smtp_trixie.tar.gz"><code>smtp_trixie.tar.gz</code></a></td><td>postfix, a name server, the mail tools</td><td><code>services/smtp.py</code></td></tr>
   <tr><td><a href="downloads/cnt_demo_bulk/mqtt_trixie.tar.gz"><code>mqtt_trixie.tar.gz</code></a></td><td>mosquitto and its clients</td><td><code>services/mqtt.py</code></td></tr>
-  <tr><td><a href="downloads/cnt_demo_bulk/asterisk_alpine.tar.gz"><code>asterisk_alpine.tar.gz</code></a></td><td>alpine with asterisk and a SIP toolbox</td><td><code>services/asterisk.py</code></td></tr>
+  <tr><td><a href="downloads/cnt_demo_bulk/asterisk_trixie.tar.gz"><code>asterisk_trixie.tar.gz</code></a></td><td>asterisk compiled for trixie, baresip, sipp, sngrep, kamailio</td><td><code>services/asterisk.py</code></td></tr>
   <tr><td><a href="downloads/cnt_demo_bulk/nft_trixie.tar.gz"><code>nft_trixie.tar.gz</code></a></td><td>nftables, the conntrack tools</td><td><code>security/nftables.py cloonix/nat.py</code></td></tr>
   <tr><td><a href="downloads/cnt_demo_bulk/suricata_trixie.tar.gz"><code>suricata_trixie.tar.gz</code></a></td><td>suricata</td><td><code>security/suricata.py</code></td></tr>
   <tr><td><a href="downloads/cnt_demo_bulk/ebpf_trixie.tar.gz"><code>ebpf_trixie.tar.gz</code></a></td><td>the bpf toolchain</td><td><code>security/ebpf.py</code></td></tr>

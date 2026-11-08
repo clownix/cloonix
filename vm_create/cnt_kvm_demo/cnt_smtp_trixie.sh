@@ -50,7 +50,9 @@ unshare --map-root-user --user --map-auto --mount -- /bin/bash -c \
                --aptopt='APT::Get::AllowUnauthenticated \"true\"' \
                --essential-hook='echo \"${POSTFIX_SEED}\" | chroot \$1 debconf-set-selections' \
                ${DISTRO} ${TRIXIE} \
-               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main\""
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main\""
 if [ ! -d "${TRIXIE}" ] || [ ! -x "${TRIXIE}/usr/bin/bash" ]; then
   echo "ERROR: mmdebstrap did not produce a usable rootfs in ${TRIXIE}"
   exit 1
@@ -65,6 +67,8 @@ if [ ! -x "${TRIXIE}/usr/sbin/named" ]; then
 fi
 build_srcs="cat > /etc/apt/sources.list <<EOF
 deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main
 EOF"
 fct_unshare_chroot "${build_srcs}"
 # policy-rc.d exit 101: no init in this chroot. Heredoc: fct_unshare_chroot single-quotes its argument.
@@ -108,6 +112,8 @@ fct_unshare_chroot "rm -f /usr/sbin/policy-rc.d"
 fct_unshare_chroot "apt-get clean >/dev/null 2>&1"
 cmd="cat > /etc/apt/sources.list <<EOF
 deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO}-security ${DISTRO}-security main
 EOF"
 fct_unshare_chroot "rm -rf /var/lib/apt/lists/partial"
 fct_unshare_chroot "rm -rf /var/cache/apt/archives/partial"

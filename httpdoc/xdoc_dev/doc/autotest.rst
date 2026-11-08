@@ -38,7 +38,7 @@ The machines, made once
 
 The autotest must run on every distro cloonix supports, so there is one
 machine per distro, *kvm_autotest_<distro>.qcow2*, for trixie, alpine,
-arch, fedora44, resolute, rocky and tumbleweed. Both scripts take the
+arch, fedora45, resolute, rocky and tumbleweed. Both scripts take the
 distro as their argument, trixie by default, and refuse any other name.
 
 *debug/autotest/kvm_autotest_<distro>.sh* boots the base *<distro>.qcow2* on nemo
@@ -73,7 +73,7 @@ to link, newuidmap, setsid, pgrep, ip ...) and the autotest asks the same
 of each kvm before pushing anything to it; *iperf3* is optional, the tap
 flow is measured only with it.
 
-RHEL kernels (fedora44, rocky) ship no *mac80211_hwsim*: the wifi sub test
+RHEL kernels (fedora45, rocky) ship no *mac80211_hwsim*: the wifi sub test
 and the wifi demos are skipped there, each saying so, as the user book
 lists that module among the optional ones.
 

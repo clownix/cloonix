@@ -20,8 +20,8 @@
 
 #include "dissectors.h"
 
-unsigned long dissector_reg_proto_count = 19;
-unsigned long dissector_reg_handoff_count = 17;
+unsigned long dissector_reg_proto_count = 24;
+unsigned long dissector_reg_handoff_count = 21;
 
 void proto_register_arp(void);
 void proto_register_data(void);
@@ -36,6 +36,11 @@ void proto_register_igmp(void);
 void proto_register_ip(void);
 void proto_register_media(void);
 void proto_register_media_type(void);
+void proto_register_rtcp(void);
+void proto_register_rtp(void);
+void proto_register_rtp_events(void);
+void proto_register_sdp(void);
+void proto_register_sip(void);
 void proto_register_smtp(void);
 void proto_register_tcp(void);
 void proto_register_text_lines(void);
@@ -57,6 +62,11 @@ dissector_reg_t const dissector_reg_proto[] = {
     { "proto_register_ip", proto_register_ip },
     { "proto_register_media", proto_register_media },
     { "proto_register_media_type", proto_register_media_type },
+    { "proto_register_rtcp", proto_register_rtcp },
+    { "proto_register_rtp", proto_register_rtp },
+    { "proto_register_rtp_events", proto_register_rtp_events },
+    { "proto_register_sdp", proto_register_sdp },
+    { "proto_register_sip", proto_register_sip },
     { "proto_register_smtp", proto_register_smtp },
     { "proto_register_tcp", proto_register_tcp },
     { "proto_register_text_lines", proto_register_text_lines },
@@ -77,6 +87,10 @@ void proto_reg_handoff_icmp(void);
 void proto_reg_handoff_ieee802_3(void);
 void proto_reg_handoff_igmp(void);
 void proto_reg_handoff_ip(void);
+void proto_reg_handoff_rtcp(void);
+void proto_reg_handoff_rtp(void);
+void proto_reg_handoff_sdp(void);
+void proto_reg_handoff_sip(void);
 void proto_reg_handoff_smtp(void);
 void proto_reg_handoff_tcp(void);
 void proto_reg_handoff_text_lines(void);
@@ -96,6 +110,10 @@ dissector_reg_t const dissector_reg_handoff[] = {
     { "proto_reg_handoff_ieee802_3", proto_reg_handoff_ieee802_3 },
     { "proto_reg_handoff_igmp", proto_reg_handoff_igmp },
     { "proto_reg_handoff_ip", proto_reg_handoff_ip },
+    { "proto_reg_handoff_rtcp", proto_reg_handoff_rtcp },
+    { "proto_reg_handoff_rtp", proto_reg_handoff_rtp },
+    { "proto_reg_handoff_sdp", proto_reg_handoff_sdp },
+    { "proto_reg_handoff_sip", proto_reg_handoff_sip },
     { "proto_reg_handoff_smtp", proto_reg_handoff_smtp },
     { "proto_reg_handoff_tcp", proto_reg_handoff_tcp },
     { "proto_reg_handoff_text_lines", proto_reg_handoff_text_lines },

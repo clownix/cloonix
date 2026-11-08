@@ -269,6 +269,8 @@ echo "5. every demo"
 echo "=========================================================="
 machine_line
 python3 ./demo_test.py nemo mito
+# the demos of the asterisk toy, from the tree, with asterisk_trixie of bulk
+python3 ./demo_test.py nemo mito --tree ../toy_targz/asterisk_demo
 
 echo
 echo "=========================================================="

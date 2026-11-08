@@ -46,13 +46,17 @@ unshare --map-root-user --user --map-auto --mount -- /bin/bash -c \
                --aptopt='Acquire::AllowInsecureRepositories \"true\"' \
                --aptopt='APT::Get::AllowUnauthenticated \"true\"' \
                ${DISTRO} ${TRIXIE} \
-               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main\""
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main\""
 if [ ! -d "${TRIXIE}" ] || [ ! -x "${TRIXIE}/usr/bin/bash" ]; then
   echo "ERROR: mmdebstrap did not produce a usable rootfs in ${TRIXIE}"
   exit 1
 fi
 cmd="cat > /etc/apt/sources.list <<EOF
 deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO}-security ${DISTRO}-security main
 EOF"
 fct_unshare_chroot "rm -rf /var/lib/apt/lists/partial"
 fct_unshare_chroot "rm -rf /var/cache/apt/archives/partial"
@@ -84,5 +88,5 @@ for i in "/var/log/frr" "/var/lib/frr" "/var/tmp/frr" ; do
   fi
 done
 . "$(dirname "$0")/cnt_pola.sh"
-cnt_pola "${TRIXIE}" || exit 1
+cnt_pola "${TRIXIE}" http://127.0.0.1/pola || exit 1
 cnt_common_pack "${TRIXIE}" || exit 1

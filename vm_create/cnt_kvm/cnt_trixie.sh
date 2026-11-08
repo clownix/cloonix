@@ -38,7 +38,9 @@ unshare --map-root-user --user --map-auto --mount -- /bin/bash -c \
                --aptopt='Acquire::AllowInsecureRepositories \"true\"' \
                --aptopt='APT::Get::AllowUnauthenticated \"true\"' \
                ${DISTRO} ${TRIXIE} \
-               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main\""
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main\""
 if [ ! -d "${TRIXIE}" ] || [ ! -x "${TRIXIE}/usr/bin/bash" ]; then
   echo "ERROR: mmdebstrap did not produce a usable rootfs in ${TRIXIE}"
   exit 1
@@ -47,6 +49,8 @@ fi
 fct_unshare_chroot "rm -f /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true"
 cmd="cat > /etc/apt/sources.list <<EOF
 deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO}-security ${DISTRO}-security main
 EOF"
 fct_unshare_chroot "rm -rf /var/lib/apt/lists/partial"
 fct_unshare_chroot "rm -rf /var/cache/apt/archives/partial"

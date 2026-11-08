@@ -100,3 +100,20 @@ From the testitall run of October 23-24 2026
     frames* (*rxtx.c* of *ovs_c2c*, *intf_flags.c*): 263 and 262 in this run.
     A gap growing from 10 s to 60 s while the drops go on would keep the
     count and the first warning, with fewer lines.
+
+
+From the asterisk toy, November 2026
+====================================
+
+  * **Asterisk 24**: the LTS of October 2026 replaces 22 at its first
+    point release, a version and a sha256 in *get_asterisk.sh*.
+  * **A call heard in the Demo panel**: the panel plays the narration clips;
+    a recording of a call (MixMonitor, 8 kHz wav) played the same way would
+    let the user hear the a2b of *voice_quality.py* clean, at 5% loss, then
+    through the jitter buffer.
+  * **A ladder of the SIP dialogs in webshark**: the dissectors give the
+    Call-ID, the CSeq and the tags of each message, what sngrep draws as a
+    ladder in a terminal of the pbx.
+  * **The reordering of an a2b**: the jitter of an a2b keeps the order of
+    the packets; a setting that lets a late packet be passed would show the
+    reordering an RTP receiver repairs.

@@ -4,7 +4,7 @@
 # kvm2 10.9.9.2, autotap 10.9.9.3. IMAGES and DEMO_IMAGES set first.
 NET="nemo"
 . "${HERE}/kvm_autotest_common.sh"
-DISTROS="trixie alpine arch fedora44 resolute rocky tumbleweed"
+DISTROS="trixie alpine arch fedora45 resolute rocky tumbleweed"
 ROOT=$(cd "${HERE}/../.." && pwd)
 KVM1="kvm1"
 KVM2="kvm2"

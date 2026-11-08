@@ -1,5 +1,5 @@
 ==============================================================================
-                               v101-00
+                               v102-00
 ==============================================================================
                                GENERAL
 ==============================================================================
@@ -24,6 +24,7 @@ and the toy specialised for one open source project, containers only:
 
   cloonix-frr-toy.tar.xz  cloonix-bird-toy.tar.xz
   cloonix-suricata-toy.tar.xz  cloonix-bind-toy.tar.xz
+  cloonix-asterisk-toy.tar.xz
 
 2 brandtypes of guests run in cloonix:
 

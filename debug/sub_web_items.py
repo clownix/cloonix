@@ -121,7 +121,7 @@ def web_cnf_a2b():
                            "%.1f to %.1f ms, 120 more wanted" % (base, now))
             time.sleep(1)
         print("      cnf-a2b delay: rtt %.1f -> %.1f ms" % (base, now))
-        for cmd in ("delay", "loss", "rate", "silentms"):
+        for cmd in ("delay", "loss", "rate", "silentms", "jitter"):
             for d in (0, 1):
                 p.post("cnf-a2b", {"name": CABLE, "dir": d, "cmd": cmd,
                                    "val": 0})

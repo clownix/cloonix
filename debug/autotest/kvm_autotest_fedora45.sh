@@ -1,8 +1,8 @@
 #!/bin/bash
-# kvm_autotest_fedora44.qcow2: fedora44.qcow2 made ready for the autotest.
+# kvm_autotest_fedora45.qcow2: fedora45.qcow2 made ready for the autotest.
 # Common part in kvm_autotest_common.sh; the base already names the mirror
 # and has selinux off. Fedora's rsyslog reads the journal (imjournal).
-DISTRO="fedora44"
+DISTRO="fedora45"
 PKGS="python3 gcc glibc-devel shadow-utils rsyslog dbus sudo tar gzip xz procps-ng util-linux iproute iperf3"
 . "$(dirname "$0")/kvm_autotest_common.sh"
 

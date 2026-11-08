@@ -38,7 +38,9 @@ unshare --map-root-user --user --map-auto --mount -- /bin/bash -c \
                --aptopt='Acquire::AllowInsecureRepositories \"true\"' \
                --aptopt='APT::Get::AllowUnauthenticated \"true\"' \
                ${DISTRO} ${UBUNTU} \
-               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main universe\""
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main universe\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main universe\" \
+               \"deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-security main universe\""
 if [ ! -d "${UBUNTU}" ] || [ ! -x "${UBUNTU}/usr/bin/bash" ]; then
   echo "ERROR: mmdebstrap did not produce a usable rootfs in ${UBUNTU}"
   exit 1
@@ -47,6 +49,8 @@ fi
 fct_unshare_chroot "rm -f /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true"
 cmd="cat > /etc/apt/sources.list <<EOF
 deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO} main universe
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO}-updates main universe
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO}-security main universe
 EOF"
 fct_unshare_chroot "rm -rf /var/lib/apt/lists/partial"
 fct_unshare_chroot "rm -rf /var/cache/apt/archives/partial"

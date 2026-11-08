@@ -1,9 +1,9 @@
 #!/bin/bash
-# Build a Fedora 44 GNOME desktop VM from fedora44.qcow2.
+# Build a Fedora 45 GNOME desktop VM from fedora45.qcow2.
 NET="nemo"
 VMNAME="pod"
-SRC="fedora44.qcow2"
-QCOW2="fedora44_gnome.qcow2"
+SRC="fedora45.qcow2"
+QCOW2="fedora45_gnome.qcow2"
 BULK="/var/lib/cloonix/bulk"
 . "$(dirname "$0")/desk_common.sh"
 desk_start

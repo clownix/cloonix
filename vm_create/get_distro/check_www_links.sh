@@ -1,92 +1,71 @@
 #!/bin/bash
-# Create the /var/www/html symlinks that the kvm_*.sh image builders expect,
-# pointing at the trees the get_*.sh mirror scripts produce.
-set -u
-STORE="/media/perrier/T7Shield2/distros"
-WWW="/var/www/html"
-# link name : path under ${STORE} : mirror script
-LINKS=(
-  "trixie:trixie:get_trixie.sh"
-  "resolute:resolute:get_resolute.sh"
-  "rocky:rocky:get_rocky.sh"
-  "fedora44:fedora44:get_fedora.sh"
-  "alpine:alpine:get_alpine.sh"
-  "arch:arch:get_arch.sh"
-  "tumbleweed:opensuse/tumbleweed:get_opensuse.sh"
+# Link /var/www/html/<tree> to each tree of the store, then check through the
+# web server every file the builders read. Run with sudo.
+. "$(dirname "$0")/distro_common.sh"
+WWW=/var/www/html
+# tree, a file a builder reads in it, the script that mirrors it
+NEED=(
+  "trixie     dists/trixie/Release                                     get_debian.sh"
+  "trixie     dists/trixie-updates/Release                             get_debian.sh"
+  "trixie-security dists/trixie-security/Release                       get_debian.sh"
+  "resolute   dists/resolute/Release                                   get_ubuntu.sh"
+  "resolute   dists/resolute-updates/Release                           get_ubuntu.sh"
+  "resolute   dists/resolute-security/Release                          get_ubuntu.sh"
+  "rocky      10/BaseOS/x86_64/os/repodata/repomd.xml                  get_rocky.sh"
+  "rocky      10/AppStream/x86_64/os/repodata/repomd.xml               get_rocky.sh"
+  "fedora     releases/44/Everything/x86_64/os/repodata/repomd.xml     get_fedora.sh"
+  "fedora     updates/44/Everything/x86_64/repodata/repomd.xml         get_fedora.sh"
+  "fedora     releases/45/Everything/x86_64/os/repodata/repomd.xml     get_fedora.sh"
+  "fedora     updates/45/Everything/x86_64/repodata/repomd.xml         get_fedora.sh"
+  "alpine     main/x86_64/APKINDEX.tar.gz                              get_alpine.sh"
+  "alpine     community/x86_64/APKINDEX.tar.gz                         get_alpine.sh"
+  "alpine     releases/x86_64/alpine-minirootfs-latest-x86_64.tar.gz   get_alpine.sh"
+  "arch       core/os/x86_64/core.db                                   get_arch.sh"
+  "arch       extra/os/x86_64/extra.db                                 get_arch.sh"
+  "arch       iso/latest/archlinux-bootstrap-x86_64.tar.zst            get_arch.sh"
+  "tumbleweed repo/oss/repodata/repomd.xml                             get_opensuse.sh"
+  "openwrt    targets/x86/64/packages/packages.adb                     get_openwrt.sh"
+  "openwrt    packages/x86_64/base/packages.adb                        get_openwrt.sh"
+  "pola       pola_linux_amd64.tar.gz                                  get_pola.sh"
+  "asterisk   asterisk.tar.gz                                          get_asterisk.sh"
+  "asterisk   pjproject.tar.bz2                                        get_asterisk.sh"
 )
 [ -d "${WWW}" ] || { echo "FATAL: ${WWW} does not exist"; exit 1; }
 [ -d "${STORE}" ] || { echo "FATAL: ${STORE} not mounted"; exit 1; }
-if [ "$(id -u)" != "0" ]; then
-  echo "NOTE: not running as root; ln will likely fail on ${WWW}."
-  echo "      re-run with sudo if you see permission errors."
-fi
-get_of() {
-  local e
-  for e in "${LINKS[@]}"; do
-    [ "${e%%:*}" = "$1" ] && { echo "${e##*:}"; return; }
-  done
-}
-rc=0
-for entry in "${LINKS[@]}"; do
-  name="${entry%%:*}"
-  rest="${entry#*:}"
-  sub="${rest%%:*}"
-  script="${rest#*:}"
-  target="${STORE}/${sub}"
-  link="${WWW}/${name}"
-  if [ ! -d "${target}" ]; then
-    echo "SKIP  ${name}: ${target} does not exist (run ${script} first)"
-    rc=1
-    continue
-  fi
-  if [ -L "${link}" ]; then
-    current=$(readlink "${link}")
-    if [ "${current%/}" = "${target%/}" ]; then
-      echo "OK    ${name} -> ${target}"
-      continue
+prev=""
+for e in "${NEED[@]}"; do
+  read -r tree file script <<< "${e}"
+  if [ "${tree}" != "${prev}" ]; then
+    prev=${tree}
+    link=${WWW}/${tree}
+    cur=$(readlink "${link}")
+    if [ ! -d "${STORE}/${tree}" ]; then
+      echo "MISS  ${STORE}/${tree} (run ${script})"
+      RC=1
+    elif [ -L "${link}" ] && [ "${cur%/}" = "${STORE}/${tree}" ]; then
+      echo "OK    ${link} -> ${cur}"
+    elif [ -e "${link}" ] && [ ! -L "${link}" ]; then
+      echo "FAIL  ${link} exists and is not a symlink"
+      RC=1
+    elif ln -sfn "${STORE}/${tree}" "${link}"; then
+      echo "LINK  ${link} -> ${STORE}/${tree}${cur:+, was ${cur}}"
+    else
+      echo "FAIL  ${link} not made: ${WWW} belongs to root, run: sudo $0"
+      RC=1
     fi
-    echo "FIX   ${name}: was ${current}"
-  elif [ -e "${link}" ]; then
-    echo "SKIP  ${name}: ${link} exists and is not a symlink"
-    rc=1
-    continue
   fi
-  if ln -sfn "${target}" "${link}"; then
-    echo "LINK  ${name} -> ${target}"
+  url=http://127.0.0.1/${tree}/${file}
+  if wget -q --spider "${url}"; then
+    echo "OK    ${url}"
+  elif [ -e "${WWW}/${tree}/${file}" ]; then
+    echo "FAIL  ${url} is on disk, not served"
+    RC=1
+  elif [ -e "${STORE}/${tree}/${file}" ]; then
+    echo "FAIL  ${url}: in ${STORE}/${tree}, ${link} does not lead to it"
+    RC=1
   else
-    echo "FAIL  ${name}: could not create ${link}"
-    rc=1
+    echo "MISS  ${url} (run ${script})"
+    RC=1
   fi
 done
-echo
-echo "--- checking the paths the builders require ---"
-check() {
-  local name="$1" path="$2" what="$3"
-  if [ -e "${WWW}/${name}/${path}" ]; then
-    echo "OK    ${name}: ${what}"
-  else
-    echo "MISS  ${name}: ${what} (run $(get_of "${name}"))"
-    echo "        expected ${WWW}/${name}/${path}"
-    rc=1
-  fi
-}
-check trixie     "dists/trixie/Release"                            "trixie Release"
-check resolute   "dists/resolute/Release"                          "resolute Release"
-check rocky      "10/BaseOS/x86_64/os/repodata/repomd.xml"         "BaseOS repodata"
-check rocky      "10/AppStream/x86_64/os/repodata/repomd.xml"      "AppStream repodata"
-check fedora44   "releases/44/Everything/x86_64/os/repodata/repomd.xml" "Everything repodata"
-check fedora44   "updates/44/Everything/x86_64/repodata/repomd.xml" "updates repodata"
-check alpine     "main/x86_64/APKINDEX.tar.gz"                     "main APKINDEX"
-check alpine     "community/x86_64/APKINDEX.tar.gz"                "community APKINDEX"
-check alpine     "releases/x86_64/alpine-minirootfs-latest-x86_64.tar.gz" "minirootfs tarball"
-check arch       "core/os/x86_64/core.db"                          "core.db"
-check arch       "extra/os/x86_64/extra.db"                        "extra.db"
-check arch       "iso/latest/archlinux-bootstrap-x86_64.tar.zst"   "bootstrap tarball"
-check tumbleweed "repo/oss/repodata/repomd.xml"                    "oss repodata"
-echo
-if [ "${rc}" = "0" ]; then
-  echo "DONE: every builder path is present and served."
-else
-  echo "COMPLETED WITH WARNINGS: some paths are missing (see above)."
-fi
-exit ${rc}
+finish "links of ${WWW} and files the builders read"

@@ -82,6 +82,7 @@ COMPLETE_A2B_CMD = {
     "delay=50":         "milliseconds added",
     "rate=1000":        "kilobytes per second",
     "silentms=200":     "bursts: closed n ms, open n ms",
+    "jitter=20":        "random extra delay 0 to n ms, order kept",
     "qsize=":           "queue size (rate sets it by itself)",
     "bsize=":           "burst size (rate sets it by itself)",
     "replace_ipsrc":    "A.B.C.D with A.B.C.D",
@@ -208,7 +209,7 @@ COMPLETE_USAGE = [
     (["cli", "*", "del"],      "<name>    or all", ["cnt1"]),
     (["cli", "*", "cnf"],
      "<name> [ethN|A|B|A2B|B2A] <key=value>    sniff= x= y= angle= note= "
-     "publish= cpu= ram= rstp= mac_mangle= delay= loss= rate= silentms=",
+     "publish= cpu= ram= rstp= mac_mangle= delay= loss= rate= silentms= jitter=",
      ["cnt1", "eth0", "sniff=on"]),
     (["cli", "*", "dump", "ip"], "<nat> <guest>", ["nat1", "vm1"]),
     (["cli", "*", "sniff"],

@@ -3,8 +3,8 @@
 # failure ends it.
 #   ./top_testitall.sh
 #   ./top_testitall.sh start      phase 1 only, the nets up (top_testfast.sh calls it)
-# 1 nemo and mito  2 doc checks  3 testitall.py  4 sub_*.py  5 demo_test.py
-# 6 testfailures.py  7 testbigflows.py (10 min storm)  8 teststorm.py (30 min)
+# 1 nemo and mito  2 doc checks  3 testitall.py  4 sub_*.py  5 demo_test.py,
+# the demos then those of the asterisk toy  6 testfailures.py  7 testbigflows.py (10 min storm)  8 teststorm.py (30 min)
 # 9 tst_max.sh, the endurance (/tmp/eternal.txt)
 # The start, with the date of the installed build, and each phase are
 # CLOONIX-PHASE lines in the syslog: keep them when the KERR are taken out.
@@ -151,6 +151,11 @@ done
 
 phase "5. every demo"
 python3 ./demo_test.py nemo mito
+# the demos of the asterisk toy, played from the tree with asterisk_trixie of
+# bulk (a SKIP that names cnt_asterisk_trixie.sh when it is not there); the
+# demolib of the tree, as for the demos above
+CLOONIX_DEMO_DIR="${HERE}/../demos" \
+  python3 ./demo_test.py nemo mito --tree ../toy_targz/asterisk_demo
 
 phase "6. things going wrong on purpose"
 python3 ./testfailures.py nemo mito

@@ -142,3 +142,17 @@ diff -Naur crun/src/libcrun/linux.c crun_tainted/src/libcrun/linux.c
        return MS_NOEXEC | MS_NOSUID;
      }
    if (strcmp (destination, "/sys") == 0)
+diff -Naur crun/src/libcrun/terminal.c crun_tainted/src/libcrun/terminal.c
+--- crun/src/libcrun/terminal.c	2026-10-24 09:33:08.000000000 +0000
++++ crun_tainted/src/libcrun/terminal.c	2026-11-03 17:31:04.006340689 +0000
+@@ -110,7 +110,9 @@
+   if (UNLIKELY (ret < 0))
+     return crun_make_error (err, errno, "tcgetattr");
+ 
+-  termios.c_oflag &= ~ONLCR;
++  /* cloonix: our stdout is raw, a bare \n would reach the console without
++     its \r: the tty of the container keeps translating. */
++  termios.c_oflag |= OPOST | ONLCR;
+ 
+   ret = tcsetattr (fd, TCSANOW, &termios);
+   if (UNLIKELY (ret < 0))

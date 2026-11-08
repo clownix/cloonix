@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 330" width="900" height="330" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f3460"/></marker>
+<marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e94560"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7a8695"/></marker>
+</defs>
+<style>
+text{fill:#1a1a2e;font-size:12px}
+.m{font-family:monospace;font-size:11.5px;fill:#0f3460}
+.s{font-size:10px;fill:#5a6472}
+.t{font-size:13px;font-weight:bold}
+.box{fill:#f7f8fa;stroke:#0f3460;stroke-width:1.5}
+.acc{fill:#fdeef1;stroke:#e94560;stroke-width:1.5}
+.gry{fill:#f2f3f5;stroke:#7a8695;stroke-width:1.5;stroke-dasharray:5 3}
+.grn{fill:#eef8f1;stroke:#27ae60;stroke-width:1.5}
+.yel{fill:#fdf6e3;stroke:#c8a24a;stroke-width:1.5}
+.zone{fill:#eef4ff;stroke:#5a7fbf;stroke-width:1.5;stroke-dasharray:7 4}
+.cab{stroke:#3498db;stroke-width:2.5;fill:none}
+.sig{stroke:#0f3460;stroke-width:1.8;fill:none;stroke-dasharray:6 4;marker-end:url(#a2);marker-start:url(#a2)}
+.rtp{stroke:#e94560;stroke-width:2.2;fill:none;marker-end:url(#ar2);marker-start:url(#ar2)}
+.arr{stroke:#0f3460;stroke-width:2;fill:none;marker-end:url(#a)}
+.arg{stroke:#7a8695;stroke-width:1.5;fill:none;stroke-dasharray:5 3;marker-end:url(#ag)}
+</style>
+<rect width="900" height="330" fill="#ffffff"/>
+<!-- the phones and the switch: signalling and voice -->
+<rect x="20" y="14" width="860" height="150" rx="10" class="zone"/>
+<text x="34" y="34" class="t">one switch, its phones</text>
+<!-- phone 1 -->
+<rect x="40" y="48" width="64" height="40" rx="6" class="box"/>
+<rect x="49" y="56" width="22" height="24" rx="3" fill="#0f3460"/>
+<circle cx="88" cy="62" r="4" fill="#0f3460"/><circle cx="88" cy="74" r="4" fill="#0f3460"/>
+<text x="114" y="64">phone</text><text x="114" y="79" class="s">baresip, 6001</text>
+<!-- phone 2 -->
+<rect x="40" y="104" width="64" height="40" rx="6" class="box"/>
+<rect x="49" y="112" width="22" height="24" rx="3" fill="#0f3460"/>
+<circle cx="88" cy="118" r="4" fill="#0f3460"/><circle cx="88" cy="130" r="4" fill="#0f3460"/>
+<text x="114" y="120">caller</text><text x="114" y="135" class="s">SIPp, a scenario</text>
+<!-- lan -->
+<line x1="250" y1="46" x2="250" y2="150" class="cab"/>
+<text x="258" y="152" class="s">lan1</text>
+<line x1="104" y1="68" x2="250" y2="68" class="cab"/>
+<line x1="104" y1="124" x2="250" y2="124" class="cab"/>
+<line x1="250" y1="96" x2="560" y2="96" class="cab"/>
+<!-- signalling and voice -->
+<path d="M290,72 L548,72" class="sig"/>
+<text x="300" y="64" class="m">SIP  udp 5060, tls 5061</text>
+<path d="M290,118 L548,118" class="rtp"/>
+<text x="300" y="138" class="m" style="fill:#e94560">RTP  udp 10000-20000, SRTP</text>
+<!-- pbx -->
+<rect x="560" y="42" width="300" height="108" rx="10" class="acc"/>
+<text x="574" y="62" class="t">pbx</text>
+<text x="610" y="62" class="s">asterisk 22, the modules the demo loads</text>
+<rect x="574" y="72" width="62" height="22" rx="4" class="box"/><text x="584" y="87" class="m">pjsip</text>
+<rect x="642" y="72" width="88" height="22" rx="4" class="box"/><text x="650" y="87" class="m">voicemail</text>
+<rect x="736" y="72" width="110" height="22" rx="4" class="box"/><text x="744" y="87" class="m">confbridge</text>
+<rect x="574" y="100" width="62" height="22" rx="4" class="box"/><text x="584" y="115" class="m">queue</text>
+<rect x="642" y="100" width="88" height="22" rx="4" class="box"/><text x="650" y="115" class="m">parking</text>
+<rect x="736" y="100" width="110" height="22" rx="4" class="box"/><text x="744" y="115" class="m">iax2, ami</text>
+<text x="574" y="140" class="s">dialplan: extensions.conf, written by the demo</text>
+<!-- the proxy in front of three switches -->
+<rect x="20" y="178" width="860" height="140" rx="10" class="zone"/>
+<text x="34" y="198" class="t">calls spread by a proxy</text>
+<rect x="40" y="226" width="64" height="40" rx="6" class="box"/>
+<rect x="49" y="234" width="22" height="24" rx="3" fill="#0f3460"/>
+<circle cx="88" cy="240" r="4" fill="#0f3460"/><circle cx="88" cy="252" r="4" fill="#0f3460"/>
+<text x="40" y="284">caller</text><text x="40" y="298" class="s">SIPp, 60 calls</text>
+<path d="M106,246 L276,246" class="arr"/>
+<text x="130" y="238" class="m">INVITE</text>
+<rect x="280" y="214" width="170" height="64" rx="8" class="yel"/>
+<text x="294" y="236" class="t">proxy</text>
+<text x="294" y="252" class="m">kamailio</text>
+<text x="294" y="268" class="s">dispatcher, round robin</text>
+<path d="M452,232 L600,206" class="arr"/>
+<path d="M452,246 L600,246" class="arg"/>
+<path d="M452,260 L600,286" class="arr"/>
+<text x="458" y="306" class="s">OPTIONS every 2 s</text>
+<rect x="604" y="190" width="150" height="34" rx="6" class="grn"/><text x="616" y="212">pbx1</text><text x="660" y="212" class="s">takes calls</text>
+<rect x="604" y="230" width="150" height="34" rx="6" class="gry"/><text x="616" y="252">pbx2</text><text x="660" y="252" class="s">drained, inactive</text>
+<rect x="604" y="270" width="150" height="34" rx="6" class="grn"/><text x="616" y="292">pbx3</text><text x="660" y="292" class="s">takes calls</text>
+<text x="770" y="252" class="s">503: next one</text>
+</svg>

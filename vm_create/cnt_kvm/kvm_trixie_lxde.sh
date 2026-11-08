@@ -15,6 +15,8 @@ APT="DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
 desk_start
 desk_ssh "sources.list could not be written" "cat > /etc/apt/sources.list << EOF
 deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main contrib non-free non-free-firmware
+deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main contrib non-free non-free-firmware
+deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main contrib non-free non-free-firmware
 EOF"
 desk_ssh "apt-get update failed" "${APT} update"
 desk_install "the install of lxde failed" \

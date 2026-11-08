@@ -196,10 +196,11 @@ everything stays under the extracted directory.
 
 The toy also comes specialised for one open source project:
 *cloonix-frr-toy.tar.xz*, *cloonix-bird-toy.tar.xz*,
-*cloonix-suricata-toy.tar.xz* and *cloonix-bind-toy.tar.xz*, containers only,
+*cloonix-suricata-toy.tar.xz*, *cloonix-bind-toy.tar.xz* and
+*cloonix-asterisk-toy.tar.xz*, containers only,
 the project in the root of the toy, its demos and the examples of its own
 documentation. The chapter of the toy gives them, in *The toys for frr, BIRD,
-Suricata and BIND*.
+Suricata, BIND and Asterisk*.
 
 Same verbs and same canvas in both, and the same demos but six that a toy
 started by a user cannot play, named in the chapter of the toy. The crun of the toy wraps

@@ -8,7 +8,6 @@ REPO="http://127.0.0.1/alpine"
 CNTREPO="http://10.117.0.1/alpine"
 ARCH="x86_64"
 MINIROOT_URL="${REPO}/releases/${ARCH}/alpine-minirootfs-latest-${ARCH}.tar.gz"
-MINIROOT="/tmp/alpine-minirootfs-${ARCH}-$(id -u).tar.gz"
 # Disk geometry.
 DISK_SIZE_G=32
 P1_START=2048          # sectors
@@ -36,7 +35,7 @@ if [ -z "${CLOONIX_IN_USERNS}" ]; then
   wget -q --spider "${MINIROOT_URL}" || \
     { echo "ERROR: ${MINIROOT_URL} not reachable"
       echo "       run get_alpine.sh to mirror the minirootfs tarball,"
-      echo "       then setup_www_links.sh to publish it"
+      echo "       then check_www_links.sh to publish it"
       exit 1; }
   rm -f ${DISK} 2>/dev/null || true
   if [ -e ${ROOTDIR} ]; then
@@ -83,12 +82,13 @@ echo "KEEP_TREE=1: skipping STEP 1 (tree already built)"
 mkdir -p ${WK}/{dev,proc,sys,tmp}
 else
 mkdir -p ${WK}
-# Cached locally so a retry does not refetch it.
-if [ ! -s ${MINIROOT} ]; then
-  wget -q -O ${MINIROOT} "${MINIROOT_URL}" || \
-    { rm -f ${MINIROOT}; echo "ERROR: could not fetch ${MINIROOT_URL}"; exit 1; }
-fi
-tar xf ${MINIROOT} -C ${WK}
+# Fetched at each build: a kept copy would outlive an update of the mirror.
+MINIROOT=$(mktemp --suffix=.tar.gz)
+wget -q -O ${MINIROOT} "${MINIROOT_URL}" || \
+  { rm -f ${MINIROOT}; echo "ERROR: could not fetch ${MINIROOT_URL}"; exit 1; }
+tar xf ${MINIROOT} -C ${WK} || \
+  { rm -f ${MINIROOT}; echo "ERROR: could not unpack ${MINIROOT_URL}"; exit 1; }
+rm -f ${MINIROOT}
 if [ ! -x ${WK}/sbin/apk ] && [ ! -x ${WK}/usr/bin/apk ]; then
   echo "ERROR: minirootfs did not unpack a usable apk in ${WK}"
   exit 1
@@ -157,12 +157,12 @@ vhost-net
 EOF
 vmlinuz=$(cd ${WK}/boot && ls vmlinuz-* 2>/dev/null | tail -1)
 [ -n "${vmlinuz}" ] || { echo "ERROR: no kernel in /boot (linux-virt)"; exit 1; }
-version=${vmlinuz#vmlinuz-}
+# mkinitfs wants the version of /lib/modules, vmlinuz-<flavour> names none;
+# its output is initramfs-<flavour>.
+version=$(ls ${WK}/lib/modules)
+[ "$(echo "${version}" | wc -w)" = "1" ] || { echo "ERROR: one kernel expected in /lib/modules, found: ${version:-none}"; exit 1; }
 echo "kernel version: ${version}"
-# mkinitfs names its output initramfs-<flavour>; linux-virt gives "virt".
-${CHROOT} ${WK} sh -c "${CPATH}; mkinitfs -f /etc/mkinitfs/mkinitfs.conf ${version}" || \
-${CHROOT} ${WK} sh -c "${CPATH}; mkinitfs ${version}" || \
-  echo "WARNING: mkinitfs failed"
+${CHROOT} ${WK} sh -c "${CPATH}; mkinitfs ${version}" || echo "WARNING: mkinitfs ${version} failed"
 INITRD=$(cd ${WK}/boot && ls initramfs-* 2>/dev/null | tail -1)
 [ -n "${INITRD}" ] || { echo "ERROR: no initramfs in /boot"; exit 1; }
 echo "initramfs: ${INITRD}"

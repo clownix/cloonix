@@ -110,7 +110,7 @@ static void packet_rx(int id, int len, uint8_t *buf)
     pbuf->len = len;
     pbuf->pkt = pkt;
     replace_packet(id, pbuf);
-    circle_put(id, blen, usec, pbuf);
+    circle_put(id, blen, usec + sched_jitter_usec(id), pbuf);
     sched_inc_queue_stored(id, blen);
     trigger_schedule(usec, 0);
     }

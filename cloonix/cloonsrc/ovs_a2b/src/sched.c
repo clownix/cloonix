@@ -22,6 +22,7 @@ static uint64_t g_cnf_qsize[2];
 static uint64_t g_cnf_bsize[2]; 
 static uint64_t g_cnf_brate[2]; 
 static uint64_t g_cnf_silent[2];
+static uint64_t g_cnf_jitter[2];
 static uint64_t g_tocken[2];
 static uint64_t g_pkt_stop[2];
 static uint64_t g_pkt_drop[2];
@@ -56,6 +57,16 @@ static int silent_now(int id, uint64_t current_usec)
   int result = 0;
   if (g_cnf_silent[id])
     result = (int) ((current_usec / g_cnf_silent[id]) & 1);
+  return result;
+}
+
+/* extra delay of one packet, drawn in [0, jitter]; FIFO dequeue keeps order */
+uint64_t sched_jitter_usec(int id)
+{
+  uint64_t result = 0;
+  if (g_cnf_jitter[id])
+    result = ((((uint64_t) rand()) << 16) ^ (uint64_t) rand()) %
+             (g_cnf_jitter[id] + 1);
   return result;
 }
 
@@ -119,6 +130,14 @@ void sched_cnf(int dir, char *type, int val)
     g_cnf_bsize[dir] = (uint64_t ) val * 1000000;
   else if (!strcmp(type, "silentms"))
     g_cnf_silent[dir] = (uint64_t ) val * 1000;
+  else if (!strcmp(type, "jitter"))
+    {
+    if (val < 0)
+      KERR("ERROR a2b %s dir %d: jitter=%d, 0 or more expected",
+           get_a2b_name(), dir, val);
+    else
+      g_cnf_jitter[dir] = (uint64_t ) val * 1000;
+    }
   else if (!strcmp(type, "rate"))
     {
     g_cnf_brate[dir] = (uint64_t ) val;
@@ -134,9 +153,9 @@ void sched_cnf(int dir, char *type, int val)
     KERR("ERROR %d %s %d", dir, type, val);
 
   KTRC("CNF SCHED %d: rate %ld  qsize %ld  bsize %ld  loss %ld delay %ld "
-       "silentms %ld", dir, g_cnf_brate[dir], g_cnf_qsize[dir],
+       "silentms %ld jitter %ld", dir, g_cnf_brate[dir], g_cnf_qsize[dir],
        g_cnf_bsize[dir]/1000, g_cnf_loss[dir], g_cnf_delay[dir],
-       g_cnf_silent[dir]/1000);
+       g_cnf_silent[dir]/1000, g_cnf_jitter[dir]/1000);
 }
 
 void sched_mngt(int id, uint64_t current_usec, uint64_t delta)
@@ -152,25 +171,18 @@ void sched_mngt(int id, uint64_t current_usec, uint64_t delta)
     }
   if (silent_now(id, current_usec))
     return;
-  if (!circle_peek(id, &len, &usec, &pbuf))
-    {
-    if (g_cnf_delay[id] == 0)
-      result = shaped_dequeue(id, len);
-    else if ((current_usec - usec) >= g_cnf_delay[id])
-      result = shaped_dequeue(id, len);
-    }
+  /* usec is the arrival time plus its jitter: due once delay has passed */
+  if ((!circle_peek(id, &len, &usec, &pbuf)) &&
+      (current_usec >= usec + g_cnf_delay[id]))
+    result = shaped_dequeue(id, len);
   while(result == 0)
     {
     circle_swap(id);
     sched_dec_queue_stored(id, len);
     result = -1;
-    if (!circle_peek(id, &len, &usec, &pbuf))
-      {
-      if (g_cnf_delay[id] == 0)
-        result = shaped_dequeue(id, len);
-      else if ((current_usec - usec) >= g_cnf_delay[id])
-        result = shaped_dequeue(id, len);
-      }
+    if ((!circle_peek(id, &len, &usec, &pbuf)) &&
+        (current_usec >= usec + g_cnf_delay[id]))
+      result = shaped_dequeue(id, len);
     }
 }
 
@@ -227,6 +239,7 @@ void sched_init(void)
     g_cnf_bsize[i] = 0;
     g_cnf_brate[i] = 0;
     g_cnf_silent[i] = 0;
+    g_cnf_jitter[i] = 0;
     g_pkt_silent_drop[i] = 0;
     g_tocken[i] = 0;
     g_pkt_stop[i] = 0;

@@ -47,6 +47,8 @@ while ! cloonix cli ${NET} ssh ${VMNAME} "echo"; do
 done
 cloonix cli ${NET} ssh ${VMNAME} "cat > /etc/apt/sources.list << EOF
 deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main contrib non-free non-free-firmware
+deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main contrib non-free non-free-firmware
+deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main contrib non-free non-free-firmware
 EOF"
 cloonix cli ${NET} add nat nat
 cloonix cli ${NET} plug nat lan_nat

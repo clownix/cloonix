@@ -8,6 +8,12 @@ desk_fatal()
 {
   echo
   echo "FATAL: $*"
+  # The guest as the failure left it, before its image goes.
+  if [ "${DESK_MADE}" = "1" ]; then
+    echo "the guest at the failure:"
+    timeout 60 cloonix cli ${NET} ssh ${VMNAME} "uptime; free -m; df -h /; dmesg | tail -n 20" 2>&1 || \
+      echo "       the guest does not answer (rc=$?)"
+  fi
   cloonix stop ${NET} >/dev/null 2>&1
   if [ "${DESK_MADE}" = "1" ]; then
     rm -f ${BULK}/${QCOW2}
@@ -123,7 +129,7 @@ desk_start()
 }
 
 # The account every desktop logs in as, password user. trixie, resolute and
-# arch have it from their base image; alpine, rocky, fedora44 and tumbleweed
+# arch have it from their base image; alpine, rocky, fedora45 and tumbleweed
 # do not. useradd where there is one, the adduser of busybox otherwise.
 desk_user()
 {

@@ -84,7 +84,7 @@ GATEWAY = {}
 IP_B = "10.0.0.2"
 UDP_PORT = 9999
 
-CLEAN = [("delay", 0), ("loss", 0), ("rate", 0), ("silentms", 0)]
+CLEAN = [("delay", 0), ("loss", 0), ("rate", 0), ("silentms", 0), ("jitter", 0)]
 
 def ssh(node, cmd, check=True, log=None):
     trace_ssh("ssh %s: %s", node, cmd if len(cmd) < 70 else cmd[:67] + "...")

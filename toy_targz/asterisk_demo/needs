@@ -1,0 +1,29 @@
+# needs - what the demos of asterisk_demo take from asterisk_trixie besides
+# the commands they run, read by lib/special_needs.py: packages taken whole
+# (dpkg names, globs), and "!word" for a word of a configuration that is
+# not a command.
+# asterisk, compiled for the image: of its modules only those the demos load
+# (modules.conf, autoload = no, in lib/asterisklib.py and in each demo)
+asterisk
+?usr/lib/asterisk/modules/*.so
+# the english prompts, whole: app_voicemail, app_queue and app_confbridge
+# play dozens of them the demos never name; sounds/en, the link to them, is
+# the alternative asterisk-core-sounds-en makes in the image, taken with them
+asterisk-core-sounds-en-gsm
+# baresip and kamailio, the modules their configurations load
+baresip-core
+?usr/lib/baresip/modules/*.so
+kamailio
+?usr/lib/x86_64-linux-gnu/kamailio/modules/*.so
+# tcpdump: codecs.py and voice_quality.py run it behind timeout, an argument
+# the scan of the commands does not see
+tcpdump
+# libnss3 whole: libsrtp2, under res_srtp, encrypts with NSS, which dlopens
+# libsoftokn3 and libfreeblpriv3 at its start, libraries no ELF names
+libnss3
+# words of pjsip.conf, extensions.conf, kamailio.cfg and of the verdicts,
+# not commands
+!type
+!exit
+!yes
+!clear

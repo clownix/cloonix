@@ -12,6 +12,8 @@
       help:"Throughput cap in kilo-octets/s. 0 = unlimited." },
     { cmd:"silentms", label:"Silent",   min:0, max:2000,  step:10,  unit:"ms",
       help:"Bursts: the wire closed for this long, then open for as long. 0 = steady." },
+    { cmd:"jitter",   label:"Jitter",   min:0, max:1000,  step:5,   unit:"ms",
+      help:"Random extra delay per packet, from 0 to this, order kept. 0 = none." },
   ];
 
   // One panel per a2b name; re-opening focuses the existing one.

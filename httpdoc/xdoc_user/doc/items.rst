@@ -218,12 +218,15 @@ Two sides, *A* and *B*, and a degradation of what crosses, per direction,
     cloonix cli nemo cnf cable A2B loss=100       1% dropped
     cloonix cli nemo cnf cable A2B rate=100       100 kB/s
     cloonix cli nemo cnf cable A2B silentms=200   bursts: 200 ms closed, 200 ms open
+    cloonix cli nemo cnf cable A2B jitter=20      0 to 20 ms more, drawn per packet
 
 *A2B* is side A to side B, *B2A* the other way. *loss* counts in
 1/10000, so 100 is 1%; *delay* is in ms; *rate* in kB/s; *silentms* closes
 the wire for that many ms then opens it for as long, so what arrived
-during the silence leaves in a burst; 0 removes any of them. The same four
-sliders are *Tune a2b* in the right-click menu.
+during the silence leaves in a burst; *jitter* gives each packet a random
+extra delay from 0 to that many ms, the packets keeping their order, which
+is what a busy queue does to a voice stream; 0 removes any of them. The same
+five sliders are *Tune a2b* in the right-click menu.
 
 *rate* sizes the queue and the burst with it. Two keys set them by hand::
 

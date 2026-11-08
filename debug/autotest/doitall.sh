@@ -5,7 +5,7 @@ set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
 BULK="/var/lib/cloonix/bulk"
 LOGDIR="/tmp/autotest-doitall-logs-$(id -u)"
-DISTROS="trixie alpine arch fedora44 resolute rocky tumbleweed"
+DISTROS="trixie alpine arch fedora45 resolute rocky tumbleweed"
 usage() {
   cat <<EOF
 doitall.sh -- build the autotest machines, kvm_autotest_<distro>.qcow2.

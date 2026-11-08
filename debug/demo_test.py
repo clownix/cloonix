@@ -256,10 +256,10 @@ def demos():
     """Every runnable demo, as (name, path, images it names)."""
     out = []
     for dirpath, dirnames, files in os.walk(TREE):
-        # lib/ holds what the demos share, not demos
+        # lib/ holds what the demos share, audio/ the narration of a toy: not demos
         dirnames[:] = [d for d in dirnames
                        if not d.startswith(".") and d != "__pycache__" and
-                       not (dirpath == TREE and d == "lib")]
+                       not (dirpath == TREE and d in ("lib", "audio"))]
         rel = os.path.relpath(dirpath, TREE)
         if rel != "." and len(rel.split(os.sep)) > 2:
             continue

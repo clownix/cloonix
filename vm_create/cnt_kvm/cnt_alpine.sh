@@ -6,7 +6,6 @@ REPO="http://127.0.0.1/alpine"
 CNTREPO="http://10.117.0.1/alpine"
 ARCH="x86_64"
 MINIROOT_URL="${REPO}/releases/${ARCH}/alpine-minirootfs-latest-${ARCH}.tar.gz"
-MINIROOT="/tmp/alpine-minirootfs-${ARCH}-$(id -u).tar.gz"
 # chroot lives in /usr/sbin, which is not on a normal user's PATH.
 CHROOT=/usr/sbin/chroot
 [ -x ${CHROOT} ] || CHROOT=/sbin/chroot
@@ -24,7 +23,7 @@ if [ -z "${CLOONIX_IN_USERNS}" ]; then
   wget -q --spider "${MINIROOT_URL}" || \
     { echo "ERROR: ${MINIROOT_URL} not reachable"
       echo "       run get_alpine.sh to mirror the minirootfs tarball,"
-      echo "       then setup_www_links.sh to publish it"
+      echo "       then check_www_links.sh to publish it"
       exit 1; }
   mkdir -p $(dirname ${ALPINE0}) 2>/dev/null || true
   export CLOONIX_IN_USERNS=1
@@ -32,12 +31,13 @@ if [ -z "${CLOONIX_IN_USERNS}" ]; then
 fi
 set -e
 mkdir -p ${WK}
-# Cached locally so a retry does not refetch it.
-if [ ! -s ${MINIROOT} ]; then
-  wget -q -O ${MINIROOT} "${MINIROOT_URL}" || \
-    { rm -f ${MINIROOT}; echo "ERROR: could not fetch ${MINIROOT_URL}"; exit 1; }
-fi
-tar xf ${MINIROOT} -C ${WK}
+# Fetched at each build: a kept copy would outlive an update of the mirror.
+MINIROOT=$(mktemp --suffix=.tar.gz)
+wget -q -O ${MINIROOT} "${MINIROOT_URL}" || \
+  { rm -f ${MINIROOT}; echo "ERROR: could not fetch ${MINIROOT_URL}"; exit 1; }
+tar xf ${MINIROOT} -C ${WK} || \
+  { rm -f ${MINIROOT}; echo "ERROR: could not unpack ${MINIROOT_URL}"; exit 1; }
+rm -f ${MINIROOT}
 if [ ! -x ${WK}/sbin/apk ] && [ ! -x ${WK}/usr/bin/apk ]; then
   echo "ERROR: minirootfs did not unpack a usable apk in ${WK}"
   exit 1

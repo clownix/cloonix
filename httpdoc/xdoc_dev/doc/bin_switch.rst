@@ -43,7 +43,8 @@ All started by suid-power, none setuid::
     cloonix-ovs-drv    one per net: the switch itself, above; netns.c, ovs_cmd.c, action.c
     cloonix-ovs-snf    one per sniffed interface: pcap_record.c writes, tun_tap.c reads the
                        mirror, inotify_trigger.c wakes webshark without polling
-    cloonix-ovs-a2b    the impairment: circle.c the delay ring, replace.c loss, sched.c
+    cloonix-ovs-a2b    the impairment: circle.c the delay ring, replace.c loss, sched.c the
+                       rate, the loss, the delay and the jitter of each direction
     cloonix-ovs-c2c    a lan carried over udp: udp.c, rxtx.c, packet_arp_mangle.c
     cloonix-ovs-nat    the nat item: machine.c per guest, passt_shuttle.c to the host side
 

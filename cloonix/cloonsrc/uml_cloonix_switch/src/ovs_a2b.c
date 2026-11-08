@@ -236,7 +236,7 @@ static void timer_heartbeat(void *data)
 }
 
 static char *g_cnf_word[A2B_NB_CNF] =
-  { "delay", "loss", "rate", "silentms", "qsize", "bsize" };
+  { "delay", "loss", "rate", "silentms", "jitter", "qsize", "bsize" };
 
 char *ovs_a2b_cnf_word(int i)
 {
@@ -265,7 +265,7 @@ static void cnf_apply(t_ovs_a2b *cur, char *cmd)
       cur->cnf_val[dir][i] = val;
       /* rate sets qsize and bsize by itself */
       if (!strcmp(word, "rate"))
-        cur->cnf_set[dir][4] = cur->cnf_set[dir][5] = 0;
+        cur->cnf_set[dir][5] = cur->cnf_set[dir][6] = 0;
       }
     }
   else if (strstr(cmd, "unreplace_ipsrc"))

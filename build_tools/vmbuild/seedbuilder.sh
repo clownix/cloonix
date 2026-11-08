@@ -78,7 +78,9 @@ ${MMDEBSTRAP} --variant=important \
       --aptopt='Acquire::AllowInsecureRepositories "true"' \
       --aptopt='APT::Get::AllowUnauthenticated "true"' \
       ${DISTRO} ${WK} \
-      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main"
+      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} main" \
+      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates main" \
+      "deb [ trusted=yes allow-insecure=yes ] ${REPO}-security ${DISTRO}-security main"
 if [ ! -x ${WK}/usr/bin/bash ]; then
   echo "ERROR: mmdebstrap did not produce a usable rootfs in ${WK}"
   exit 1
@@ -115,6 +117,8 @@ fi
 echo "using bios-setup: ${BIOS_SETUP}"
 cat > ${WK}/etc/apt/sources.list << EOF
 deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO} main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO} ${DISTRO}-updates main
+deb [ trusted=yes allow-insecure=yes ] ${CNTREPO}-security ${DISTRO}-security main
 EOF
 rm -rf ${WK}/var/lib/apt/lists/partial
 rm -rf ${WK}/var/cache/apt/archives/partial

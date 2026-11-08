@@ -410,6 +410,7 @@ BAD = [
     ("cnf", "tfA", "bogus=1", W(2, "not a setting cloonix knows")),
     ("cnf", "tfA", "ram=abc", W(2, "megabytes")),
     ("cnf", "nosuch", "A2B", "delay=abc", W(2, "one of delay=")),
+    ("cnf", "nosuch", "A2B", "jitter=-1", W(2, "one of delay=")),
     ("cnf", "nosuch", "publish=0:80", W(2, "0 is not a port")),
     ("cnf", "tflan", "mac_mangle=zz", W(1, "mac_mangle=zz")),
     # c2c

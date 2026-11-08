@@ -23,9 +23,9 @@ call is placed and measured with no sound card.
           test: two SIP legs, one bridge, a release relayed.
 
 Every configuration file of asterisk is written at run time over cloonix
-cli ssh: the image is a plain alpine with asterisk and the SIP tools.
+cli ssh: the image is a trixie with asterisk compiled for it and the SIP tools.
 
-Image: asterisk_alpine
+Image: asterisk_trixie
 Size:  3 containers, 1 lan
 
 THE PACKET TO CATCH
@@ -62,8 +62,8 @@ from demolib import (
     net_answers, show, step, story, trace, trace_ssh, wait_ready, unavailable,
     needs_subuid)
 
-# asterisk_alpine only.
-ROOTFS_CHOICES = ("asterisk_alpine",)
+# asterisk_trixie only.
+ROOTFS_CHOICES = ("asterisk_trixie",)
 
 HISTORY = """\
 SIP was published by Henning Schulzrinne, Mark Handley, Eve Schooler
@@ -95,12 +95,41 @@ verbose = 3
 """
 
 MODULES_CONF = """[modules]
-autoload=yes
+autoload=no
+load => res_sorcery_config.so
+load => res_sorcery_memory.so
+load => res_sorcery_astdb.so
+load => res_pjproject.so
+load => res_rtp_asterisk.so
+load => res_timing_timerfd.so
+load => res_pjsip.so
+load => res_pjsip_session.so
+load => res_pjsip_pubsub.so
+load => res_pjsip_endpoint_identifier_ip.so
+load => res_pjsip_sdp_rtp.so
+load => res_pjsip_caller_id.so
+load => res_pjsip_rfc3326.so
+load => chan_pjsip.so
+load => pbx_config.so
+load => app_dial.so
+load => app_playtones.so
+load => bridge_simple.so
+load => bridge_native_rtp.so
+load => codec_ulaw.so
+load => cdr_csv.so
 """
 
 LOGGER_CONF = """[general]
 [logfiles]
 messages => notice,warning,error,verbose
+"""
+
+# cdr_csv declines without a [csv] section holding a setting
+CDR_CONF = """[general]
+enable = yes
+
+[csv]
+loguniqueid = yes
 """
 
 RTP_CONF = """[general]
@@ -282,15 +311,15 @@ def choose_rootfs():
              "  If /var/lib/cloonix/bulk/%s is not there, fetch it:\n"
              "    cd /var/lib/cloonix/bulk\n"
              "    wget https://clownix.net/downloads/cnt_demo_bulk/"
-             "asterisk_alpine.tar.gz\n"
+             "asterisk_trixie.tar.gz\n"
              "    (cloonix extracts it at the first use)\n"
              "  or build it:\n"
-             "    cd vm_create/cnt_kvm_demo && ./cnt_asterisk_alpine.sh\n"
+             "    cd vm_create/cnt_kvm_demo && ./cnt_asterisk_trixie.sh\n"
              "  If it IS there, the tree is the thing to look at. An image\n"
              "  is only offered when it has an init the server recognises:\n"
              "    ls -l /var/lib/cloonix/bulk/%s/sbin/init\n"
              "  and compare its permissions with an image that works:\n"
-             "    ls -ld /var/lib/cloonix/bulk/alpine"
+             "    ls -ld /var/lib/cloonix/bulk/trixie"
              % (" or ".join(ROOTFS_CHOICES), said or "nothing",
                 ROOTFS_CHOICES[0], ROOTFS_CHOICES[0]))
 
@@ -303,7 +332,7 @@ def tools_present(node, *tools):
         if r.returncode:
             sys.exit("%s has no %s: the image carries no SIP tools.\n"
                      "  build one with"
-                     " vm_create/cnt_kvm_demo/cnt_asterisk_alpine.sh" % (node, t))
+                     " vm_create/cnt_kvm_demo/cnt_asterisk_trixie.sh" % (node, t))
 
 def address(node):
     trace("%s gets %s", node, IP[node])
@@ -348,11 +377,12 @@ def start_asterisk():
     put(PBX, "/etc/asterisk/modules.conf", MODULES_CONF)
     put(PBX, "/etc/asterisk/logger.conf", LOGGER_CONF)
     put(PBX, "/etc/asterisk/rtp.conf", RTP_CONF)
+    put(PBX, "/etc/asterisk/cdr.conf", CDR_CONF)
     put(PBX, "/etc/asterisk/pjsip.conf", pjsip_conf())
     put(PBX, "/etc/asterisk/extensions.conf", EXTENSIONS_CONF)
 
     # asterisk stays root.
-    trace("six config files written on %s, starting the switch", PBX)
+    trace("seven config files written on %s, starting the switch", PBX)
     ssh(PBX, "asterisk </dev/null >/dev/null 2>&1")
 
     # asterisk returns as soon as it has forked, well before the modules are

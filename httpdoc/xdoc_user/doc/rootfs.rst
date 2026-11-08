@@ -75,10 +75,12 @@ What vm_create contains
     vm_create/cnt_kvm        the distributions: one cnt and one kvm per distro, the desktops
     vm_create/cnt_kvm_demo   the demo images: trixie plus one piece of software, and
                              the kvm images a demo needs beyond the distributions;
-                             26 of the 28 cnt_<n>_trixie.sh share demo_common.sh
+                             27 of the 29 cnt_<n>_trixie.sh share demo_common.sh
     vm_create/cisco          the Catalyst 8000V image, from a cisco iso
 
-Nothing in them uses sudo except *check_www_links.sh*. Every builder runs
+Nothing in them uses sudo except *check_www_links.sh*, which *allbulk.sh*
+runs, and *mydistros.sh*, *allbulk.sh* and the two *doitall.sh* when they
+create their log in */var/log*. Every builder runs
 inside a user namespace and writes into bulk only.
 
 
@@ -91,15 +93,66 @@ A local mirror first
 
 The builders install from a web server on your own machine, never from the
 internet. freebsd has no mirror, so *doitall.sh* does not build it:
-*kvm_freebsd.sh* is run by hand. One
-script per distribution in *get_distro*: *get_trixie.sh*, *get_rocky.sh*,
-*get_fedora.sh*, *get_alpine.sh*, *get_arch.sh*, *get_opensuse.sh*,
-*get_resolute.sh*. The paths at their top point at the author's disk::
+*kvm_freebsd.sh* is run by hand. One script per distribution in
+*get_distro*: *get_debian.sh*, *get_ubuntu.sh*, *get_fedora.sh*,
+*get_rocky.sh*, *get_alpine.sh*, *get_arch.sh*, *get_opensuse.sh*,
+*get_openwrt.sh*; and two for what no distribution carries, pinned by their
+sha256: *get_pola.sh*, the Pola release of the frr_trixie container, and
+*get_asterisk.sh*, the Asterisk tarball and the pjproject it bundles, which
+*asterisk_build.sh* compiles for asterisk_trixie, trixie having no asterisk.
+They write into the store named at the top of *distro_common.sh*, the
+author's disk::
 
-    hote="ftp.fr.debian.org"
-    cible="/media/perrier/T7Shield2/distros/trixie"
+    STORE=/media/perrier/T7Shield2/distros
 
-Then the symlinks under */var/www/html*::
+A distribution of fixed releases keeps the list of its releases at the top
+of its script, mirrors each into a directory of its own and refreshes only
+the releases given as arguments. *get_debian.sh* and *get_ubuntu.sh* write a
+tree per release, named by its codename, holding the release and its
+-updates; the -security of ubuntu goes into that tree too, the one of debian,
+served by another host, into a tree of its own. *get_fedora.sh* and
+*get_rocky.sh* write one tree each, *fedora* and *rocky*, the releases inside
+laid out as upstream::
+
+    ./get_fedora.sh 45
+    trixie/dists/trixie-updates/Release
+    trixie-security/dists/trixie-security/Release
+    fedora/releases/45/Everything/x86_64/os/repodata/repomd.xml
+    rocky/10/BaseOS/x86_64/os/repodata/repomd.xml
+
+The arch, tumbleweed, alpine and openwrt trees are updated in place, the
+packages of a new release replacing those of the old one. The debian and
+ubuntu trees hold the amd64 binaries, every Translation and the Contents,
+no source package. The debian and ubuntu builders install from the release,
+its -updates and its -security, so an image carries the fixes published up to
+the day it is built, and its sources.list names the three.
+
+*mydistros.sh* runs every *get_<distro>.sh* at once, one process per
+distribution in a detached session, and writes all their output, one
+prefixed line each, into */var/log/mydistros*, emptied at each launch. It
+runs them from a copy of *get_distro* made at launch, so the tree can
+change while the downloads last. Its own lines, tagged *[mydistros]*,
+report the disk absent at launch (nothing starts) or gone during the run
+(every download stops), the first network error of a distribution
+(*UNREACHABLE*), a script ending in error, which runs once more (*RETRY*),
+and at the end, for each one failing twice, the lines of its output that
+state the problem, then the list of the ok and failed ones::
+
+    ./mydistros.sh
+    tail -f /var/log/mydistros
+    grep '\[mydistros\]' /var/log/mydistros
+
+A launch made while one runs is refused and leaves the log of the running
+one alone; the refusal prints the command that stops it. *--stop* sends a
+TERM to every download, a KILL after 30 s to what is left, and lists the
+processes still holding the launch when a KILL cannot end them, such as a
+download stuck on the disk::
+
+    ./mydistros.sh --stop
+
+Then the symlinks under */var/www/html*, one per tree and named as the
+tree, and the check, through the web server, of every file the builders
+read::
 
     sudo ./check_www_links.sh
     curl http://127.0.0.1/trixie/
@@ -166,29 +219,44 @@ demos; *realnet* is its one kvm image, *python_trixie.qcow2*, built by
     ./doitall.sh dns dhcp
     ./doitall.sh --list
 
-Before building, both check: not root, known names, scripts present and
-executable, none calling sudo, bulk writable, *unshare*, *flock*,
-*mkfs.ext4* and *qemu-img* installed. Containers are built first. Each
-build writes a log::
+Before launching, both check: not root, known names, bulk writable,
+*unshare*, *flock*, *mkfs.ext4* and *qemu-img* installed. The run then goes
+on without the terminal, from a copy of *vm_create* made at launch, and
+tries every build in turn, containers first, desktops last. A script
+missing or not executable, one calling sudo, a desktop whose base image is
+absent, a builder ending in error: each is a failure of that build alone,
+and the run goes on. Its whole output, then a report, go into
+*/var/log/doitall_cnt_kvm.log* or */var/log/doitall_cnt_kvm_demo.log*: each
+failure with its problem lines and its last ones, the warnings the ok
+builds went on with, the images built. What a failed build leaves is
+erased, a container tree or tar.gz, a qcow2 written by it; an older qcow2
+it did not touch stays. *--wait* follows the run here and
+returns its status. A second launch of the same driver is refused; the
+other driver waits for the first to end, the two sharing bulk::
 
-    /tmp/doitall-logs/cnt_trixie.log
-    /tmp/doitall-logs/kvm_trixie.log
+    ./doitall.sh --cnt --kvm
+    tail -f /var/log/doitall_cnt_kvm.log
+    grep '\[doitall\]' /var/log/doitall_cnt_kvm.log
 
-A failure stops the run and names the log and the retry, *./doitall.sh
---cnt trixie*. Every container builder ends by calling *cnt_common_config*
+Every container builder ends by calling *cnt_common_config*
 from *cnt_kvm/cnt_common.sh*: syslog configuration, *locale.gen*,
 *locale.conf*, */etc/hosts*, root present in *passwd* and *group*.
 
 Everything at once: allbulk.sh
 ==============================
 
-*vm_create/allbulk.sh* runs both drivers with *--all*, one after the other,
-and delivers what they built into four directories of the home, ready to be
-published or copied to another machine::
+*vm_create/allbulk.sh* is the complete renewal. It publishes the mirrors
+with *check_www_links.sh* and erases nothing unless every file the builders
+read is served and the machine can build. It then erases every image the two drivers list,
+in bulk and in four directories of the home, runs both
+drivers with *--all* to their end, one after the other, delivers what they
+built into those four directories, ready to be published or copied to
+another machine, and goes on without the terminal::
 
     ./allbulk.sh                 the help and the names, builds nothing
-    ./allbulk.sh --go            hours: every image of both directories
-    ./allbulk.sh --deliver       no build: deliver what bulk holds
+    ./allbulk.sh --go            hours: erase, build, deliver, report
+    ./allbulk.sh --deliver       no build: deliver what bulk holds, here
+    tail -f /var/log/allbulk.log
 
     cnt_kvm/doitall.sh --all        ~/cnt_bulk/<image>.tar.gz
                                     ~/kvm_bulk/<image>.qcow2.gz
@@ -196,13 +264,14 @@ published or copied to another machine::
                                     ~/kvm_demo_bulk/<image>.qcow2.gz
 
 A container image is copied as it is, a qcow2 is gzipped, with *pigz* when
-the machine has it; the images stay in bulk. It stops at the first error: a
-builder that fails, a listed image that is not in bulk, or one that this run
-did not build. After such a stop the failed builder is corrected and run
-alone, ``./doitall.sh --desktop alpine`` as the failure says, the rest is
-built with the two drivers, and *--deliver* finishes the work without
-building anything again. What goes to each directory is what the *--list* of its
-driver names, the desktops included, not what bulk happens to hold. A
+the machine has it; the images stay in bulk. A build that fails leaves no
+image, in bulk or in the home, so what the renewal leaves is valid.
+*/var/log/allbulk.log* ends with the reports of both driver logs, the
+failed builds and what was delivered. A failed builder, once corrected, is
+run alone, ``./doitall.sh --desktop alpine --wait``, and *--deliver*
+finishes the work without building anything again. What goes to each
+directory is what the *--list* of its driver names, the desktops included,
+not what bulk happens to hold. A
 delivered machine image is put back in use with
 ``gunzip -c trixie.qcow2.gz > /var/lib/cloonix/bulk/trixie.qcow2``.
 
@@ -272,6 +341,12 @@ next run::
 
     KEEP_TREE=1 ./kvm_trixie.sh
 
+The openwrt image is made otherwise: *kvm_openwrt.sh* keeps the master boot
+record, grub and kernel of the combined image OpenWrt publishes, rebuilds
+its root partition from the rootfs tarball with *qemu-ga* added, and checks
+the ext4 at partition 2. Its kernel has virtio-scsi, the cd-rom and iso9660
+built in, so it boots without an initramfs and mounts the agent disc.
+
 What the builders put in a machine image::
 
     qemu-guest-agent enabled          cloonix drives it to start its agent
@@ -307,7 +382,7 @@ is installed through a nat, the guest is powered off::
 ::
 
     kvm_alpine_xfce.sh        kvm_trixie_lxde.sh       kvm_trixie_gnome.sh
-    kvm_resolute_gnome.sh     kvm_rocky_gnome.sh       kvm_fedora44_gnome.sh
+    kvm_resolute_gnome.sh     kvm_rocky_gnome.sh       kvm_fedora45_gnome.sh
     kvm_arch_plasma.sh        kvm_tumbleweed_plasma.sh
 
 The eight share *desk_common.sh*, where nothing fails quietly. What the
@@ -315,8 +390,8 @@ desktop cannot do without is fatal, says what failed and removes the image:
 the mirror out of reach, the desktop install, no session command, no display
 manager enabled, a guest that does not power off. What it can do without is
 a *WARNING*, printed when it happens and again as the last lines of the
-builder; *doitall.sh* repeats the warnings of every builder under its final
-summary.
+builder; *doitall.sh* repeats the warnings of every ok build in the report
+at the end of its log.
 
 Each installs firefox, chromium and epiphany, one engine each, a missing
 package costing that browser only, with a warning. Ubuntu ships firefox

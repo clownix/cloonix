@@ -323,7 +323,8 @@ static void handle_cnf_a2b(int fd, const char *body, int blen)
     /* Accept only the commands the a2b scheduler actually implements so a
        stray cmd string can never reach the a2b process. */
     int cmd_ok = (!strcmp(cmd, "loss")  || !strcmp(cmd, "delay") ||
-                  !strcmp(cmd, "rate")  || !strcmp(cmd, "silentms"));
+                  !strcmp(cmd, "rate")  || !strcmp(cmd, "silentms") ||
+                  !strcmp(cmd, "jitter"));
     if (!name[0] || (dir != 0 && dir != 1) || !cmd_ok || !got_val) {
         KERR("WARNING handle_cnf_a2b: bad params name=%s dir=%d cmd=%s val=%d body=%.200s",
              name, dir, cmd, val, body);

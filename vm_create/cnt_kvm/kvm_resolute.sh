@@ -88,7 +88,9 @@ ${MMDEBSTRAP} --variant=important \
       --aptopt='APT::Get::AllowUnauthenticated "true"' \
       --components="${COMPONENTS}" \
       ${DISTRO} ${WK} \
-      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} ${COMPONENTS}"
+      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO} ${COMPONENTS}" \
+      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-updates ${COMPONENTS}" \
+      "deb [ trusted=yes allow-insecure=yes ] ${REPO} ${DISTRO}-security ${COMPONENTS}"
 if [ ! -x ${WK}/usr/bin/bash ]; then
   echo "ERROR: mmdebstrap did not produce a usable rootfs in ${WK}"
   exit 1

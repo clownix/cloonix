@@ -5,4 +5,5 @@ void sched_mngt(int id, uint64_t current_usec, uint64_t delta_usec);
 int sched_can_enqueue(int id, uint64_t len, uint8_t *buf);
 void sched_cnf(int dir, char *type, int val);
 void sched_init(void);
+uint64_t sched_jitter_usec(int id);
 

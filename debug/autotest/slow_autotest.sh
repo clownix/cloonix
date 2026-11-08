@@ -18,7 +18,7 @@ DEMO_IMAGES=${AUTOTEST_DEMO_IMAGES:-"wg_trixie batman_trixie ovn_trixie \
 openvpn_trixie tinc_trixie strongswan_trixie libreswan_trixie nft_trixie \
 arp_trixie frr_trixie bird_trixie babel_trixie dns_trixie unbound_trixie \
 knot_trixie dhcp_trixie ntp_trixie proxy_trixie squid_trixie smtp_trixie \
-mqtt_trixie asterisk_alpine suricata_trixie radius_trixie vrrp_trixie \
+mqtt_trixie asterisk_trixie suricata_trixie radius_trixie vrrp_trixie \
 cluster_trixie"}
 # The tests run first in each kvm, the latest work: a failure there is
 # known in minutes instead of hours; the whole suite runs after them.

@@ -1,0 +1,20 @@
+# packages - the asterisk_demo part of the Demo picker of the asterisk toy,
+# appended to demos/packages by create_asterisk_toy_targz.sh. Same format:
+# "<number> <title>", then "<area>/<demo>.py  <one line>". The line is the
+# title of the page of the documentation the demo plays, or what it shows.
+
+11 Asterisk documentation examples, SIPp and Kamailio
+asterisk_demo/hello_world.py          Hello World
+asterisk_demo/secure_calling.py       Secure Calling Tutorial
+asterisk_demo/nat.py                  Configuring res_pjsip to work through NAT
+asterisk_demo/voicemail.py            Voicemail
+asterisk_demo/confbridge.py           ConfBridge
+asterisk_demo/queues.py               Building Queues
+asterisk_demo/transfers.py            Feature Code Call Transfers and Call Parking
+asterisk_demo/iax2.py                 Inter-Asterisk eXchange protocol, version 2 (IAX2)
+asterisk_demo/paging.py               Paging and Intercom
+asterisk_demo/ami.py                  Asterisk Manager Interface (AMI)
+asterisk_demo/codecs.py               Codecs and transcoding
+asterisk_demo/voice_quality.py        RTCP and the jitter buffer
+asterisk_demo/load.py                 SIPp: calls per second
+asterisk_demo/load_balancing.py       Kamailio Dispatcher load balancing

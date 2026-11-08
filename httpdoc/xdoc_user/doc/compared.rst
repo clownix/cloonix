@@ -138,7 +138,7 @@ containerlab and mininet run tcpdump in the namespace of the node.
 A cable that degrades
 =====================
 
-**a2b** is an item, cabled like a machine: loss, delay, rate and silentms,
+**a2b** is an item, cabled like a machine: loss, delay, jitter, rate and silentms,
 each direction apart, from the command line or from sliders in the
 right-click menu of the canvas, on a running network.
 
