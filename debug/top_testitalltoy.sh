@@ -9,6 +9,18 @@
 # top_testitall.sh; /dev/kvm, vhost-net and net/tun must be read-write.
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
+# the tests of this tree on a cloonix of another version fail on what one
+# lacks: the cloonix tested must be the one of this tree
+same_version() {
+  local tree inst
+  tree=$(grep -m1 '^CLOONIX_VERSION=' "${HERE}/../cloonix/cloonix_config.py" | cut -d= -f2)
+  inst=$(grep -m1 '^CLOONIX_VERSION=' "$1" 2>/dev/null | cut -d= -f2)
+  if [ "${tree}" != "${inst}" ]; then
+    echo "the cloonix tested is version ${inst:-unknown} ($1),"
+    echo "these tests are those of version ${tree}: install the cloonix of this tree"
+    exit 1
+  fi
+}
 cd "${HERE}"
 
 VERB="all"
@@ -200,6 +212,7 @@ if [ "${VERB}" = "start" ]; then
   echo "when done:                         ./top_testitalltoy.sh stop"
   exit 0
 fi
+same_version "${TESTITALL_CFG}"
 trap on_exit EXIT
 rm -f /tmp/testbigflows_max_nemo.txt
 # TESTITALL_SUBS_FIRST (space list of sub_*.py) and TESTITALL_DEMOS_FIRST

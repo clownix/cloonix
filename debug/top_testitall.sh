@@ -10,6 +10,19 @@
 # CLOONIX-PHASE lines in the syslog: keep them when the KERR are taken out.
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
+# the tests of this tree on a cloonix of another version fail on what one
+# lacks: the cloonix tested must be the one of this tree
+same_version() {
+  local tree inst
+  tree=$(grep -m1 '^CLOONIX_VERSION=' "${HERE}/../cloonix/cloonix_config.py" | cut -d= -f2)
+  inst=$(grep -m1 '^CLOONIX_VERSION=' "$1" 2>/dev/null | cut -d= -f2)
+  if [ "${tree}" != "${inst}" ]; then
+    echo "the cloonix tested is version ${inst:-unknown} ($1),"
+    echo "these tests are those of version ${tree}: install the cloonix of this tree"
+    exit 1
+  fi
+}
+same_version /usr/libexec/cloonix/cloonfs/etc/cloonix.cfg
 cd "${HERE}"
 # On any failure (set -e or an explicit exit) end with a FAIL line five times
 # over, so a glance at the tail of the log gives the verdict at once.
